@@ -1,0 +1,1072 @@
+/**
+ * FurrGuard - Circuit Forge Animation System
+ * Technical/Industrial aesthetic animations
+ * SrTeb-inspired purple/magenta theme
+ *
+ * @version 1.1.0
+ * @author GrinchHorizon
+ * @copyright SrTeb Limited
+ */
+
+/* ============================================
+   PAGE LOAD SEQUENCE
+   ============================================ */
+
+/* Circuit reveal - horizontal wipe effect */
+@keyframes circuitReveal {
+    0% {
+        clip-path: inset(0 100% 0 0);
+        opacity: 0;
+    }
+    100% {
+        clip-path: inset(0 0 0 0);
+        opacity: 1;
+    }
+}
+
+/* Vertical circuit reveal */
+@keyframes circuitRevealVertical {
+    0% {
+        clip-path: inset(0 0 100% 0);
+        opacity: 0;
+    }
+    100% {
+        clip-path: inset(0 0 0 0);
+        opacity: 1;
+    }
+}
+
+/* Scan line - horizontal sweep */
+@keyframes scanLine {
+    0% {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* Vertical scan line */
+@keyframes scanLineVertical {
+    0% {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+}
+
+/* Data pulse - subtle opacity breathing */
+@keyframes dataPulse {
+    0%, 100% {
+        opacity: 0.5;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+/* ============================================
+   FADE & SLIDE ANIMATIONS
+   ============================================ */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ============================================
+   TECHNICAL ANIMATIONS - Purple/Magenta Theme
+   ============================================ */
+
+/* Glow pulse for accents - purple */
+@keyframes glowPulse {
+    0%, 100% {
+        box-shadow: 0 0 5px rgba(139, 92, 246, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 15px rgba(139, 92, 246, 0.4),
+                    0 0 30px rgba(192, 38, 211, 0.2);
+    }
+}
+
+/* Border glow animation - magenta */
+@keyframes borderGlow {
+    0%, 100% {
+        border-color: rgba(139, 92, 246, 0.2);
+    }
+    50% {
+        border-color: rgba(192, 38, 211, 0.4);
+    }
+}
+
+/* Corner bracket flash */
+@keyframes cornerFlash {
+    0%, 100% {
+        opacity: 0.3;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+/* Circuit trace - draws a line */
+@keyframes circuitTrace {
+    0% {
+        width: 0;
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    100% {
+        width: 100%;
+        opacity: 1;
+    }
+}
+
+/* Node blink - for connection points - purple */
+@keyframes nodeBlink {
+    0%, 100% {
+        background: rgba(139, 92, 246, 0.3);
+    }
+    50% {
+        background: rgba(192, 38, 211, 0.8);
+    }
+}
+
+/* Status indicator pulse - purple/magenta */
+@keyframes statusPulse {
+    0%, 100% {
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4);
+    }
+    50% {
+        opacity: 0.8;
+        box-shadow: 0 0 0 6px rgba(192, 38, 211, 0);
+    }
+}
+
+/* Gradient glow animation */
+@keyframes gradientGlow {
+    0%, 100% {
+        background-position: 0% 50%;
+        box-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
+    }
+    50% {
+        background-position: 100% 50%;
+        box-shadow: 0 0 20px rgba(192, 38, 211, 0.4);
+    }
+}
+
+/* ============================================
+   LOADING ANIMATIONS
+   ============================================ */
+
+/* Spinner - rotating */
+@keyframes spinner {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Circuit spinner - more technical */
+@keyframes circuitSpinner {
+    0% {
+        stroke-dashoffset: 100;
+        transform: rotate(0deg);
+    }
+    50% {
+        stroke-dashoffset: 0;
+    }
+    100% {
+        stroke-dashoffset: 100;
+        transform: rotate(360deg);
+    }
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* Loading dots */
+@keyframes loadingDots {
+    0%, 80%, 100% {
+        opacity: 0.3;
+        transform: scale(0.85);
+    }
+    40% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+}
+
+/* Gradient spinner */
+@keyframes gradientSpinner {
+    0% {
+        transform: rotate(0deg);
+        border-top-color: var(--purple-500, #8b5cf6);
+    }
+    25% {
+        border-top-color: var(--magenta-500, #c026d3);
+    }
+    50% {
+        border-top-color: var(--pink-500, #db2777);
+    }
+    75% {
+        border-top-color: var(--magenta-500, #c026d3);
+    }
+    100% {
+        transform: rotate(360deg);
+        border-top-color: var(--purple-500, #8b5cf6);
+    }
+}
+
+/* ============================================
+   INTERACTION ANIMATIONS
+   ============================================ */
+
+/* Button press */
+@keyframes buttonPress {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(0.98);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Ripple effect - purple */
+@keyframes ripple {
+    0% {
+        transform: scale(0);
+        opacity: 0.5;
+        background: rgba(139, 92, 246, 0.3);
+    }
+    100% {
+        transform: scale(4);
+        opacity: 0;
+        background: rgba(192, 38, 211, 0.1);
+    }
+}
+
+/* Hover lift */
+@keyframes hoverLift {
+    0% {
+        transform: translateY(0);
+    }
+    100% {
+        transform: translateY(-2px);
+    }
+}
+
+/* Button glow on hover */
+@keyframes buttonGlow {
+    0%, 100% {
+        box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2);
+    }
+    50% {
+        box-shadow: 0 4px 25px rgba(192, 38, 211, 0.4);
+    }
+}
+
+/* ============================================
+   TOAST & MODAL ANIMATIONS
+   ============================================ */
+
+/* Toast slide in from right with bounce */
+@keyframes toastSlideIn {
+    0% {
+        transform: translateX(120%);
+        opacity: 0;
+    }
+    70% {
+        transform: translateX(-5%);
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Toast slide out */
+@keyframes toastSlideOut {
+    0% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    100% {
+        transform: translateX(120%);
+        opacity: 0;
+    }
+}
+
+/* Modal fade in scale */
+@keyframes modalIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.95) translateY(-10px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Modal slide from right */
+@keyframes modalSlideRight {
+    0% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Modal backdrop fade */
+@keyframes backdropFade {
+    0% {
+        opacity: 0;
+        backdrop-filter: blur(0);
+    }
+    100% {
+        opacity: 1;
+        backdrop-filter: blur(4px);
+    }
+}
+
+/* ============================================
+   STAT & NUMBER ANIMATIONS
+   ============================================ */
+
+/* Counter animation placeholder */
+@keyframes countUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Stat card glow */
+@keyframes statGlow {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(139, 92, 246, 0);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+    }
+}
+
+/* ============================================
+   SECTION TRANSITIONS
+   ============================================ */
+
+@keyframes sectionIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes tabSwitch {
+    0% {
+        transform: scaleX(0);
+    }
+    100% {
+        transform: scaleX(1);
+    }
+}
+
+/* Sidebar item slide */
+@keyframes sidebarSlide {
+    0% {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ============================================
+   CARD ANIMATIONS
+   ============================================ */
+
+/* Card hover effect */
+@keyframes cardHover {
+    0% {
+        transform: translateY(0);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+    100% {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 30px rgba(139, 92, 246, 0.15);
+    }
+}
+
+/* Card border shimmer */
+@keyframes cardBorderShimmer {
+    0% {
+        border-color: rgba(139, 92, 246, 0.1);
+    }
+    50% {
+        border-color: rgba(192, 38, 211, 0.2);
+    }
+    100% {
+        border-color: rgba(139, 92, 246, 0.1);
+    }
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+.animate-fadeIn {
+    animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-fadeInUp {
+    animation: fadeInUp 0.4s ease-out forwards;
+}
+
+.animate-fadeInDown {
+    animation: fadeInDown 0.4s ease-out forwards;
+}
+
+.animate-fadeInLeft {
+    animation: fadeInLeft 0.4s ease-out forwards;
+}
+
+.animate-fadeInRight {
+    animation: fadeInRight 0.4s ease-out forwards;
+}
+
+.animate-scaleIn {
+    animation: scaleIn 0.3s ease-out forwards;
+}
+
+.animate-circuitReveal {
+    animation: circuitReveal 0.5s ease-out forwards;
+}
+
+.animate-scanLine {
+    animation: scanLine 1.5s ease-in-out infinite;
+}
+
+.animate-glowPulse {
+    animation: glowPulse 2s ease-in-out infinite;
+}
+
+.animate-nodeBlink {
+    animation: nodeBlink 1.5s ease-in-out infinite;
+}
+
+.animate-spinner {
+    animation: spinner 0.8s linear infinite;
+}
+
+.animate-gradientSpinner {
+    animation: gradientSpinner 1s linear infinite;
+}
+
+.animate-buttonGlow {
+    animation: buttonGlow 2s ease-in-out infinite;
+}
+
+/* Stagger delay utilities */
+.stagger-1 { animation-delay: 50ms; }
+.stagger-2 { animation-delay: 100ms; }
+.stagger-3 { animation-delay: 150ms; }
+.stagger-4 { animation-delay: 200ms; }
+.stagger-5 { animation-delay: 250ms; }
+.stagger-6 { animation-delay: 300ms; }
+.stagger-7 { animation-delay: 350ms; }
+.stagger-8 { animation-delay: 400ms; }
+
+/* Staggered children */
+.stagger-children > * {
+    opacity: 0;
+    animation: fadeInUp 0.4s ease-out forwards;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 50ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 100ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 150ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 200ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 250ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 350ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 400ms; }
+
+/* Scroll-triggered animations */
+.fade-on-scroll {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+
+.fade-on-scroll.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Reveal on scroll with circuit effect */
+.reveal-on-scroll {
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+    transition: clip-path 0.6s ease-out, opacity 0.6s ease-out;
+}
+
+.reveal-on-scroll.visible {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+}
+
+/* Hover lift effect */
+.hover-lift {
+    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+}
+
+.hover-lift:hover {
+    transform: translateY(-2px);
+}
+
+/* Shimmer effect for loading - purple */
+.shimmer {
+    position: relative;
+    overflow: hidden;
+}
+
+.shimmer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(139, 92, 246, 0.08),
+        rgba(192, 38, 211, 0.05),
+        transparent
+    );
+    animation: shimmer 2s infinite;
+}
+
+/* Skeleton loading - dark theme with purple tint */
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        rgba(15, 15, 23, 1) 25%,
+        rgba(25, 20, 35, 1) 50%,
+        rgba(15, 15, 23, 1) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Loading dots - purple */
+.loading-dots {
+    display: inline-flex;
+    gap: 6px;
+}
+
+.loading-dots span {
+    width: 6px;
+    height: 6px;
+    background: var(--purple-500, #8b5cf6);
+    border-radius: 50%;
+    animation: loadingDots 1.2s ease-in-out infinite;
+}
+
+.loading-dots span:nth-child(2) {
+    animation-delay: 150ms;
+    background: var(--magenta-500, #c026d3);
+}
+.loading-dots span:nth-child(3) {
+    animation-delay: 300ms;
+    background: var(--pink-500, #db2777);
+}
+
+/* Page load sequence */
+.page-load-sequence {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+/* Card with hover glow */
+.card-glow {
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.card-glow:hover {
+    animation: cardHover 0.3s ease forwards;
+}
+
+/* Gradient text animation */
+.gradient-text-animate {
+    background: linear-gradient(
+        90deg,
+        var(--purple-400, #a78bfa),
+        var(--magenta-500, #c026d3),
+        var(--pink-500, #db2777),
+        var(--magenta-500, #c026d3),
+        var(--purple-400, #a78bfa)
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradientGlow 3s ease infinite;
+}
+
+/* ============================================
+   REDUCED MOTION SUPPORT
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .fade-on-scroll,
+    .reveal-on-scroll {
+        opacity: 1;
+        transform: none;
+        clip-path: none;
+    }
+}
+
+/* ============================================
+   FLOATING SHAPES ANIMATION
+   ============================================ */
+
+@keyframes floatShape1 {
+    0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+    33% { transform: translate(25px, -35px) scale(1.1) rotate(5deg); }
+    66% { transform: translate(-15px, 20px) scale(0.95) rotate(-3deg); }
+}
+
+@keyframes floatShape2 {
+    0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+    50% { transform: translate(-40px, 25px) scale(0.9) rotate(-5deg); }
+}
+@keyframes floatShape3 {
+    0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+    50% { transform: translate(-50px, -45px) scale(1.08) rotate(3deg); }
+}
+
+/* Pulse animation for badges */
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.3); }
+}
+
+/* Cursor blink */
+@keyframes blink {
+    0%, 45% { opacity: 1; }
+    50%, 95% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+/* Badge pulse */
+@keyframes badgePulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+    50% { box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.3); }
+}
+
+/* ============================================
+   PREMIUM FLOATING SHAPES - SrTeb Style
+   ============================================ */
+
+@keyframes floatPremium1 {
+    0%, 100% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+        opacity: 0.4;
+    }
+    25% {
+        transform: translate(30px, -40px) scale(1.15) rotate(5deg);
+        opacity: 0.6;
+    }
+    50% {
+        transform: translate(-20px, -60px) scale(0.95) rotate(-3deg);
+        opacity: 0.5;
+    }
+    75% {
+        transform: translate(-40px, 20px) scale(1.1) rotate(3deg);
+        opacity: 0.55;
+    }
+}
+
+@keyframes floatPremium2 {
+    0%, 100% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+        opacity: 0.35;
+    }
+    33% {
+        transform: translate(-50px, 30px) scale(0.85) rotate(-5deg);
+        opacity: 0.5;
+    }
+    66% {
+        transform: translate(20px, -20px) scale(1.12) rotate(4deg);
+        opacity: 0.45;
+    }
+}
+
+@keyframes floatPremium3 {
+    0%, 100% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+        opacity: 0.3;
+    }
+    50% {
+        transform: translate(-30px, -50px) scale(1.08) rotate(-4deg);
+        opacity: 0.5;
+    }
+}
+
+@keyframes floatPremium4 {
+    0%, 100% {
+        transform: translate(0, 0) scale(1);
+        opacity: 0.25;
+    }
+    50% {
+        transform: translate(40px, 40px) scale(1.2);
+        opacity: 0.4;
+    }
+}
+
+/* Glow Pulse Animation - Premium */
+@keyframes glowPulsePremium {
+    0%, 100% {
+        box-shadow:
+            0 0 5px rgba(139, 92, 246, 0.2),
+            0 0 10px rgba(139, 92, 246, 0.1);
+    }
+    50% {
+        box-shadow:
+            0 0 20px rgba(139, 92, 246, 0.4),
+            0 0 40px rgba(192, 38, 211, 0.2),
+            0 0 60px rgba(219, 39, 119, 0.1);
+    }
+}
+
+/* Gradient Flow Animation */
+@keyframes gradientFlow {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* Border Rotate Animation */
+@keyframes borderRotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Shimmer Rotate */
+@keyframes shimmerRotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Float Gentle */
+@keyframes floatGentle {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+/* Pulse Scale */
+@keyframes pulseScale {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+/* Typing Cursor */
+@keyframes typingCursor {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0;
+    }
+}
+
+/* Data Flow */
+@keyframes dataFlow {
+    0% {
+        background-position: 0% 0%;
+    }
+    100% {
+        background-position: 100% 100%;
+    }
+}
+
+/* Circuit Draw */
+@keyframes circuitDraw {
+    0% {
+        stroke-dashoffset: 1000;
+        opacity: 0;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        stroke-dashoffset: 0;
+        opacity: 1;
+    }
+}
+
+/* Premium Glow */
+@keyframes premiumGlow {
+    0%, 100% {
+        filter: drop-shadow(0 0 5px rgba(139, 92, 246, 0.3));
+    }
+    50% {
+        filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.6))
+                drop-shadow(0 0 40px rgba(192, 38, 211, 0.3));
+    }
+}
+
+/* Utility Classes for Premium Animations */
+.animate-float-premium-1 {
+    animation: floatPremium1 20s ease-in-out infinite;
+}
+
+.animate-float-premium-2 {
+    animation: floatPremium2 25s ease-in-out infinite;
+}
+
+.animate-float-premium-3 {
+    animation: floatPremium3 18s ease-in-out infinite;
+}
+
+.animate-float-premium-4 {
+    animation: floatPremium4 22s ease-in-out infinite;
+}
+
+.animate-glow-premium {
+    animation: glowPulsePremium 3s ease-in-out infinite;
+}
+
+.animate-gradient-flow {
+    background-size: 200% 200%;
+    animation: gradientFlow 4s ease infinite;
+}
+
+.animate-border-rotate {
+    animation: borderRotate 3s linear infinite;
+}
+
+.animate-float-gentle {
+    animation: floatGentle 4s ease-in-out infinite;
+}
+
+.animate-pulse-scale {
+    animation: pulseScale 2s ease-in-out infinite;
+}
+
+.animate-typing-cursor {
+    animation: typingCursor 1s step-end infinite;
+}
+
+.animate-premium-glow {
+    animation: premiumGlow 2s ease-in-out infinite;
+}
+
+/* Floating Shapes Container */
+.floating-shapes-premium {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.floating-shapes-premium .shape {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    pointer-events: none;
+}
+
+.floating-shapes-premium .shape-1 {
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, transparent 70%);
+    top: 10%;
+    left: 5%;
+    animation: floatPremium1 20s ease-in-out infinite;
+}
+
+.floating-shapes-premium .shape-2 {
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, rgba(192, 38, 211, 0.25) 0%, transparent 70%);
+    top: 60%;
+    right: 10%;
+    animation: floatPremium2 25s ease-in-out infinite;
+}
+
+.floating-shapes-premium .shape-3 {
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(219, 39, 119, 0.2) 0%, transparent 70%);
+    bottom: 20%;
+    left: 30%;
+    animation: floatPremium3 18s ease-in-out infinite;
+}
+
+.floating-shapes-premium .shape-4 {
+    width: 180px;
+    height: 180px;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+    top: 30%;
+    right: 30%;
+    animation: floatPremium4 22s ease-in-out infinite;
+}

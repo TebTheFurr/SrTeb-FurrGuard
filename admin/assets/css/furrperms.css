@@ -1,0 +1,385 @@
+/* ============================================
+   FURRPERMS SECTION - Complementary Styles
+   Hand-crafted Design System v3.0
+   ============================================ */
+
+/* ==================== BUTTON ENHANCEMENTS ==================== */
+
+.furrperms-header-actions .btn-primary {
+    position: relative;
+    overflow: visible;
+}
+
+.furrperms-header-actions .btn-primary::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.25), transparent 70%);
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    transition: transform 0.4s, opacity 0.2s;
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+.furrperms-header-actions .btn-primary:active::after {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+    transition: 0s;
+}
+
+/* Refresh Button */
+.furrperms-header-actions .btn-secondary svg {
+    transition: transform 0.5s var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+.furrperms-header-actions .btn-secondary:hover svg {
+    animation: spin 0.6s linear infinite;
+}
+
+/* ==================== STATUS BADGE ENHANCEMENTS ==================== */
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    border-radius: var(--radius-full, 9999px);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    position: relative;
+    overflow: hidden;
+}
+
+.status-badge::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+    transition: left 0.4s ease;
+}
+
+.status-badge:hover::before {
+    left: 100%;
+}
+
+.status-badge.allowed {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(16, 185, 129, 0.08));
+    color: var(--accent-green, #22c55e);
+    border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.status-badge.allowed::after {
+    content: '';
+    width: 5px;
+    height: 5px;
+    background: var(--accent-green, #22c55e);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--accent-green, #22c55e);
+    animation: statusPulse 2s infinite;
+}
+
+.status-badge.blocked {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(220, 38, 38, 0.08));
+    color: var(--accent-red, #ef4444);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.status-badge.blocked::after {
+    content: '';
+    width: 5px;
+    height: 5px;
+    background: var(--accent-red, #ef4444);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--accent-red, #ef4444);
+    animation: statusPulse 2s infinite;
+}
+
+@keyframes statusPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.15); }
+}
+
+/* ==================== TAB STYLING ==================== */
+
+.furrperms-tab {
+    position: relative;
+}
+
+.furrperms-tab[data-tab="furrperms-whitelist"]::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.furrperms-tab[data-tab="furrperms-whitelist"]::after {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/%3E%3Cpath d='M9 12l2 2 4-4'/%3E%3C/svg%3E") no-repeat center;
+    opacity: 0;
+    transition: all 0.2s ease;
+}
+
+.furrperms-tab[data-tab="furrperms-logs"]::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/%3E%3Cpolyline points='14 2 14 8 20 8'/%3E%3Cline x1='16' y1='13' x2='8' y2='13'/%3E%3Cline x1='16' y1='17' x2='8' y2='17'/%3E%3C/svg%3E") no-repeat center;
+    opacity: 0;
+    transition: all 0.2s ease;
+}
+
+.furrperms-tab:hover::before,
+.furrperms-tab:hover::after,
+.furrperms-tab.active::before,
+.furrperms-tab.active::after {
+    opacity: 0.5;
+}
+
+/* ==================== TABLE ROW ANIMATIONS ==================== */
+
+#section-furrperms .data-table tbody tr {
+    animation: rowSlide 0.25s var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+@keyframes rowSlide {
+    from {
+        opacity: 0;
+        transform: translateX(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Stagger animation */
+#section-furrperms .data-table tbody tr:nth-child(1) { animation-delay: 0.03s; }
+#section-furrperms .data-table tbody tr:nth-child(2) { animation-delay: 0.06s; }
+#section-furrperms .data-table tbody tr:nth-child(3) { animation-delay: 0.09s; }
+#section-furrperms .data-table tbody tr:nth-child(4) { animation-delay: 0.12s; }
+#section-furrperms .data-table tbody tr:nth-child(5) { animation-delay: 0.15s; }
+#section-furrperms .data-table tbody tr:nth-child(6) { animation-delay: 0.18s; }
+#section-furrperms .data-table tbody tr:nth-child(7) { animation-delay: 0.21s; }
+#section-furrperms .data-table tbody tr:nth-child(8) { animation-delay: 0.24s; }
+
+/* ==================== SEARCH INPUT ==================== */
+
+#searchFurrPermsWhitelist,
+#searchFurrPermsLogs {
+    background: var(--bg-elevated, #161616);
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.05));
+    border-radius: var(--radius-md, 10px);
+    padding: var(--space-3, 12px) var(--space-4, 16px);
+    color: var(--text-normal, rgba(255, 255, 255, 0.88));
+    transition: all 0.2s ease;
+}
+
+#searchFurrPermsWhitelist:focus,
+#searchFurrPermsLogs:focus {
+    outline: none;
+    border-color: rgba(99, 102, 241, 0.5);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    background: var(--bg-surface, #0f0f0f);
+}
+
+/* ==================== EMPTY STATE ==================== */
+
+.empty-state {
+    padding: var(--space-10, 40px) var(--space-6, 24px);
+    text-align: center;
+    color: var(--text-muted, rgba(255, 255, 255, 0.55));
+    position: relative;
+}
+
+.empty-state::before {
+    content: '';
+    display: block;
+    width: 48px;
+    height: 48px;
+    margin: 0 auto var(--space-4, 16px);
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5'%3E%3Cpath d='M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4'/%3E%3C/svg%3E") no-repeat center;
+    opacity: 0.3;
+}
+
+/* ==================== PAGINATION ==================== */
+
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-2, 8px);
+    margin-top: var(--space-6, 24px);
+    padding: var(--space-4, 16px);
+}
+
+.pagination-container button {
+    padding: var(--space-2, 8px) var(--space-4, 16px);
+    background: var(--bg-surface, #0f0f0f);
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.05));
+    border-radius: var(--radius-sm, 6px);
+    color: var(--text-muted, rgba(255, 255, 255, 0.55));
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pagination-container button:hover {
+    background: var(--bg-hover, rgba(255, 255, 255, 0.04));
+    border-color: var(--border-default, rgba(255, 255, 255, 0.08));
+    color: var(--text-normal, rgba(255, 255, 255, 0.88));
+}
+
+.pagination-container button.active {
+    background: var(--accent-primary, #6366f1);
+    border-color: transparent;
+    color: #fff;
+}
+
+/* ==================== DELETE BUTTON ==================== */
+
+#section-furrperms .btn-icon.btn-danger {
+    position: relative;
+}
+
+#section-furrperms .btn-icon.btn-danger::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 36px;
+    height: 36px;
+    background: radial-gradient(circle, rgba(239, 68, 68, 0.25), transparent 70%);
+    transform: translate(-50%, -50%) scale(0);
+    transition: transform 0.25s ease;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+#section-furrperms .btn-icon.btn-danger:hover::before {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+/* ==================== MODAL ==================== */
+
+#addFurrPermsModal .modal-content {
+    border-top: 2px solid var(--accent-primary, #6366f1);
+}
+
+/* ==================== COMMAND CODE ==================== */
+
+.command-code {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+    padding: var(--space-2, 8px) var(--space-4, 16px);
+    background: var(--accent-red-bg, rgba(239, 68, 68, 0.12));
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: var(--radius-xs, 4px);
+    font-family: 'SF Mono', 'Fira Code', 'Monaco', monospace;
+    font-size: 0.8rem;
+    color: var(--accent-red, #ef4444);
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.command-code::before {
+    content: '/';
+    opacity: 0.4;
+    font-weight: 400;
+}
+
+.command-code.allowed {
+    background: var(--accent-green-bg, rgba(34, 197, 94, 0.12));
+    border-color: rgba(34, 197, 94, 0.2);
+    color: var(--accent-green, #22c55e);
+}
+
+.command-code.allowed::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: currentColor;
+    border-radius: 50%;
+    opacity: 0.8;
+}
+
+.command-code:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ==================== DISABLED ROW ==================== */
+
+.row-disabled {
+    opacity: 0.45;
+    filter: grayscale(0.4);
+    transition: all 0.2s ease;
+}
+
+.row-disabled:hover {
+    opacity: 0.65;
+    filter: grayscale(0);
+}
+
+/* ==================== LOADING SPINNER ==================== */
+
+.loading-spinner {
+    width: 32px;
+    height: 32px;
+    margin: var(--space-5, 20px) auto;
+    border: 2px solid var(--border-default, rgba(255, 255, 255, 0.08));
+    border-top-color: var(--accent-primary, #6366f1);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+}
+
+/* ==================== RESPONSIVE ==================== */
+
+@media (max-width: 768px) {
+    .furrperms-header-actions {
+        flex-direction: column;
+    }
+
+    .furrperms-header-actions .btn-primary,
+    .furrperms-header-actions .btn-secondary {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .table-controls {
+        flex-direction: column;
+    }
+
+    .table-controls .form-input,
+    .table-controls .styled-select {
+        width: 100%;
+    }
+}

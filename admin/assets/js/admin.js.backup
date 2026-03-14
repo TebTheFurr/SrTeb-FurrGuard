@@ -1,0 +1,2911 @@
+/**
+ * FurrGuard Admin Panel JavaScript
+ *
+ * @author GrinchHorizon
+ * @copyright SrTeb Limited
+ * @website https://srteb.eu
+ * @version 1.0.0
+ */
+
+const API_URL = 'api.php';
+const DISCORD_CLIENT_ID = 'YOUR_DISCORD_CLIENT_ID';
+const DISCORD_REDIRECT_URI = encodeURIComponent(window.location.origin + '/admin/callback.php');
+
+let currentSection = 'overview';
+let currentUser = null;
+let skinViewer = null;
+let settingsSaveTimeout = null;
+
+/**
+ * Detecta si una UUID pertenece a un jugador offline/no-premium
+ * Las UUIDs offline de Minecraft tienen el bit 4 de la versión (position 14) siempre en 0
+ * Ejemplo: 0cc4ca21-c5dd-3efa-ad51-7a1bb8d8c657 (nota el '0' después del segundo guion)
+ * Las UUIDs premium tienen la versión 4, que es el carácter '4' en esa posición
+ */
+function isOfflineUUID(uuid) {
+    if (!uuid || typeof uuid !== 'string') return false;
+    // Formato UUID: xxxxxxxx-xxxx-Vxxx-xxxx-xxxxxxxxxxxx
+    // V está en la posición 14 (índice 14 en string con guiones)
+    // Para UUIDs offline, V es siempre 0, 1, 2, o 3
+    if (uuid.length >= 15) {
+        const versionChar = uuid.charAt(14);
+        return versionChar !== '4';
+    }
+    return false;
+}
+
+/**
+ * Obtiene el tipo de ban apropiado según si el jugador es premium o no
+ * Para jugadores offline/no-premium, usa 'nick' en lugar de 'uuid'
+ */
+function getBanTypeForPlayer(uuid, nick) {
+    if (isOfflineUUID(uuid)) {
+        return { type: 'nick', value: nick, isOffline: true };
+    }
+    return { type: 'uuid', value: uuid, isOffline: false };
+}
+
+/**
+ * Custom Modal System - Reemplaza nativos alert(), confirm(), prompt()
+ */
+
+/**
+ * Muestra un modal de confirmación personalizado (reemplazo de confirm())
+ * @param {string} message - Mensaje a mostrar
+ * @param {string} title - Título del modal (opcional)
+ * @param {string} variant - 'danger', 'warning', 'info' (opcional, default: 'danger')
+ * @returns {Promise<boolean>} - Resuelve a true si confirma, false si cancela
+ */
+function showConfirm(message, title = 'Confirmar acción', variant = 'danger') {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('confirmModal');
+        const messageEl = document.getElementById('confirmMessage');
+        const titleEl = document.getElementById('confirmTitle');
+        const okBtn = document.getElementById('confirmOk');
+        const cancelBtn = document.getElementById('confirmCancel');
+
+        // Set content
+        messageEl.textContent = message;
+        titleEl.textContent = title;
+
+        // Set variant
+        modal.className = 'modal active';
+        if (variant === 'warning') {
+            modal.classList.add('warning');
+        } else if (variant === 'info') {
+            modal.classList.add('info');
+        } else {
+            modal.classList.add('danger');
+        }
+
+        // Handle confirm
+        const handleConfirm = () => {
+            modal.classList.remove('active');
+            resolve(true);
+            cleanup();
+        };
+
+        // Handle cancel
+        const handleCancel = () => {
+            modal.classList.remove('active');
+            resolve(false);
+            cleanup();
+        };
+
+        // Cleanup event listeners
+        const cleanup = () => {
+            okBtn.removeEventListener('click', handleConfirm);
+            cancelBtn.removeEventListener('click', handleCancel);
+            modal.querySelector('.modal-overlay').removeEventListener('click', handleCancel);
+        };
+
+        // Add event listeners
+        okBtn.addEventListener('click', handleConfirm);
+        cancelBtn.addEventListener('click', handleCancel);
+        modal.querySelector('.modal-overlay').addEventListener('click', handleCancel);
+
+        // Focus confirm button
+        setTimeout(() => okBtn.focus(), 100);
+    });
+}
+
+/**
+ * Muestra un modal de entrada personalizado (reemplazo de prompt())
+ * @param {string} message - Mensaje a mostrar
+ * @param {string} defaultValue - Valor por defecto (opcional)
+ * @param {string} title - Título del modal (opcional)
+ * @param {string} placeholder - Placeholder del input (opcional)
+ * @returns {Promise<string|null>} - Resuelve al valor ingresado o null si cancela
+ */
+function showPrompt(message, defaultValue = '', title = 'Entrada requerida', placeholder = '') {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('promptModal');
+        const messageEl = document.getElementById('promptMessage');
+        const titleEl = document.getElementById('promptTitle');
+        const inputEl = document.getElementById('promptInput');
+        const okBtn = document.getElementById('promptOk');
+        const cancelBtn = document.getElementById('promptCancel');
+
+        // Set content
+        messageEl.textContent = message;
+        titleEl.textContent = title;
+        inputEl.value = defaultValue;
+        inputEl.placeholder = placeholder || message;
+
+        // Show modal
+        modal.classList.add('active');
+
+        // Handle confirm
+        const handleConfirm = () => {
+            const value = inputEl.value.trim();
+            modal.classList.remove('active');
+            resolve(value || null);
+            cleanup();
+        };
+
+        // Handle cancel
+        const handleCancel = () => {
+            modal.classList.remove('active');
+            resolve(null);
+            cleanup();
+        };
+
+        // Handle Enter key
+        const handleKeyPress = (e) => {
+            if (e.key === 'Enter') {
+                handleConfirm();
+            }
+        };
+
+        // Cleanup event listeners
+        const cleanup = () => {
+            okBtn.removeEventListener('click', handleConfirm);
+            cancelBtn.removeEventListener('click', handleCancel);
+            inputEl.removeEventListener('keypress', handleKeyPress);
+            modal.querySelector('.modal-overlay').removeEventListener('click', handleCancel);
+        };
+
+        // Add event listeners
+        okBtn.addEventListener('click', handleConfirm);
+        cancelBtn.addEventListener('click', handleCancel);
+        inputEl.addEventListener('keypress', handleKeyPress);
+        modal.querySelector('.modal-overlay').addEventListener('click', handleCancel);
+
+        // Focus input
+        setTimeout(() => inputEl.focus(), 100);
+    });
+}
+
+/**
+ * Muestra un modal de alerta personalizado (reemplazo de alert())
+ * @param {string} message - Mensaje a mostrar
+ * @param {string} title - Título del modal (opcional)
+ * @param {string} variant - 'success', 'warning', 'info', 'danger' (opcional, default: 'info')
+ * @returns {Promise<void>}
+ */
+function showAlert(message, title = 'Información', variant = 'info') {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('alertModal');
+        const messageEl = document.getElementById('alertMessage');
+        const titleEl = document.getElementById('alertTitle');
+        const okBtn = document.getElementById('alertOk');
+
+        // Set content
+        messageEl.textContent = message;
+        titleEl.textContent = title;
+
+        // Set variant
+        modal.className = 'modal active';
+        modal.classList.add(variant);
+
+        // Handle close
+        const handleClose = () => {
+            modal.classList.remove('active');
+            resolve();
+            cleanup();
+        };
+
+        // Cleanup event listeners
+        const cleanup = () => {
+            okBtn.removeEventListener('click', handleClose);
+            modal.querySelector('.modal-overlay').removeEventListener('click', handleClose);
+        };
+
+        // Add event listeners
+        okBtn.addEventListener('click', handleClose);
+        modal.querySelector('.modal-overlay').addEventListener('click', handleClose);
+
+        // Focus button
+        setTimeout(() => okBtn.focus(), 100);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    checkAuth();
+    initEventListeners();
+});
+
+function checkAuth() {
+    const session = localStorage.getItem('furrguard_session');
+    if (session) {
+        try {
+            currentUser = JSON.parse(session);
+            showDashboard();
+            loadDashboardData();
+        } catch (e) {
+            localStorage.removeItem('furrguard_session');
+            showLogin();
+        }
+    } else {
+        showLogin();
+    }
+}
+
+function showLogin() {
+    document.getElementById('loginContainer').classList.remove('hidden');
+    document.getElementById('dashboard').classList.remove('active');
+}
+
+function showDashboard() {
+    document.getElementById('loginContainer').classList.add('hidden');
+    document.getElementById('dashboard').classList.add('active');
+
+    if (currentUser) {
+        document.getElementById('userDisplay').textContent = currentUser.username || 'Admin';
+        if (currentUser.avatar) {
+            document.getElementById('userAvatar').innerHTML = `<img src="https://cdn.discordapp.com/avatars/${currentUser.discord_id}/${currentUser.avatar}.png" alt="Avatar">`;
+        }
+        const roleDisplay = document.getElementById('userRoleDisplay');
+        if (roleDisplay && currentUser.role) {
+            const roleLabels = { founder: 'Founder', owner: 'Owner', manager: 'Manager', sradmin: 'SrAdmin', admin: 'Admin' };
+            roleDisplay.textContent = roleLabels[currentUser.role] || 'Admin';
+        }
+        applyRolePermissions();
+    }
+}
+
+function applyRolePermissions() {
+    const role = currentUser?.role;
+    if (!role || !window.ROLE_PERMISSIONS) return;
+
+    const allowed = window.ROLE_PERMISSIONS[role] || [];
+
+    document.querySelectorAll('.nav-item[data-section]').forEach(item => {
+        const section = item.dataset.section;
+        if (section && !allowed.includes(section)) {
+            item.style.display = 'none';
+        } else {
+            item.style.display = '';
+        }
+    });
+
+    // Hide categories where all children are hidden
+    document.querySelectorAll('.nav-category').forEach(cat => {
+        const items = cat.querySelectorAll('.nav-item[data-section]');
+        const allHidden = Array.from(items).every(item => item.style.display === 'none');
+        cat.style.display = allHidden ? 'none' : '';
+    });
+
+    if (!allowed.includes(currentSection)) {
+        switchSection('overview');
+    }
+}
+
+function initEventListeners() {
+    document.getElementById('discordLoginBtn').addEventListener('click', () => {
+        const url = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${DISCORD_REDIRECT_URI}&response_type=code&scope=identify`;
+        window.location.href = url;
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const section = item.dataset.section;
+            if (section) {
+                switchSection(section);
+            }
+        });
+    });
+
+    // Category collapse/expand toggle
+    document.querySelectorAll('.nav-category-header').forEach(header => {
+        header.addEventListener('click', () => {
+            header.closest('.nav-category').classList.toggle('collapsed');
+        });
+    });
+
+    document.querySelectorAll('[data-goto]').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            switchSection(link.dataset.goto);
+        });
+    });
+
+    document.getElementById('sidebarToggle').addEventListener('click', () => {
+        document.querySelector('.sidebar').classList.toggle('open');
+    });
+
+    document.getElementById('refreshBtn').addEventListener('click', refreshData);
+
+    document.getElementById('globalSearch').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            performGlobalSearch(e.target.value);
+        }
+    });
+
+    initFilterListeners();
+    initModalListeners();
+    initQuickActions();
+    initSettingsListeners();
+}
+
+function switchSection(section) {
+    const role = currentUser?.role;
+    if (role && window.ROLE_PERMISSIONS) {
+        const allowed = window.ROLE_PERMISSIONS[role] || [];
+        if (!allowed.includes(section)) {
+            section = 'overview';
+        }
+    }
+    currentSection = section;
+
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.section === section);
+    });
+
+    // Auto-expand parent category of active section
+    const activeNavItem = document.querySelector(`.nav-item[data-section="${section}"]`);
+    if (activeNavItem) {
+        const parentCategory = activeNavItem.closest('.nav-category');
+        if (parentCategory) {
+            parentCategory.classList.remove('collapsed');
+        }
+    }
+
+    document.querySelectorAll('.section').forEach(sec => {
+        sec.classList.toggle('active', sec.id === `section-${section}`);
+    });
+
+    const titles = {
+        'overview': 'Resumen',
+        'players': 'Jugadores',
+        'connections': 'Conexiones',
+        'ips': 'IPs',
+        'whitelist': 'Whitelist',
+        'blacklist': 'Blacklist',
+        'providers': 'Proveedores Bloqueados',
+        'countries': 'Países Bloqueados',
+        'continents': 'Continentes Bloqueados',
+        'sanctions': 'Sanciones',
+        'messages': 'Mensajes',
+        'logs': 'Logs de Actividad',
+        'settings': 'Configuración',
+        'users': 'Gestión de Usuarios',
+        'modules': 'Módulos'
+    };
+
+    document.getElementById('sectionTitle').textContent = titles[section] || section;
+
+    loadSectionData(section);
+
+    document.querySelector('.sidebar').classList.remove('open');
+}
+
+async function loadDashboardData() {
+    await loadSectionData('overview');
+    loadBadgeCounts();
+}
+
+async function loadSectionData(section) {
+    switch (section) {
+        case 'overview':
+            await loadOverviewData();
+            break;
+        case 'players':
+            await loadPlayersData();
+            break;
+        case 'connections':
+            await loadConnectionsData();
+            break;
+        case 'ips':
+            await loadIPsData();
+            break;
+        case 'whitelist':
+            await loadWhitelistData();
+            break;
+        case 'blacklist':
+            await loadBlacklistData();
+            break;
+        case 'sanctions':
+            await loadSanctionsData();
+            break;
+        case 'providers':
+            await loadProvidersData();
+            break;
+        case 'countries':
+            await loadCountriesData();
+            break;
+        case 'continents':
+            await loadContinentsData();
+            break;
+        case 'messages':
+            await loadMessagesData();
+            break;
+        case 'logs':
+            await loadLogsData();
+            break;
+        case 'settings':
+            await loadSettingsData();
+            break;
+        case 'users':
+            await loadUsersData();
+            break;
+        case 'modules':
+            await initFurrPerms();
+            break;
+    }
+}
+
+async function loadOverviewData() {
+    try {
+        const response = await apiRequest('get_overview');
+        if (response.success) {
+            document.getElementById('statOnline').textContent = response.data.online_players || 0;
+            document.getElementById('statTotalPlayers').textContent = response.data.total_players || 0;
+            document.getElementById('statConnections24h').textContent = response.data.connections_24h || 0;
+            document.getElementById('statBlocked24h').textContent = response.data.blocked_24h || 0;
+
+            renderRecentConnections(response.data.recent_connections || []);
+            renderRecentBlocks(response.data.recent_blocks || []);
+        }
+    } catch (error) {
+        console.error('Error loading overview:', error);
+    }
+}
+
+async function loadPlayersData(page = 1, filter = 'all', search = '') {
+    const tbody = document.getElementById('playersTableBody');
+    tbody.innerHTML = '<tr><td colspan="8"><div class="loading-spinner"></div></td></tr>';
+
+    try {
+        const response = await apiRequest('get_players', { page, filter, search });
+        if (response.success) {
+            renderPlayersTable(response.data.players || []);
+            renderPagination('playersPagination', response.data.pagination, (p) => loadPlayersData(p, filter, search));
+        }
+    } catch (error) {
+        console.error('Error loading players:', error);
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Error al cargar datos</td></tr>';
+    }
+}
+
+async function loadConnectionsData(page = 1, filter = 'all', search = '') {
+    const tbody = document.getElementById('connectionsTableBody');
+    tbody.innerHTML = '<tr><td colspan="8"><div class="loading-spinner"></div></td></tr>';
+
+    try {
+        const response = await apiRequest('get_connections', { page, filter, search });
+        if (response.success) {
+            renderConnectionsTable(response.data.connections || []);
+            renderPagination('connectionsPagination', response.data.pagination, (p) => loadConnectionsData(p, filter, search));
+        }
+    } catch (error) {
+        console.error('Error loading connections:', error);
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Error al cargar datos</td></tr>';
+    }
+}
+
+async function loadIPsData(page = 1, search = '') {
+    const tbody = document.getElementById('ipsTableBody');
+    tbody.innerHTML = '<tr><td colspan="8"><div class="loading-spinner"></div></td></tr>';
+
+    try {
+        const response = await apiRequest('get_ips', { page, search });
+        if (response.success) {
+            renderIPsTable(response.data.ips || []);
+            renderPagination('ipsPagination', response.data.pagination, (p) => loadIPsData(p, search));
+        }
+    } catch (error) {
+        console.error('Error loading IPs:', error);
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Error al cargar datos</td></tr>';
+    }
+}
+
+async function loadWhitelistData() {
+    try {
+        const response = await apiRequest('get_whitelist');
+        if (response.success) {
+            renderWhitelistTable(response.data.entries || []);
+        }
+    } catch (error) {
+        console.error('Error loading whitelist:', error);
+    }
+}
+
+function renderWhitelistTable(entries) {
+    const tbody = document.getElementById('whitelistTableBody');
+    if (!tbody) return;
+
+    if (entries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No hay entradas en whitelist</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = entries.map(entry => {
+        let valueDisplay = `<code>${escapeHtml(entry.value)}</code>`;
+        if (entry.type === 'uuid' && entry.minecraft_name) {
+            valueDisplay = `<code>${escapeHtml(entry.value)}</code><br><small style="color:var(--text-muted)">Nick: ${escapeHtml(entry.minecraft_name)}</small>`;
+        }
+
+        return `
+        <tr>
+            <td><span class="type-badge ${entry.type}">${entry.type.toUpperCase()}</span></td>
+            <td>${valueDisplay}</td>
+            <td>${escapeHtml(entry.reason || 'Sin razón')}</td>
+            <td>${escapeHtml(entry.added_by)}</td>
+            <td>${formatDate(entry.created_at)}</td>
+            <td>
+                <button class="action-btn" onclick="editWhitelistEntry(${entry.id}, '${entry.type}', '${escapeHtml(entry.value).replace(/'/g, "\\'")}', '${escapeHtml(entry.reason || '').replace(/'/g, "\\'")}')">Editar</button>
+                <button class="action-btn danger" onclick="removeFromWhitelist(${entry.id}, '${entry.type}', '${escapeHtml(entry.value)}')">Eliminar</button>
+            </td>
+        </tr>
+    `;
+    }).join('');
+}
+
+async function loadBlacklistData() {
+    try {
+        const response = await apiRequest('get_blacklist');
+        if (response.success) {
+            renderBlacklistTable(response.data.entries || []);
+        }
+    } catch (error) {
+        console.error('Error loading blacklist:', error);
+    }
+}
+
+async function loadSanctionsData() {
+    try {
+        const response = await apiRequest('get_sanctions');
+        if (response.success) {
+            renderSanctionsTable(response.data.sanctions || []);
+            renderPagination('sanctionsPagination', response.data.pagination, (p) => loadSanctionsData(p));
+        }
+    } catch (error) {
+        console.error('Error loading sanctions:', error);
+    }
+}
+
+async function loadProvidersData() {
+    try {
+        const response = await apiRequest('get_providers');
+        if (response.success) {
+            renderProvidersTable(response.data.providers || [], response.data.stats || {});
+            renderPagination('providersPagination', response.data.pagination, (p) => loadProvidersData(p));
+        }
+    } catch (error) {
+        console.error('Error loading providers:', error);
+    }
+}
+
+async function loadCountriesData() {
+    try {
+        const response = await apiRequest('get_countries');
+        if (response.success) {
+            renderCountriesTable(response.data.countries || [], response.data.stats || {});
+        }
+    } catch (error) {
+        console.error('Error loading countries:', error);
+    }
+}
+
+async function loadContinentsData() {
+    try {
+        const response = await apiRequest('get_continents');
+        if (response.success) {
+            renderContinentsTable(response.data.continents || [], response.data.stats || {});
+        }
+    } catch (error) {
+        console.error('Error loading continents:', error);
+    }
+}
+
+async function loadMessagesData() {
+    try {
+        const response = await apiRequest('get_messages');
+        if (response.success) {
+            renderMessagesTable(response.data.messages || {});
+        }
+    } catch (error) {
+        console.error('Error loading messages:', error);
+    }
+}
+
+async function loadLogsData(filter = 'all') {
+    try {
+        const response = await apiRequest('get_logs', { filter });
+        if (response.success) {
+            renderLogsTable(response.data.logs || []);
+        }
+    } catch (error) {
+        console.error('Error loading logs:', error);
+    }
+}
+
+async function loadSettingsData() {
+    try {
+        const response = await apiRequest('get_settings');
+        if (response.success) {
+            const settings = response.data.settings || {};
+
+            // Actualizar campos individuales
+            if (document.getElementById('settingServerName'))
+                document.getElementById('settingServerName').value = settings.server_name || '';
+            if (document.getElementById('settingBlockProxy'))
+                document.getElementById('settingBlockProxy').checked = settings.block_proxy === '1';
+            if (document.getElementById('settingBlockVPN'))
+                document.getElementById('settingBlockVPN').checked = settings.block_vpn === '1';
+            if (document.getElementById('settingBlockHosting'))
+                document.getElementById('settingBlockHosting').checked = settings.block_hosting === '1';
+            if (document.getElementById('settingWebhookUrl'))
+                document.getElementById('settingWebhookUrl').value = settings.webhook_url || '';
+            if (document.getElementById('settingNotifyConnections'))
+                document.getElementById('settingNotifyConnections').checked = settings.notify_connections === '1';
+            if (document.getElementById('settingNotifyHispanic'))
+                document.getElementById('settingNotifyHispanic').checked = settings.notify_hispanic === '1';
+            if (document.getElementById('settingNotifyBlocks'))
+                document.getElementById('settingNotifyBlocks').checked = settings.notify_blocks === '1';
+            if (document.getElementById('settingApiKey'))
+                document.getElementById('settingApiKey').value = settings.api_key || '';
+        }
+    } catch (error) {
+        console.error('Error loading settings:', error);
+    }
+}
+
+async function loadUsersData() {
+    const tbody = document.getElementById('usersTableBody');
+    if (!tbody) return;
+
+    try {
+        const response = await apiRequest('get_admin_users');
+        if (response.success) {
+            renderUsersTable(response.data.users || []);
+        }
+    } catch (error) {
+        console.error('Error loading users:', error);
+        tbody.innerHTML = '<tr><td colspan="5"><div class="loading-spinner"></div></td></tr>';
+    }
+}
+
+function renderRecentConnections(connections) {
+    const container = document.getElementById('recentConnectionsList');
+    if (!container) return;
+
+    if (connections.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>Sin conexiones recientes</p></div>';
+        return;
+    }
+
+    container.innerHTML = connections.slice(0, 5).map(conn => `
+        <div class="connection-mini-item" onclick="showPlayerDetail('${conn.uuid}')">
+            <div class="player-avatar">
+                <img src="https://mineskin.eu/avatar/${conn.nick}/32.png" alt="${conn.nick}">
+            </div>
+            <div class="info">
+                <div class="nick">${escapeHtml(conn.nick)}</div>
+                <div class="details">${conn.country || 'Desconocido'} - ${conn.ip}</div>
+            </div>
+            ${conn.blocked ? '<span class="status-badge blocked">Bloqueado</span>' : '<span class="status-badge allowed">OK</span>'}
+            <div class="time">${formatTimeAgo(conn.created_at)}</div>
+        </div>
+    `).join('');
+}
+
+function renderRecentBlocks(blocks) {
+    const container = document.getElementById('recentBlocksList');
+    if (!container) return;
+
+    if (blocks.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>Sin bloqueos recientes</p></div>';
+        return;
+    }
+
+    container.innerHTML = blocks.slice(0, 5).map(block => {
+        let valueDisplay = escapeHtml(block.value);
+        if (block.type === 'uuid' && block.minecraft_name) {
+            valueDisplay = `${escapeHtml(block.value)}<br><small style="color:var(--text-muted)">Nick: ${escapeHtml(block.minecraft_name)}</small>`;
+        }
+
+        return `
+        <div class="block-mini-item">
+            <span class="type-badge ${block.type}">${block.type}</span>
+            <div class="info">
+                <div class="value">${valueDisplay}</div>
+                <div class="reason">${escapeHtml(block.reason || 'Sin razón')}</div>
+            </div>
+            <div class="time">${formatTimeAgo(block.created_at)}</div>
+        </div>
+    `;
+    }).join('');
+}
+
+function renderPlayersTable(players) {
+    const tbody = document.getElementById('playersTableBody');
+    if (!tbody) return;
+
+    if (players.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No se encontraron jugadores</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = players.map(player => `
+        <tr onclick="showPlayerDetail('${player.uuid}')">
+            <td>
+                <div class="player-cell">
+                    <div class="player-avatar">
+                        <img src="https://mineskin.eu/avatar/${player.last_nick}/36.png" alt="${player.last_nick}">
+                    </div>
+                    <div class="player-info">
+                        <span class="player-nick">${escapeHtml(player.last_nick)}</span>
+                    </div>
+                </div>
+            </td>
+            <td><code style="font-size:0.75rem;color:var(--text-muted)">${player.uuid}</code></td>
+            <td>
+                <div class="ip-cell">
+                    ${player.last_country_code ? `<img src="https://flagcdn.com/w20/${player.last_country_code.toLowerCase()}.png" class="ip-flag" alt="${player.last_country_code}">` : ''}
+                    <span class="ip-address">${player.last_ip || 'N/A'}</span>
+                </div>
+            </td>
+            <td>${player.last_country || 'Desconocido'}</td>
+            <td>${player.total_connections || 0}</td>
+            <td>${formatDate(player.last_seen)}</td>
+            <td>
+                ${player.is_online ? '<span class="status-badge online">Online</span>' : '<span class="status-badge offline">Offline</span>'}
+                ${player.is_whitelisted ? '<span class="status-badge whitelisted">WL</span>' : ''}
+                ${player.is_blacklisted ? '<span class="status-badge blacklisted">BL</span>' : ''}
+            </td>
+            <td>
+                <button class="action-btn" onclick="event.stopPropagation(); showPlayerDetail('${player.uuid}')">Ver</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function renderConnectionsTable(connections) {
+    const tbody = document.getElementById('connectionsTableBody');
+    if (!tbody) return;
+
+    if (connections.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No se encontraron conexiones</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = connections.map(conn => `
+        <tr class="${conn.blocked ? 'blocked' : ''}">
+            <td>
+                <div class="player-cell">
+                    <div class="player-avatar">
+                        <img src="https://mineskin.eu/avatar/${conn.nick}/36.png" alt="${conn.nick}">
+                    </div>
+                    <span class="player-nick">${escapeHtml(conn.nick)}</span>
+                </div>
+            </td>
+            <td>
+                <div class="ip-cell">
+                    ${conn.country_code ? `<img src="https://flagcdn.com/w20/${conn.country_code.toLowerCase()}.png" class="ip-flag" alt="${conn.country_code}">` : ''}
+                    <div class="ip-info">
+                        <span class="ip-address">
+                            ${conn.ip}
+                            <span class="ip-version ${conn.ip_version}">${conn.ip_version}</span>
+                        </span>
+                    </div>
+                </div>
+            </td>
+            <td>${conn.country || 'Desconocido'}</td>
+            <td>${escapeHtml(conn.isp || 'N/A')}</td>
+            <td>${conn.game_version || 'N/A'}</td>
+            <td>${formatDate(conn.created_at)}</td>
+            <td>
+                ${conn.blocked ? `<span class="status-badge blocked">${getBlockReasonLabel(conn.block_reason)}</span>` : '<span class="status-badge allowed">Permitido</span>'}
+                ${conn.is_proxy ? '<span class="status-badge proxy">Proxy</span>' : ''}
+                ${conn.is_vpn ? '<span class="status-badge vpn">VPN</span>' : ''}
+                ${conn.is_hosting ? '<span class="status-badge hosting">Hosting</span>' : ''}
+            </td>
+            <td>
+                <button class="action-btn" onclick="showConnectionDetail(${conn.id})">Ver</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function renderIPsTable(ips) {
+    const tbody = document.getElementById('ipsTableBody');
+    if (!tbody) return;
+
+    if (ips.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No se encontraron IPs</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = ips.map(ip => `
+        <tr onclick="showIPDetail('${ip.ip}')">
+            <td>
+                <div class="ip-cell">
+                    ${ip.country_code ? `<img src="https://flagcdn.com/w20/${ip.country_code.toLowerCase()}.png" class="ip-flag" alt="${ip.country_code}">` : ''}
+                    <span class="ip-address">${ip.ip}</span>
+                </div>
+            </td>
+            <td>${ip.country || 'Desconocido'}</td>
+            <td>
+                <div style="display:flex;flex-direction:column;">
+                    <span>${escapeHtml(ip.isp || 'N/A')}</span>
+                    <small style="color:var(--text-muted)">${ip.asn || ''}</small>
+                </div>
+            </td>
+            <td>${ip.player_count || 0}</td>
+            <td>${ip.connection_count || 0}</td>
+            <td>${formatDate(ip.first_seen)}</td>
+            <td>
+                ${ip.is_whitelisted ? '<span class="status-badge whitelisted">Whitelist</span>' : ''}
+                ${ip.is_blacklisted ? '<span class="status-badge blacklisted">Blacklist</span>' : ''}
+                ${!ip.is_whitelisted && !ip.is_blacklisted ? '<span class="status-badge">Normal</span>' : ''}
+            </td>
+            <td>
+                <button class="action-btn" onclick="event.stopPropagation(); showIPDetail('${ip.ip}')">Ver</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function renderBlacklistTable(entries) {
+    const tbody = document.getElementById('blacklistTableBody');
+    if (!tbody) return;
+
+    if (entries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No hay entradas en blacklist</td></tr>';
+        return;
+    }
+
+    let rows = '';
+    entries.forEach(entry => {
+        let expiryText = 'Permanente';
+        let isExpired = false;
+        if (entry.expires_at) {
+            const expiresDate = new Date(entry.expires_at);
+            const now = new Date();
+            if (expiresDate <= now) {
+                expiryText = 'Expirado';
+                isExpired = true;
+            } else {
+                const diffMs = expiresDate - now;
+                const diffMins = Math.floor(diffMs / 60000);
+                if (diffMins < 60) expiryText = `${diffMins}m restantes`;
+                else if (diffMins < 1440) expiryText = `${Math.floor(diffMins / 60)}h restantes`;
+                else expiryText = `${Math.floor(diffMins / 1440)}d restantes`;
+            }
+        }
+
+        let valueDisplay = `<code>${escapeHtml(entry.value)}</code>`;
+        if (entry.type === 'uuid' && entry.minecraft_name) {
+            valueDisplay = `<code>${escapeHtml(entry.value)}</code><br><small style="color:var(--text-muted)">Nick: ${escapeHtml(entry.minecraft_name)}</small>`;
+        }
+
+        // Indicador de IPs manchadas
+        const childCount = entry.child_count || 0;
+        const childIndicator = childCount > 0
+            ? `<br><small style="color:var(--accent-secondary);font-weight:600">+ ${childCount} IP${childCount > 1 ? 's' : ''} asociada${childCount > 1 ? 's' : ''}</small>`
+            : '';
+
+        // Mostrar botón "Agregar IP" solo para entradas de tipo uuid o nick
+        const canAddIP = entry.type === 'uuid' || entry.type === 'nick';
+        const addIpButton = canAddIP
+            ? `<button class="action-btn" style="font-size:0.85em;padding:4px 8px" onclick="promptAddIP(${entry.id})">+ IP</button>`
+            : '';
+
+        // Fila principal
+        rows += `
+        <tr class="${childCount > 0 ? 'has-children' : ''}">
+            <td><code style="color:var(--accent-primary);font-size:0.85em">#${escapeHtml(entry.ban_id || '—')}</code></td>
+            <td><span class="type-badge ${entry.type}">${entry.type.toUpperCase()}</span></td>
+            <td>${valueDisplay}${childIndicator}</td>
+            <td>${escapeHtml(entry.reason || 'Sin razón')}</td>
+            <td>${escapeHtml(entry.added_by)}</td>
+            <td>${formatDate(entry.created_at)}</td>
+            <td>
+                <span class="status-badge ${entry.active && !isExpired ? 'active' : 'inactive'}">${entry.active && !isExpired ? 'Activo' : isExpired ? 'Expirado' : 'Inactivo'}</span>
+                <small style="display:block;color:var(--text-muted);margin-top:2px">${expiryText}</small>
+            </td>
+            <td>
+                ${addIpButton}
+                <button class="action-btn" onclick="editBlacklistEntry(${entry.id}, '${entry.type}', '${escapeHtml(entry.value).replace(/'/g, "\\'")}', '${escapeHtml(entry.reason || '').replace(/'/g, "\\'")}', '${entry.expires_at || ''}')">Editar</button>
+                ${entry.active
+            ? `<button class="action-btn danger" onclick="toggleBlacklist(${entry.id}, false)">Desactivar</button>`
+            : `<button class="action-btn success" onclick="toggleBlacklist(${entry.id}, true)">Activar</button>`
+        }
+                <button class="action-btn danger" onclick="removeFromBlacklist(${entry.id})">Eliminar</button>
+            </td>
+        </tr>
+        `;
+
+        // Filas hijas (IPs manchadas)
+        if (entry.children && entry.children.length > 0) {
+            entry.children.forEach(child => {
+                const childExpiryText = child.expires_at ? formatDate(child.expires_at) : 'Permanente';
+                rows += `
+                <tr class="child-row">
+                    <td></td>
+                    <td><span class="type-badge ${child.type}" style="opacity:0.7;font-size:0.85em">${child.type.toUpperCase()}</span></td>
+                    <td><span style="color:var(--accent-secondary);font-weight:500">${escapeHtml(child.display_value)}</span></td>
+                    <td><small style="color:var(--text-muted)">IP asociada</small></td>
+                    <td></td>
+                    <td></td>
+                    <td>
+                        <span class="status-badge ${child.active ? 'active' : 'inactive'}" style="font-size:0.85em">${child.active ? 'Activo' : 'Inactivo'}</span>
+                    </td>
+                    <td>
+                        <button class="action-btn danger" style="font-size:0.85em;padding:4px 8px" onclick="removeChildBlacklist(${child.id}, ${entry.id})">Eliminar IP</button>
+                    </td>
+                </tr>
+                `;
+            });
+        }
+    });
+
+    tbody.innerHTML = rows;
+}
+
+function renderProvidersTable(providers) {
+    const tbody = document.getElementById('providersTableBody');
+    if (!tbody) return;
+
+    if (providers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No hay proveedores bloqueados</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = providers.map(prov => `
+        <tr>
+            <td>${escapeHtml(prov.name)}</td>
+            <td><code>${escapeHtml(prov.pattern)}</code></td>
+            <td><span class="type-badge ${prov.type}">${prov.type.toUpperCase()}</span></td>
+            <td>${prov.block_count || 0}</td>
+            <td><span class="status-badge ${prov.active ? 'active' : 'inactive'}">${prov.active ? 'Activo' : 'Inactivo'}</span></td>
+            <td>${formatDate(prov.created_at)}</td>
+            <td>
+                ${prov.active
+            ? `<button class="action-btn danger" onclick="toggleProvider(${prov.id}, false)">Desactivar</button>`
+            : `<button class="action-btn success" onclick="toggleProvider(${prov.id}, true)">Activar</button>`
+        }
+                <button class="action-btn danger" onclick="deleteProvider(${prov.id})">Eliminar</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function renderCountriesTable(countries, stats) {
+    const tbody = document.getElementById('countriesTableBody');
+    if (!tbody) return;
+
+    if (countries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No hay países bloqueados</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = countries.map(country => `
+        <tr class="${country.active ? '' : 'row-disabled'}">
+            <td>
+                <button class="btn-icon ${country.active ? 'btn-success' : 'btn-warning'}" onclick="toggleCountry(${country.id}, ${!country.active})" title="${country.active ? 'Desactivar' : 'Activar'}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${country.active ? '<circle cx="12" cy="12" r="10"/>' : '<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor"/>'}</svg>
+                </button>
+            </td>
+            <td>${country.country_code}</td>
+            <td>${country.country_name}</td>
+            <td>${country.block_count || 0}</td>
+            <td class="actions-cell">
+                <button class="btn-icon btn-warning" onclick="editCountry(${country.id})" title="Editar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 17H4a2 2 0 0 1 2v4h2a2 2 0 0 1-4m-1 6h13a2 2 0 0 1-5 1l-5-5-4 1l-5 5v12"/></svg>
+                </button>
+                <button class="btn-icon btn-danger" onclick="deleteCountry(${country.id})" title="Eliminar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2 2v2"></path></svg>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function renderContinentsTable(continents, stats) {
+    const tbody = document.getElementById('continentsTableBody');
+    if (!tbody) return;
+
+    if (continents.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No hay continentes bloqueados</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = continents.map(cont => `
+        <tr class="${continent.active ? '' : 'row-disabled'}">
+            <td>
+                <button class="btn-icon ${continent.active ? 'btn-success' : 'btn-warning'}" onclick="toggleContinent(${continent.id}, ${!continent.active})" title="${continent.active ? 'Desactivar' : 'Activar'}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${continent.active ? '<circle cx="12" cy="12" r="10"/>' : '<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor"/>'}</svg>
+                </button>
+            </td>
+            <td>${continent.continent_code}</td>
+            <td>${continent.continent_name}</td>
+            <td>${continent.block_count || 0}</td>
+            <td class="actions-cell">
+                <button class="btn-icon btn-warning" onclick="editContinent(${continent.id})" title="Editar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 17H4a2 2 0 0 1 2v4h2a2 2 0 0 1-4m-1 6h13a2 2 0 0 1-5 1l-5-5-4 1l-5 5v12"/></svg>
+                </button>
+                <button class="btn-icon btn-danger" onclick="deleteContinent(${continent.id})" title="Eliminar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2 2v2"></path></svg>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function renderMessagesTable(messages) {
+    const tbody = document.getElementById('messagesTableBody');
+    if (!tbody) return;
+
+    Object.entries(messages).forEach(([key, value]) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="message-key">${key}</td>
+            <td><textarea class="message-input" id="msg-${key}">${escapeHtml(value)}</textarea></td>
+            <td class="actions-cell">
+                <button class="btn-primary btn-sm" onclick="saveMessage('${key}')">Guardar</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function renderSettingsTable(settings) {
+    const tbody = document.getElementById('settingsTableBody');
+    if (!tbody) return;
+
+    Object.entries(settings).forEach(([key, value]) => {
+        const row = document.createElement('tr');
+        const isApiKey = key === 'api_key';
+        const isWebhook = key === 'webhook_url';
+        const isBoolean = ['block_proxy', 'block_vpn', 'block_hosting', 'notify_connections', 'notify_hispanic', 'notify_blocks'].includes(key);
+
+        row.innerHTML = `
+            <td>
+                <code>${key}</code>
+            </td>
+            <td>
+                ${isApiKey
+                    ? '<input type="password" class="settings-input" id="setting-${key}" value="•••••••••••••" onchange="markSettingsChanged()">'
+                    : isBoolean
+                        ? `<select class="settings-input" id="setting-${key}" onchange="markSettingsChanged()">
+                                <option value="1"${value === '1' ? 'selected' : ''}>Sí</option>
+                                <option value="0"${value === '0' ? 'selected' : ''}>No</option>
+                            </select>`
+                        : `<input type="text" class="settings-input" id="setting-${key}" value="${escapeHtml(value)}" onchange="markSettingsChanged()">`
+                    }
+            </td>
+            <td class="actions-cell">
+                ${isWebhook ? `
+                    <button class="btn-icon btn-warning" onclick="testWebhook()">Test</button>
+                ` : ''}
+                ${isApiKey ? `
+                    <button class="btn-icon btn-secondary" onclick="regenerateApiKey()">Regenerar</button>
+                ` : ''}
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+
+    // Hide server_name and discord_url from display, only show through edit modal
+    const serverNameRow = tbody.querySelector(`tr:has-código(code: "server_name")`);
+    const discordUrlRow = tbody.querySelector(`tr:has-código(code: "discord_url")`);
+    if (serverNameRow) serverNameRow.style.display = 'none';
+    if (discordUrlRow) discordUrlRow.style.display = 'none';
+}
+
+function renderUsersTable(users) {
+    const tbody = document.getElementById('usersTableBody');
+    if (!tbody) return;
+
+    if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No hay usuarios admin</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = users.map(user => {
+        const roleLabels = { founder: 'Founder', owner: 'Owner', manager: 'Manager', sradmin: 'SrAdmin', admin: 'Admin' };
+        const badgeClass = user.role === 'founder' ? 'badge-founder' : 'badge-admin';
+
+        return `
+            <tr>
+                <td>${user.discord_id}</td>
+                <td><span class="badge ${badgeClass}">${roleLabels[user.role] || user.role}</span></td>
+                <td>${user.created_by || '-'}</td>
+                <td>${formatDateTime(user.created_at)}</td>
+                <td class="actions-cell">
+                    ${(user.role !== 'founder') ? `
+                        <button class="btn-icon btn-danger" onclick="removeAdminUser(${user.id})" title="Eliminar">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2 2v2"></path></svg>
+                        </button>
+                    ` : '<span class="text-muted">—</span>'}
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+async function editWhitelistEntry(id) {
+    const type = await showPrompt('Tipo', '', 'uuid, nick, ip, as, ip_range');
+    const value = await showPrompt('Valor');
+    const reason = await showPrompt('Razón (opcional)');
+
+    if (!type || !value) {
+        await showAlert('Tipo y valor son requeridos', 'Campo requerido', 'warning');
+        return;
+    }
+
+    try {
+        const response = await apiRequest('edit_whitelist', { id, type, value, reason });
+        if (response.success) {
+            await showAlert('Entrada actualizada correctamente', 'Éxito', 'success');
+            await loadWhitelistData();
+        }
+    } catch (error) {
+        await showAlert('Error al actualizar entrada', 'Error', 'danger');
+    }
+}
+
+async function removeWhitelist(id) {
+    const confirmed = await showConfirm('¿Estás seguro de eliminar esta entrada?');
+    if (!confirmed) return;
+
+    try {
+        const response = await apiRequest('remove_whitelist', { id });
+        if (response.success) {
+            await showAlert('Entrada eliminada correctamente', 'Éxito', 'success');
+            await loadWhitelistData();
+        }
+    } catch (error) {
+        await showAlert('Error al eliminar', 'Error', 'danger');
+    }
+}
+
+async function toggleBlacklist(id, active) {
+    try {
+        const response = await apiRequest('toggle_blacklist', { id, active });
+        if (response.success) {
+            await showAlert(active ? 'Entrada activada' : 'Entrada desactivada', 'Éxito', 'success');
+            await loadBlacklistData();
+        }
+    } catch (error) {
+        await showAlert('Error al cambiar estado', 'Error', 'danger');
+    }
+}
+
+async function removeBlacklist(id) {
+    const confirmed = await showConfirm('¿Estás seguro de eliminar esta entrada?');
+    if (!confirmed) return;
+
+    try {
+        const response = await apiRequest('remove_blacklist', { id });
+        if (response.success) {
+            await showAlert('Entrada eliminada correctamente', 'Éxito', 'success');
+            await loadBlacklistData();
+        }
+    } catch (error) {
+        await showAlert('Error al eliminar', 'Error', 'danger');
+    }
+}
+
+async function toggleProvider(id, active) {
+    try {
+        const response = await apiRequest('toggle_provider', { id, active });
+        if (response.success) {
+            await loadProvidersData();
+        }
+    } catch (error) {
+        console.error('Error toggling provider:', error);
+    }
+}
+
+async function deleteProvider(id) {
+    const confirmed = await showConfirm('¿Estás seguro de eliminar este proveedor?');
+    if (!confirmed) return;
+
+    try {
+        const response = await apiRequest('remove_provider', { action: 'delete_provider', id });
+        if (response.success) {
+            await loadProvidersData();
+        await showAlert('Proveedor eliminado correctamente', 'Éxito', 'success');
+        } else {
+            await showAlert(response.error || 'Error al eliminar', 'Error', 'danger');
+        }
+    } catch (error) {
+        await showAlert('Error al eliminar proveedor', 'Error', 'danger');
+    }
+}
+
+async function toggleCountry(id, active) {
+    try {
+        const response = await apiRequest('toggle_country', { id, active });
+        if (response.success) {
+            await loadCountriesData();
+        }
+    } catch (error) {
+        console.error('Error toggling country:', error);
+    }
+}
+
+async function editCountry(id) {
+    const kickMessage = await showPrompt('Mensaje de kick (opcional)');
+    const name = await showPrompt('Nombre del país', '');
+    const code = await showPrompt('Código del país', '');
+
+    if (!code || !name) {
+        await showAlert('Código y nombre son requeridos', 'Campo requerido', 'warning');
+        return;
+    }
+
+    try {
+        const response = await apiRequest('edit_country', { id, kick_message: kickMessage, country_name: name, country_code: code });
+        if (response.success) {
+            await showAlert('País actualizado correctamente', 'Éxito', 'success');
+            await loadCountriesData();
+        }
+    } catch (error) {
+        await showAlert('Error al actualizar país', 'Error', 'danger');
+    }
+}
+
+async function deleteCountry(id) {
+    const confirmed = await showConfirm('¿Estás seguro de eliminar este país?');
+    if (!confirmed) return;
+
+    try {
+        const response = await apiRequest('delete_country', { id });
+        if (response.success) {
+            await showAlert('País eliminado correctamente', 'Éxito', 'success');
+            await loadCountriesData();
+        }
+    } catch (error) {
+        await showAlert('Error al eliminar país', 'Error', 'danger');
+    }
+}
+
+async function toggleContinent(id, active) {
+    try {
+        const response = await apiRequest('toggle_continent', { id, active });
+        if (response.success) {
+            await loadContinentsData();
+        }
+    } catch (error) {
+        console.error('Error toggling continent:', error);
+    }
+}
+
+async function editContinent(id) {
+    const kickMessage = await showPrompt('Mensaje de kick (opcional)');
+
+    try {
+        const response = await apiRequest('edit_continent', { id, kick_message: kickMessage });
+        if (response.success) {
+            await showAlert('Continente actualizado correctamente', 'Éxito', 'success');
+            await loadContinentsData();
+        }
+    } catch (error) {
+        await showAlert('Error al actualizar continente', 'Error', 'danger');
+    }
+}
+
+async function deleteContinent(id) {
+    const confirmed = await showConfirm('¿Estás seguro de eliminar este continente?');
+    if (!confirmed) return;
+
+    try {
+        const response = await apiRequest('delete_continent', { id });
+        if (response.success) {
+            await showAlert('Continente eliminado correctamente', 'Éxito', 'success');
+            await loadContinentsData();
+        }
+    } catch (error) {
+        await showAlert('Error al eliminar continente', 'Error', 'danger');
+    }
+}
+
+async function saveMessage(key) {
+    const textarea = document.getElementById(`msg-${key}`);
+    const value = textarea.value.trim();
+
+    try {
+        const response = await apiRequest('save_messages', { messages: { [key]: value } });
+        if (response.success) {
+            await showAlert('Mensaje guardado correctamente', 'Éxito', 'success');
+        }
+    } catch (error) {
+        await showAlert('Error al guardar mensaje', 'Error', 'danger');
+    }
+}
+
+async function markSettingsChanged() {
+    // Auto-save after 2 seconds of no changes
+    clearTimeout(settingsSaveTimeout);
+    settingsSaveTimeout = setTimeout(() => saveSettings(), 2000);
+}
+
+async function saveSettings() {
+    const inputs = document.querySelectorAll('#settingsTableBody input, #settingsTableBody select');
+    const settings = {};
+
+    inputs.forEach(input => {
+        settings[input.id.replace('setting-', '')] = input.value;
+    });
+
+    try {
+        const response = await apiRequest('save_settings', { settings });
+        if (response.success) {
+            document.getElementById('saveSettingsBtn').disabled = false;
+            await showAlert('Configuración guardada correctamente', 'Éxito', 'success');
+        }
+    } catch (error) {
+        await showAlert('Error al guardar configuración', 'Error', 'danger');
+    }
+}
+
+async function testWebhook() {
+    const webhookUrl = document.getElementById('setting-webhook_url').value.trim();
+
+    if (!webhookUrl) {
+        await showAlert('Ingresa una URL de webhook primero', 'Campo requerido', 'warning');
+        return;
+    }
+
+    try {
+        const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                content: 'Test webhook desde FurrGuard',
+                username: currentUser?.username || 'Admin',
+                timestamp: new Date().toISOString()
+            })
+        });
+
+        if (response.ok) {
+            await showAlert('Webhook configurado correctamente', 'Éxito', 'success');
+        } else {
+            await showAlert('Error al configurar webhook (código ' + response.status + ')', 'Error', 'danger');
+        }
+    } catch (error) {
+        await showAlert('Error al probar webhook: ' + error.message, 'Error', 'danger');
+    }
+}
+
+async function regenerateApiKey() {
+    const confirmed = await showConfirm('¿Estás seguro de regenerar la API key? Esto podría causar que el plugin deje de funcionar.');
+
+    try {
+        const response = await apiRequest('regenerate_api_key');
+        if (response.success && response.data) {
+            document.getElementById('setting-api_key').value = response.data.api_key;
+            await showAlert('API Key regenerada correctamente', 'Éxito', 'success');
+        }
+    } catch (error) {
+        await showAlert('Error al regenerar API key', 'Error', 'danger');
+    }
+}
+
+async function removeAdminUser(id) {
+    const confirmed = await showConfirm('¿Estás seguro de eliminar este usuario?');
+    if (!confirmed) return;
+
+    try {
+        const response = await apiRequest('remove_admin_user', { id });
+        if (response.success) {
+            await showAlert('Usuario eliminado correctamente', 'Éxito', 'success');
+            await loadUsersData();
+        }
+    } catch (error) {
+        await showAlert('Error al eliminar usuario', 'Error', 'danger');
+    }
+}
+
+function initSkinViewer(nick) {
+    const container = document.getElementById('skinViewer');
+    if (!container || typeof skinview3d === 'undefined') return;
+
+    if (skinViewer) {
+        skinViewer.dispose();
+    }
+
+    skinViewer = new skinview3d.SkinViewer({
+        canvas: document.createElement('canvas'),
+        width: 200,
+        height: 300,
+        skin: `https://mineskin.eu/skin/${nick}`
+    });
+
+    container.innerHTML = '';
+    container.appendChild(skinViewer.canvas);
+
+    skinViewer.camera.position.set(0, 18, 45);
+    skinViewer.autoRotate = true;
+    skinViewer.autoRotateSpeed = 1;
+
+    skinViewer.animation = new skinview3d.WalkingAnimation();
+    skinViewer.animation.speed = 0.5;
+
+    skinViewer.controls.enableRotate = true;
+    skinViewer.controls.enableZoom = false;
+}
+
+async function showPlayerDetail(uuid) {
+    const modal = document.getElementById('playerModal');
+    const content = document.getElementById('playerModalContent');
+    const footer = document.getElementById('playerModalFooter');
+
+    modal.classList.add('active');
+    content.innerHTML = '<div class="loading-spinner"></div>';
+    footer.innerHTML = '';
+
+    try {
+        const response = await apiRequest('get_player_detail', { uuid });
+        if (response.success) {
+            const player = response.data.player;
+            const nicks = response.data.nicks || [];
+            const ips = response.data.ips || [];
+
+            content.innerHTML = `
+                <div class="player-detail">
+                    <div class="player-skin-viewer" id="skinViewer"></div>
+                    <div class="player-detail-info">
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <div class="detail-label">Nick Actual</div>
+                                <div class="detail-value">${escapeHtml(player.last_nick)}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Estado</div>
+                                <div class="detail-value">
+                                    ${player.is_online ? '<span class="status-badge online">Online</span>' : '<span class="status-badge offline">Offline</span>'}
+                                </div>
+                            </div>
+                            <div class="detail-item full">
+                                <div class="detail-label">UUID</div>
+                                <div class="detail-value" style="font-family:monospace;font-size:0.8rem">${player.uuid}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Última IP</div>
+                                <div class="detail-value">${player.last_ip || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">País</div>
+                                <div class="detail-value">${player.last_country || 'Desconocido'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Conexiones</div>
+                                <div class="detail-value">${player.total_connections}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Primera vez</div>
+                                <div class="detail-value">${formatDate(player.first_seen)}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Última vez</div>
+                                <div class="detail-value">${formatDate(player.last_seen)}</div>
+                            </div>
+                        </div>
+
+                        <div class="detail-section">
+                            <h4>Historial de Nicks (${nicks.length})</h4>
+                            <div class="history-list">
+                                ${nicks.map(nick => `
+                                    <div class="history-item">
+                                        <span class="value">${escapeHtml(nick.nick)}</span>
+                                        <span class="date">${formatDate(nick.first_seen)}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <div class="detail-section">
+                            <h4>Historial de IPs (${ips.length})</h4>
+                            <div class="history-list">
+                                ${ips.map(ip => `
+                                    <div class="history-item">
+                                        <span class="value">${ip.ip}</span>
+                                        <span>${ip.country || ''}</span>
+                                        <span class="date">${formatDate(ip.first_used)}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            setTimeout(() => {
+                initSkinViewer(player.last_nick);
+            }, 100);
+
+            // Determinar el tipo de ban apropiado según si el jugador es premium o no
+            const banInfo = getBanTypeForPlayer(uuid, player.last_nick);
+            const wlType = banInfo.type;
+            const wlValue = banInfo.value;
+
+            footer.innerHTML = `
+                ${!player.is_whitelisted ? `<button class="btn-success" onclick="closeModal('playerModal'); openWhitelistModal('${wlType}', '${wlValue}', true)">Añadir a Whitelist</button>` : `<button class="btn-ghost" onclick="removeFromWhitelistByValue('${wlType}', '${wlValue}')">Quitar de Whitelist</button>`}
+                ${!player.is_blacklisted ? `<button class="btn-danger" onclick="closeModal('playerModal'); openBlacklistModal('${wlType}', '${wlValue}', true)">Añadir a Blacklist</button>` : `<button class="btn-ghost" onclick="removeFromBlacklistByValue('${wlType}', '${wlValue}')">Quitar de Blacklist</button>`}
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading player detail:', error);
+        content.innerHTML = '<div class="empty-state">Error al cargar datos del jugador</div>';
+    }
+}
+
+async function showConnectionDetail(id) {
+    const modal = document.getElementById('ipModal');
+    const content = document.getElementById('ipModalContent');
+
+    content.innerHTML = '<div class="loading-spinner"></div>';
+
+    try {
+        const response = await apiRequest('get_connection_detail', { id });
+        if (response.success && response.data) {
+            const conn = response.data.connection;
+            const footer = document.getElementById('ipModalFooter');
+
+            const html = `
+                <h3>Detalle de IP: ${escapeHtml(conn.ip)}</h3>
+                <div class="ip-detail">
+                    <p><strong>País:</strong> ${conn.country || 'Desconocido'} (${conn.country_code || '-'})</p>
+                    <p><strong>ISP:</strong> ${conn.isp || '-'}</p>
+                    <p><strong>ASN:</strong> <code>${conn.asn || '-'}</code></p>
+                    <p><strong>Conexiones:</strong> ${conn.connection_count || 0}</p>
+                    <p><strong>Whitelist:</strong> ${conn.is_whitelisted ? 'Sí' : 'No'}</p>
+                    <p><strong>Blacklist:</strong> ${conn.is_blacklisted ? 'Sí' : 'No'}</p>
+                </div>
+            `;
+
+            content.innerHTML = html;
+            footer.innerHTML = '<button class="btn-ghost modal-close">Cerrar</button>';
+
+            modal.querySelector('.modal-close').addEventListener('click', () => closeModal('ipModal'));
+        }
+    } catch (error) {
+        content.innerHTML = '<p class="error">Error al cargar detalles de IP</p>';
+    }
+}
+
+async function showIPDetail(ip) {
+    const modal = document.getElementById('ipModal');
+    const content = document.getElementById('ipModalContent');
+    const footer = document.getElementById('ipModalFooter');
+
+    modal.classList.add('active');
+    content.innerHTML = '<div class="loading-spinner"></div>';
+    footer.innerHTML = '';
+
+    try {
+        const response = await apiRequest('get_ip_detail', { ip });
+        if (response.success) {
+            const ipData = response.data.ip;
+            const players = response.data.players || [];
+
+            content.innerHTML = `
+                <div class="detail-grid">
+                    <div class="detail-item full">
+                        <div class="detail-label">IP</div>
+                        <div class="detail-value" style="font-family:monospace">${ipData.ip}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">País</div>
+                        <div class="detail-value">${ipData.country || 'Desconocido'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">ISP</div>
+                        <div class="detail-value">${escapeHtml(ipData.isp || 'N/A')}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">ASN</div>
+                        <div class="detail-value">${ipData.asn || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Conexiones</div>
+                        <div class="detail-value">${ipData.connection_count}</div>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <h4>Jugadores que usaron esta IP (${players.length})</h4>
+                    <div class="history-list">
+                        ${players.map(p => `
+                            <div class="history-item" style="cursor:pointer" onclick="showPlayerDetail('${p.uuid}'); closeModal('ipModal');">
+                                <img src="https://mineskin.eu/avatar/${p.nick}/24.png" style="width:24px;height:24px;border-radius:4px">
+                                <span class="value">${escapeHtml(p.nick)}</span>
+                                <span class="date">${formatDate(p.last_used)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+
+            footer.innerHTML = `<button class="btn-ghost" onclick="closeModal('ipModal')">Cerrar</button>`;
+        }
+    } catch (error) {
+        console.error('Error loading IP detail:', error);
+        content.innerHTML = '<div class="empty-state">Error al cargar datos de la IP</div>';
+    }
+}
+
+async function addAdminUser() {
+    const discordId = document.getElementById('adminUserDiscordId').value.trim();
+    const role = document.getElementById('adminUserRole').value;
+
+    if (!discordId || !role) {
+        await showAlert('Discord ID y rol son requeridos', 'Campo requerido', 'warning');
+        return;
+    }
+
+    if (!/^\d{17,20}$/.test(discordId)) {
+        await showAlert('Discord ID inválido (debe tener 17-20 dígitos)', 'Error', 'danger');
+        return;
+    }
+
+    const validRoles = ['admin', 'sradmin', 'manager', 'owner'];
+    if (!validRoles.includes(role)) {
+        await showAlert('Rol inválido', 'Error', 'danger');
+        return;
+    }
+
+    try {
+        const response = await apiRequest('add_admin_user', { discord_id: discordId, role });
+        if (response.success) {
+            await showAlert('Usuario añadido correctamente', 'Éxito', 'success');
+            await loadUsersData();
+        } else {
+            await showAlert(response.error || 'Error al añadir usuario', 'Error', 'danger');
+        }
+    } catch (error) {
+        await showAlert('Error de conexión', 'Error', 'danger');
+    }
+}
+
+function refreshData() {
+    loadSectionData(currentSection);
+    loadBadgeCounts();
+}
+
+async function loadBadgeCounts() {
+    try {
+        const response = await apiRequest('get_counts');
+        if (response.success && response.data) {
+            const badges = {
+                whitelist: document.getElementById('whitelistBadge'),
+                blacklist: document.getElementById('blacklistBadge'),
+                providers: document.getElementById('providersBadge'),
+                countries: document.getElementById('countriesBadge'),
+                continents: document.getElementById('continentsBadge')
+            };
+
+            if (badges.whitelist) badges.whitelist.textContent = response.data.whitelist || 0;
+            if (badges.blacklist) badges.blacklist.textContent = response.data.blacklist || 0;
+            if (badges.providers) badges.providers.textContent = response.data.providers || 0;
+            if (badges.countries) badges.countries.textContent = response.data.countries || 0;
+            if (badges.continents) badges.continents.textContent = response.data.continents || 0;
+        }
+    } catch (error) {
+        console.error('Error loading badge counts:', error);
+    }
+}
+
+function performGlobalSearch(query) {
+    if (!query || query.length < 3) return;
+
+    // Buscar en jugadores, IPs, whitelist, blacklist
+    switch (currentSection) {
+        case 'players':
+            loadPlayersData(1, 'all', query);
+            break;
+        case 'ips':
+            loadIPsData(1, query);
+            break;
+        case 'whitelist':
+            loadWhitelistData();
+            break;
+        case 'blacklist':
+            loadBlacklistData();
+            break;
+        default:
+            loadPlayersData(1, 'all', query);
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatDateTime(dateStr) {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Justo ahora';
+    if (diffMins < 60) return `${diffMins}m`;
+    if (diffHours < 24) return `${Math.floor(diffHours)}h`;
+    return `${diffDays}d`;
+}
+
+// Alias para compatibilidad con código antiguo
+const formatTimeAgo = formatDateTime;
+
+function getBlockReasonLabel(reason) {
+    const labels = {
+        'proxy_detected': 'Proxy',
+        'vpn_detected': 'VPN',
+        'hosting_detected': 'Hosting',
+        'blacklisted': 'Blacklist',
+        'blocked_provider': 'ISP Bloqueado'
+    };
+    return labels[reason] || reason || 'Bloqueado';
+}
+
+function getMessageDescription(key) {
+    const descriptions = {
+        'prefix': 'Prefijo que aparece antes de todos los mensajes',
+        'kick_proxy': 'Mensaje al detectar conexión desde proxy',
+        'kick_vpn': 'Mensaje al detectar conexión desde VPN',
+        'kick_hosting': 'Mensaje al detectar conexión desde hosting/datacenter',
+        'kick_blacklisted': 'Mensaje cuando el jugador está en blacklist',
+        'kick_blocked_provider': 'Mensaje cuando el ISP está bloqueado',
+        'whitelist_added': 'Confirmación al añadir a whitelist',
+        'whitelist_removed': 'Confirmación al quitar de whitelist',
+        'blacklist_added': 'Confirmación al añadir a blacklist',
+        'blacklist_removed': 'Confirmación al quitar de blacklist',
+        'player_allowed': 'Log cuando un jugador es permitido',
+        'player_blocked': 'Log cuando un jugador es bloqueado',
+        'no_permission': 'Sin permisos para comando',
+        'reload_success': 'Recarga exitosa',
+        'command_usage': 'Uso incorrecto de comando',
+        'player_not_found': 'Jugador no encontrado',
+        'invalid_type': 'Tipo inválido en comando'
+    };
+    return descriptions[key] || '';
+}
+
+function getLogIconClass(type) {
+    const classes = {
+        'whitelist': 'green',
+        'blacklist': 'red',
+        'connection': 'blue',
+        'settings': 'orange'
+    };
+    return classes[type] || 'blue';
+}
+
+function getLogIcon(type) {
+    const icons = {
+        'whitelist': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+        'blacklist': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>',
+        'connection': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>',
+        'settings': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6"/></svg>'
+    };
+    return icons[type] || icons['connection'];
+}
+
+// ============================================
+// CORE FUNCTIONS
+// ============================================
+
+function logout() {
+    localStorage.removeItem('furrguard_session');
+    currentUser = null;
+    window.location.href = '../index.php';
+}
+
+async function apiRequest(action, data = {}) {
+    const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action, ...data })
+    });
+
+    if (response.status === 401) {
+        localStorage.removeItem('furrguard_session');
+        window.location.href = 'index.php?error=session_expired';
+        throw new Error('Session expired');
+    }
+
+    if (response.status === 403) {
+        showToast('Sin permisos para esta acción', 'error');
+        throw new Error('Forbidden');
+    }
+
+    if (!response.ok) {
+        throw new Error('Network error');
+    }
+
+    return await response.json();
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.classList.remove('active');
+}
+
+function closeAllModals() {
+    document.querySelectorAll('.modal.active').forEach(modal => {
+        modal.classList.remove('active');
+    });
+}
+
+async function removeFromWhitelistByValue(type, value) {
+    try {
+        const response = await apiRequest('remove_whitelist_by_value', { type, value });
+        if (response.success) {
+            showToast('Eliminado de whitelist', 'success');
+            closeAllModals();
+            // Recargar datos si estamos viendo whitelist
+            if (currentSection === 'overview') {
+                loadOverviewData();
+            } else if (currentSection === 'whitelist') {
+                loadWhitelistData();
+            }
+            loadBadgeCounts();
+        }
+    } catch (error) {
+        showToast('Error al eliminar', 'error');
+    }
+}
+
+function showNotification(message, type = 'success') {
+    // Alias for showToast for compatibility
+    showToast(message, type);
+}
+
+function showToast(message, type = 'success', duration = 3500) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const icons = {
+        success: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+        error: '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>',
+        warning: '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+        info: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>'
+    };
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            ${icons[type] || icons.info}
+        </svg>
+        <span class="toast-message">${escapeHtml(message)}</span>
+        <button class="toast-close" aria-label="Cerrar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        </button>
+        <div class="shimmer"></div>
+    `;
+
+    container.appendChild(toast);
+    toast.offsetHeight;
+    toast.classList.add('show');
+
+    const closeBtn = toast.querySelector('.toast-close');
+    closeBtn.addEventListener('click', () => {
+        toast.classList.add('hiding');
+        setTimeout(() => toast.remove(), 300);
+    });
+
+    setTimeout(() => {
+        toast.classList.add('hiding');
+        setTimeout(() => toast.remove(), 300);
+    }, duration);
+}
+
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function renderPagination(containerId, pagination, callback) {
+    const container = document.getElementById(containerId);
+    if (!pagination || pagination.total_pages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    container.innerHTML = '';
+
+    function addBtn(label, page, disabled, active) {
+        const btn = document.createElement('button');
+        btn.textContent = label;
+        if (disabled) btn.disabled = true;
+        if (active) btn.classList.add('active');
+        if (!disabled) btn.addEventListener('click', () => callback(page));
+        container.appendChild(btn);
+    }
+
+    addBtn('Anterior', pagination.current_page - 1, pagination.current_page === 1);
+
+    for (let i = 1; i <= pagination.total_pages; i++) {
+        if (i === 1 || i === pagination.total_pages || (i >= pagination.current_page - 2 && i <= pagination.current_page + 2)) {
+            addBtn(i, i, false, i === pagination.current_page);
+        } else if (i === pagination.current_page - 3 || i === pagination.current_page + 3) {
+            addBtn('...', null, true);
+        }
+    }
+
+    addBtn('Siguiente', pagination.current_page + 1, pagination.current_page === pagination.total_pages);
+}
+
+function checkPermission(section) {
+    const role = currentUser?.role;
+    if (!role || !window.ROLE_PERMISSIONS) return false;
+    const allowed = window.ROLE_PERMISSIONS[role] || [];
+    return allowed.includes(section);
+}
+
+function initFilterListeners() {
+    document.querySelectorAll('[data-player-filter]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-player-filter]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            loadPlayersData(1, btn.dataset.playerFilter);
+        });
+    });
+
+    document.querySelectorAll('[data-conn-filter]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-conn-filter]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            loadConnectionsData(1, btn.dataset.connFilter);
+        });
+    });
+
+    document.querySelectorAll('[data-wl-filter]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-wl-filter]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            loadWhitelistData(btn.dataset.wlFilter);
+        });
+    });
+
+    document.querySelectorAll('[data-bl-filter]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-bl-filter]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            loadBlacklistData(btn.dataset.blFilter);
+        });
+    });
+
+    document.querySelectorAll('[data-sanction-filter]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-sanction-filter]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            loadSanctionsData(1, btn.dataset.sanctionFilter);
+        });
+    });
+
+    document.querySelectorAll('[data-prov-filter]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-prov-filter]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            loadProvidersData(1, btn.dataset.provFilter);
+        });
+    });
+
+    document.querySelectorAll('[data-log-filter]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-log-filter]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            loadLogsData(btn.dataset.logFilter);
+        });
+    });
+}
+
+function initModalListeners() {
+    // Close modals when clicking overlay
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', () => {
+            overlay.closest('.modal').classList.remove('active');
+        });
+    });
+
+    document.querySelectorAll('.modal-close').forEach(btn => {
+        btn.addEventListener('click', () => {
+            btn.closest('.modal').classList.remove('active');
+        });
+    });
+}
+
+function initQuickActions() {
+    document.getElementById('quickAddWhitelist')?.addEventListener('click', () => {
+        openWhitelistModal();
+    });
+
+    document.getElementById('quickAddBlacklist')?.addEventListener('click', () => {
+        openBlacklistModal();
+    });
+
+    document.getElementById('quickSearchPlayer')?.addEventListener('click', () => {
+        switchSection('players');
+        setTimeout(() => document.getElementById('playersSearch')?.focus(), 100);
+    });
+
+    document.getElementById('quickExport')?.addEventListener('click', exportData);
+}
+
+function initSettingsListeners() {
+    // Settings listeners - if needed
+}
+
+// ============================================
+// MODAL HELPERS
+// ============================================
+
+function openBlacklistModal(prefillType = 'uuid', prefillValue = '', readonly = false) {
+    document.getElementById('blacklistModal').classList.add('active');
+    document.getElementById('blType').value = prefillType;
+    document.getElementById('blValue').value = prefillValue;
+    document.getElementById('blReason').value = '';
+    document.getElementById('blDuration').value = '0';
+    document.getElementById('blCustomDurationGroup').style.display = 'none';
+    document.getElementById('blCustomDuration').value = '';
+    document.getElementById('blType').disabled = readonly;
+    document.getElementById('blValue').readOnly = readonly;
+    updateBlacklistHelpText(prefillType);
+    if (readonly) {
+        setTimeout(() => document.getElementById('blReason').focus(), 100);
+    }
+}
+
+function openWhitelistModal(prefillType = 'uuid', prefillValue = '', readonly = false) {
+    document.getElementById('whitelistModal').classList.add('active');
+    document.getElementById('wlType').value = prefillType;
+    document.getElementById('wlValue').value = prefillValue;
+    document.getElementById('wlReason').value = '';
+    document.getElementById('wlType').disabled = readonly;
+    document.getElementById('wlValue').readOnly = readonly;
+    if (readonly) {
+        setTimeout(() => document.getElementById('wlReason').focus(), 100);
+    }
+}
+
+function updateBlacklistHelpText(type) {
+    const typeHelp = document.getElementById('blTypeHelp');
+    const valueHelp = document.getElementById('blValueHelp');
+    const blValue = document.getElementById('blValue');
+
+    const helpTexts = {
+        uuid: {
+            type: 'UUID para jugadores premium (con cuenta de Mojang/Microsoft)',
+            value: 'UUID del jugador (ej: 123e4567-e89b-12d3-a456-426614174000)',
+            placeholder: 'Introduce la UUID...'
+        },
+        nick: {
+            type: 'Nick para jugadores no-premium/offline (sin UUID real)',
+            value: 'Nick del jugador (ej: Player123)',
+            placeholder: 'Introduce el nick...'
+        },
+        ip: {
+            type: 'Dirección IP específica',
+            value: 'Dirección IPv4 o IPv6 (ej: 192.168.1.1)',
+            placeholder: 'Introduce la IP...'
+        },
+        ip_range: {
+            type: 'Rango de IPs usando notación CIDR',
+            value: 'Rango CIDR (ej: 192.168.1.0/24)',
+            placeholder: 'Introduce el rango CIDR...'
+        },
+        as: {
+            type: 'Número de Sistema Autónomo',
+            value: 'Número AS (ej: AS12345 o 12345)',
+            placeholder: 'Introduce el número AS...'
+        }
+    };
+
+    if (helpTexts[type]) {
+        typeHelp.textContent = helpTexts[type].type;
+        valueHelp.textContent = helpTexts[type].value;
+        blValue.placeholder = helpTexts[type].placeholder;
+    }
+}
+
+async function addToBlacklist(type, value, reason = '', duration = 0, stainIp = 1) {
+    try {
+        const response = await apiRequest('add_blacklist', { type, value, reason, duration, stain_ip: stainIp });
+        if (response.success) {
+            showToast('Añadido a blacklist', 'success');
+            loadBlacklistData();
+            loadBadgeCounts();
+        } else {
+            showToast(response.error || 'Error', 'error');
+        }
+    } catch (error) {
+        showToast('Error al añadir a blacklist', 'error');
+    }
+}
+
+async function removeFromBlacklist(id) {
+    const confirmed = await showConfirm('¿Eliminar de blacklist? Las IPs asociadas también se eliminarán.');
+    if (!confirmed) return;
+
+    try {
+        const response = await apiRequest('remove_blacklist', { id });
+        if (response.success) {
+            showToast('Eliminado de blacklist', 'success');
+            loadBlacklistData();
+            loadBadgeCounts();
+        }
+    } catch (error) {
+        showToast('Error al eliminar', 'error');
+    }
+}
+
+async function removeChildBlacklist(childId, parentId) {
+    const confirmed = await showConfirm('¿Eliminar esta IP de la blacklist?');
+    if (!confirmed) return;
+
+    try {
+        const response = await apiRequest('remove_blacklist', { id: childId });
+        if (response.success) {
+            showToast('IP eliminada de blacklist', 'success');
+            loadBlacklistData();
+            loadBadgeCounts();
+        }
+    } catch (error) {
+        showToast('Error al eliminar', 'error');
+    }
+}
+
+async function promptAddIP(parentId) {
+    const ip = await showPrompt('Introduce la dirección IP a añadir (ej: 192.168.1.1):');
+    if (!ip) return;
+
+    const ipTrimmed = ip.trim();
+    const ipPattern = /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$/;
+
+    if (!ipPattern.test(ipTrimmed)) {
+        showToast('Formato de IP inválido', 'error');
+        return;
+    }
+
+    try {
+        const response = await apiRequest('add_blacklist_ip', { parent_id: parentId, ip: ipTrimmed });
+        if (response.success) {
+            showToast('IP añadida a blacklist', 'success');
+            loadBlacklistData();
+            loadBadgeCounts();
+        } else {
+            showToast(response.error || 'Error al añadir IP', 'error');
+        }
+    } catch (error) {
+        showToast('Error al añadir IP', 'error');
+    }
+}
+
+async function removeFromBlacklistByValue(type, value) {
+    try {
+        const response = await apiRequest('remove_blacklist_by_value', { type, value });
+        if (response.success) {
+            showToast('Eliminado de blacklist', 'success');
+            closeModal('ipModal');
+        }
+    } catch (error) {
+        showToast('Error al eliminar', 'error');
+    }
+}
+
+async function editWhitelistEntry(id, type, value, reason) {
+    document.getElementById('editWlId').value = id;
+    document.getElementById('editWlType').value = type;
+    document.getElementById('editWlValue').value = value;
+    document.getElementById('editWlReason').value = reason;
+    document.getElementById('editWhitelistModal').classList.add('active');
+}
+
+async function editBlacklistEntry(id, type, value, reason, expiresAt) {
+    document.getElementById('editBlId').value = id;
+    document.getElementById('editBlType').value = type;
+    document.getElementById('editBlValue').value = value;
+    document.getElementById('editBlReason').value = reason;
+    document.getElementById('editBlDuration').value = '-1';
+    document.getElementById('editBlCustomDurationGroup').style.display = 'none';
+    document.getElementById('editBlCustomDuration').value = '';
+    document.getElementById('editBlacklistModal').classList.add('active');
+}
+
+async function addProvider(name, pattern, type) {
+    try {
+        const response = await apiRequest('add_provider', { name, pattern, type });
+        if (response.success) {
+            showToast('Proveedor añadido', 'success');
+            loadProvidersData();
+            loadBadgeCounts();
+        } else {
+            showToast(response.error || 'Error', 'error');
+        }
+    } catch (error) {
+        showToast('Error al añadir proveedor', 'error');
+    }
+}
+
+async function toggleProvider(id, active) {
+    try {
+        const response = await apiRequest('toggle_provider', { id, active });
+        if (response.success) {
+            showToast(active ? 'Activado' : 'Desactivado', 'success');
+            loadProvidersData();
+        }
+    } catch (error) {
+        showToast('Error', 'error');
+    }
+}
+
+async function toggleCountry(id, active) {
+    try {
+        const response = await apiRequest('toggle_country', { id, active });
+        if (response.success) {
+            showToast(active ? 'Activado' : 'Desactivado', 'success');
+            loadCountriesData();
+        }
+    } catch (error) {
+        showToast('Error', 'error');
+    }
+}
+
+async function toggleContinent(id, active) {
+    try {
+        const response = await apiRequest('toggle_continent', { id, active });
+        if (response.success) {
+            showToast(active ? 'Activado' : 'Desactivado', 'success');
+            loadContinentsData();
+        }
+    } catch (error) {
+        showToast('Error', 'error');
+    }
+}
+
+async function editCountry(id) {
+    const kickMessage = await showPrompt('Mensaje de kick (opcional)');
+    const name = await showPrompt('Nombre del país');
+    const code = await showPrompt('Código del país');
+
+    if (!code || !name) {
+        await showAlert('Código y nombre son requeridos', 'Campo requerido', 'warning');
+        return;
+    }
+
+    try {
+        const response = await apiRequest('edit_country', { id, kick_message: kickMessage, country_name: name, country_code: code });
+        if (response.success) {
+            await showAlert('País actualizado correctamente', 'Éxito', 'success');
+            await loadCountriesData();
+        }
+    } catch (error) {
+        await showAlert('Error al actualizar país', 'Error', 'danger');
+    }
+}
+
+async function deleteCountry(id) {
+    const confirmed = await showConfirm('¿Estás seguro de eliminar este país?');
+    if (!confirmed) return;
+
+    try {
+        const response = await apiRequest('delete_country', { id });
+        if (response.success) {
+            await showAlert('País eliminado correctamente', 'Éxito', 'success');
+            await loadCountriesData();
+        }
+    } catch (error) {
+        await showAlert('Error al eliminar país', 'Error', 'danger');
+    }
+}
+
+async function editContinent(id) {
+    const kickMessage = await showPrompt('Mensaje de kick (opcional)');
+
+    try {
+        const response = await apiRequest('edit_continent', { id, kick_message: kickMessage });
+        if (response.success) {
+            await showAlert('Continente actualizado correctamente', 'Éxito', 'success');
+            await loadContinentsData();
+        }
+    } catch (error) {
+        await showAlert('Error al actualizar continente', 'Error', 'danger');
+    }
+}
+
+async function deleteContinent(id) {
+    const confirmed = await showConfirm('¿Estás seguro de eliminar este continente?');
+    if (!confirmed) return;
+
+    try {
+        const response = await apiRequest('delete_continent', { id });
+        if (response.success) {
+            await showAlert('Continente eliminado correctamente', 'Éxito', 'success');
+            await loadContinentsData();
+        }
+    } catch (error) {
+        await showAlert('Error al eliminar continente', 'Error', 'danger');
+    }
+}
+
+async function editWhitelistEntry(id) {
+    const type = await showPrompt('Tipo', '', 'uuid, nick,ip,as,ip_range');
+    const value = await showPrompt('Valor');
+    const reason = await showPrompt('Razón (opcional)');
+
+    if (!type || !value) {
+        await showAlert('Tipo y valor son requeridos', 'Campo requerido', 'warning');
+        return;
+    }
+
+    try {
+        const response = await apiRequest('edit_whitelist', { id, type, value, reason });
+        if (response.success) {
+            await showAlert('Entrada actualizada correctamente', 'Éxito', 'success');
+            await loadWhitelistData();
+        }
+    } catch (error) {
+        await showAlert('Error al actualizar entrada', 'Error', 'danger');
+    }
+}
+
+async function removeWhitelist(id) {
+    const confirmed = await showConfirm('¿Estás seguro de eliminar esta entrada?');
+    if (!confirmed) return;
+
+    try {
+        const response = await apiRequest('remove_whitelist', { id });
+        if (response.success) {
+            await showAlert('Entrada eliminada correctamente', 'Éxito', 'success');
+            await loadWhitelistData();
+        }
+    } catch (error) {
+        await showAlert('Error al eliminar', 'Error', 'danger');
+    }
+}
+
+async function toggleBlacklist(id, active) {
+    try {
+        const response = await apiRequest('toggle_blacklist', { id, active });
+        if (response.success) {
+            showToast(active ? 'Entrada activada' : 'Entrada desactivada', 'success');
+            await loadBlacklistData();
+        }
+    } catch (error) {
+        showToast('Error al cambiar estado', 'error');
+    }
+}
+
+async function removeBlacklist(id) {
+    const confirmed = await showConfirm('¿Estás seguro de eliminar esta entrada?');
+    if (!confirmed) return;
+
+    try {
+        const response = await apiRequest('remove_blacklist', { id });
+        if (response.success) {
+            await showAlert('Entrada eliminada correctamente', 'Éxito', 'success');
+            await loadBlacklistData();
+        }
+    } catch (error) {
+        await showAlert('Error al eliminar', 'Error', 'danger');
+    }
+}
+
+async function deleteProvider(id) {
+    const confirmed = await showConfirm('¿Estás seguro de eliminar este proveedor?');
+    if (!confirmed) return;
+
+    try {
+        const response = await apiRequest('remove_provider', { action: 'delete_provider', id });
+        if (response.success) {
+            await loadProvidersData();
+            await showAlert('Proveedor eliminado correctamente', 'Éxito', 'success');
+        } else {
+            await showAlert(response.error || 'Error al eliminar', 'Error', 'danger');
+        }
+    } catch (error) {
+        await showAlert('Error al eliminar proveedor', 'Error', 'danger');
+    }
+}
+
+async function saveMessage(key) {
+    const textarea = document.getElementById(`msg-${key}`);
+    const value = textarea.value.trim();
+
+    try {
+        const response = await apiRequest('save_messages', { messages: { [key]: value } });
+        if (response.success) {
+            await showAlert('Mensaje guardado correctamente', 'Éxito', 'success');
+        }
+    } catch (error) {
+        await showAlert('Error al guardar mensaje', 'Error', 'danger');
+    }
+}
+
+async function markSettingsChanged() {
+    clearTimeout(settingsSaveTimeout);
+    settingsSaveTimeout = setTimeout(() => saveSettings(), 2000);
+}
+
+async function saveSettings() {
+    const inputs = document.querySelectorAll('#settingsTableBody input, #settingsTableBody select');
+    const settings = {};
+
+    inputs.forEach(input => {
+        settings[input.id.replace('setting-', '')] = input.value;
+    });
+
+    try {
+        const response = await apiRequest('save_settings', { settings });
+        if (response.success) {
+            document.getElementById('saveSettingsBtn').disabled = false;
+            await showAlert('Configuración guardada correctamente', 'Éxito', 'success');
+        }
+    } catch (error) {
+        await showAlert('Error al guardar configuración', 'Error', 'danger');
+    }
+}
+
+async function testWebhook() {
+    const webhookUrl = document.getElementById('setting-webhook_url').value.trim();
+
+    if (!webhookUrl) {
+        await showAlert('Ingresa una URL de webhook primero', 'Campo requerido', 'warning');
+        return;
+    }
+
+    try {
+        const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                content: 'Test webhook desde FurrGuard',
+                username: currentUser?.username || 'Admin',
+                timestamp: new Date().toISOString()
+            })
+        });
+
+        if (response.ok) {
+            await showAlert('Webhook configurado correctamente', 'Éxito', 'success');
+        } else {
+            await showAlert('Error al configurar webhook (código ' + response.status + ')', 'Error', 'danger');
+        }
+    } catch (error) {
+        await showAlert('Error al probar webhook: ' + error.message, 'Error', 'danger');
+    }
+}
+
+async function regenerateApiKey() {
+    const confirmed = await showConfirm('¿Estás seguro de regenerar la API key? Esto podría causar que el plugin deje de funcionar.');
+
+    if (!confirmed) return;
+
+    try {
+        const response = await apiRequest('regenerate_api_key');
+        if (response.success && response.data) {
+            document.getElementById('setting-api_key').value = response.data.api_key;
+            await showAlert('API Key regenerada correctamente', 'Éxito', 'success');
+        }
+    } catch (error) {
+        await showAlert('Error al regenerar API key', 'Error', 'danger');
+    }
+}
+
+async function removeAdminUser(id) {
+    const confirmed = await showConfirm('¿Estás seguro de eliminar este usuario?');
+    if (!confirmed) return;
+
+    try {
+        const response = await apiRequest('remove_admin_user', { id });
+        if (response.success) {
+            await showAlert('Usuario eliminado correctamente', 'Éxito', 'success');
+            await loadUsersData();
+        }
+    } catch (error) {
+        await showAlert('Error al eliminar usuario', 'Error', 'danger');
+    }
+}
+
+function getBlockReasonLabel(reason) {
+    const labels = {
+        'proxy_detected': 'Proxy',
+        'vpn_detected': 'VPN',
+        'hosting_detected': 'Hosting',
+        'blacklisted': 'Blacklist',
+        'blocked_provider': 'ISP Bloqueado'
+    };
+    return labels[reason] || reason || 'Bloqueado';
+}
+
+function getMessageDescription(key) {
+    const descriptions = {
+        'prefix': 'Prefijo que aparece antes de todos los mensajes',
+        'kick_proxy': 'Mensaje al detectar conexión desde proxy',
+        'kick_vpn': 'Mensaje al detectar conexión desde VPN',
+        'kick_hosting': 'Mensaje al detectar conexión desde hosting/datacenter',
+        'kick_blacklisted': 'Mensaje cuando el jugador está en blacklist',
+        'kick_blocked_provider': 'Mensaje cuando el ISP está bloqueado',
+        'whitelist_added': 'Confirmación al añadir a whitelist',
+        'whitelist_removed': 'Confirmación al quitar de whitelist',
+        'blacklist_added': 'Confirmación al añadir a blacklist',
+        'blacklist_removed': 'Confirmación al quitar de blacklist',
+        'player_allowed': 'Log cuando un jugador es permitido',
+        'player_blocked': 'Log cuando un jugador es bloqueado',
+        'no_permission': 'Sin permisos para comando',
+        'reload_success': 'Recarga exitosa',
+        'command_usage': 'Uso incorrecto de comando',
+        'player_not_found': 'Jugador no encontrado',
+        'invalid_type': 'Tipo inválido en comando'
+    };
+    return descriptions[key] || '';
+}
+
+function getLogIconClass(type) {
+    const classes = {
+        'whitelist': 'green',
+        'blacklist': 'red',
+        'connection': 'blue',
+        'settings': 'orange'
+    };
+    return classes[type] || 'blue';
+}
+
+function getLogIcon(type) {
+    const icons = {
+        'whitelist': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+        'blacklist': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>',
+        'connection': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>',
+        'settings': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6"/></svg>'
+    };
+    return icons[type] || icons['connection'];
+}
+
+// ============================================
+// FURRPERMS MODULE
+// ============================================
+
+let furrPermsState = {
+    whitelist: [],
+    logs: [],
+    stats: { total_whitelist: 0, allowed_commands: 0, blocked_commands: 0 },
+    currentPage: 1,
+    perPage: 20,
+    filter: 'all',
+    search: ''
+};
+
+async function initFurrPerms() {
+    // Check permissions
+    if (!checkPermission('furrperms')) {
+        showNotification('No tienes permiso para acceder a esta sección', 'error');
+        return;
+    }
+
+    // Event listeners
+    document.getElementById('addFurrPermsWhitelistBtn')?.addEventListener('click', () => openFurrPermsModal());
+    document.getElementById('refreshFurrPermsBtn')?.addEventListener('click', () => loadFurrPermsData());
+    document.getElementById('clearFurrPermsLogsBtn')?.addEventListener('click', () => clearFurrPermsLogs());
+    document.getElementById('searchFurrPermsWhitelist')?.addEventListener('input', (e) => {
+        furrPermsState.search = e.target.value;
+        renderFurrPermsWhitelist();
+    });
+    document.getElementById('searchFurrPermsLogs')?.addEventListener('input', (e) => {
+        furrPermsState.search = e.target.value;
+        renderFurrPermsLogs();
+    });
+    document.getElementById('furrPermsLogsFilter')?.addEventListener('change', (e) => {
+        furrPermsState.filter = e.target.value;
+        furrPermsState.currentPage = 1;
+        loadFurrPermsLogs();
+    });
+    document.getElementById('confirmAddFurrPermsWhitelist')?.addEventListener('click', addFurrPermsWhitelist);
+
+    // Load initial data
+    await loadFurrPermsData();
+}
+
+async function loadFurrPermsData() {
+    await Promise.all([
+        loadFurrPermsWhitelist(),
+        loadFurrPermsLogs()
+    ]);
+    loadFurrPermsStats();
+}
+
+async function loadFurrPermsWhitelist() {
+    try {
+        const response = await fetch('api.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ action: 'get_furr_perms_whitelist' })
+        });
+        const data = await response.json();
+        if (data.success) {
+            furrPermsState.whitelist = data.entries;
+            renderFurrPermsWhitelist();
+        }
+    } catch (error) {
+        console.error('Error loading FurrPerms whitelist:', error);
+    }
+}
+
+async function loadFurrPermsLogs() {
+    try {
+        const params = new URLSearchParams({
+            action: 'get_furr_perms_logs',
+            page: furrPermsState.currentPage,
+            per_page: furrPermsState.perPage
+        });
+        if (furrPermsState.filter !== 'all') {
+            params.append('filter', furrPermsState.filter);
+        }
+        if (furrPermsState.search) {
+            params.append('search', furrPermsState.search);
+        }
+
+        const response = await fetch('api.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
+        });
+        const data = await response.json();
+        if (data.success) {
+            furrPermsState.logs = data.logs;
+            furrPermsState.stats = {
+                total_whitelist: data.stats?.total_whitelist || 0,
+                allowed_commands: data.stats?.allowed_commands || 0,
+                blocked_commands: data.stats?.blocked_commands || 0
+            };
+            renderFurrPermsLogs();
+            renderFurrPermsStats();
+            renderFurrPermsPagination(data.total_pages, data.current_page);
+        }
+    } catch (error) {
+        console.error('Error loading FurrPerms logs:', error);
+    }
+}
+
+function loadFurrPermsStats() {
+    document.getElementById('furrPermsTotalWhitelist').textContent = furrPermsState.whitelist.length;
+    document.getElementById('furrPermsAllowedCommands').textContent = furrPermsState.stats.allowed_commands;
+    document.getElementById('furrPermsBlockedCommands').textContent = furrPermsState.stats.blocked_commands;
+}
+
+function renderFurrPermsStats() {
+    document.getElementById('furrPermsTotalWhitelist').textContent = furrPermsState.stats.total_whitelist;
+    document.getElementById('furrPermsAllowedCommands').textContent = furrPermsState.stats.allowed_commands;
+    document.getElementById('furrPermsBlockedCommands').textContent = furrPermsState.stats.blocked_commands;
+}
+
+function renderFurrPermsWhitelist() {
+    const tbody = document.getElementById('furrPermsWhitelistTableBody');
+    if (!tbody) return;
+
+    const filtered = furrPermsState.whitelist.filter(entry =>
+        !furrPermsState.search ||
+        entry.nick.toLowerCase().includes(furrPermsState.search.toLowerCase()) ||
+        (entry.uuid && entry.uuid.toLowerCase().includes(furrPermsState.search.toLowerCase())) ||
+        (entry.added_by && entry.added_by.toLowerCase().includes(furrPermsState.search.toLowerCase()))
+    );
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No hay jugadores en whitelist</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = filtered.map(entry => `
+        <tr class="${entry.active ? '' : 'row-disabled'}">
+            <td>
+                <span class="player-name">${escapeHtml(entry.nick)}</span>
+                ${!entry.active ? '<span class="badge badge-secondary">Inactivo</span>' : ''}
+            </td>
+            <td><span class="text-muted">${entry.uuid ? escapeHtml(entry.uuid.substring(0, 8) + '...') : '-'}</span></td>
+            <td>${entry.reason ? escapeHtml(entry.reason) : '-'}</td>
+            <td>${escapeHtml(entry.added_by)}</td>
+            <td>${formatDate(entry.created_at)}</td>
+            <td>
+                <button class="btn-icon btn-danger" onclick="removeFurrPermsWhitelist(${entry.id}, '${escapeHtml(entry.nick)}')" title="Eliminar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 12 20"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function renderFurrPermsLogs() {
+    const tbody = document.getElementById('furrPermsLogsTableBody');
+    if (!tbody) return;
+
+    if (furrPermsState.logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No hay logs registrados</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = furrPermsState.logs.map(log => `
+        <tr>
+            <td>
+                <span class="player-name">${escapeHtml(log.player_nick)}</span>
+            </td>
+            <td><code class="command-code">${escapeHtml(log.command)}</code></td>
+            <td>${escapeHtml(log.server_name || '-')}</td>
+            <td>
+                <span class="badge ${log.allowed ? 'badge-success' : 'badge-danger'}">
+                    ${log.allowed ? 'Permitido' : 'Bloqueado'}
+                </span>
+            </td>
+            <td>${formatDateTime(log.created_at)}</td>
+        </tr>
+    `).join('');
+}
+
+function renderFurrPermsPagination(totalPages, currentPage) {
+    const container = document.getElementById('furrPermsLogsPagination');
+    if (!container) return;
+
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+    for (let i = 1; i <= totalPages; i++) {
+        html += `<button class="pagination-btn ${i === currentPage ? 'active' : ''}" onclick="goToFurrPermsPage(${i})">${i}</button>`;
+    }
+    container.innerHTML = html;
+}
+
+function goToFurrPermsPage(page) {
+    furrPermsState.currentPage = page;
+    loadFurrPermsLogs();
+}
+
+function openFurrPermsModal() {
+    const modal = document.getElementById('addFurrPermsModal');
+    if (modal) {
+        modal.classList.add('active');
+        document.getElementById('furrPermsNick').value = '';
+        document.getElementById('furrPermsUuid').value = '';
+        document.getElementById('furrPermsReason').value = '';
+    }
+}
+
+async function addFurrPermsWhitelist() {
+    const nick = document.getElementById('furrPermsNick').value.trim();
+    const uuid = document.getElementById('furrPermsUuid').value.trim();
+    const reason = document.getElementById('furrPermsReason').value.trim();
+
+    if (!nick) {
+        showNotification('El nick es obligatorio', 'error');
+        return;
+    }
+
+    if (uuid && !isValidUUID(uuid)) {
+        showNotification('UUID inválido', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch('api.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                action: 'add_furr_perms_whitelist',
+                nick: nick,
+                uuid: uuid,
+                reason: reason
+            })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification('Jugador añadido a whitelist', 'success');
+            closeModal('addFurrPermsModal');
+            await loadFurrPermsWhitelist();
+        } else {
+            showNotification(data.error || 'Error al añadir jugador', 'error');
+        }
+    } catch (error) {
+        console.error('Error adding FurrPerms whitelist:', error);
+        showNotification('Error al añadir jugador', 'error');
+    }
+}
+
+async function removeFurrPermsWhitelist(id, nick) {
+    if (!confirm(`¿Eliminar a ${nick} de la whitelist?`)) return;
+
+    try {
+        const response = await fetch('api.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                action: 'remove_furr_perms_whitelist',
+                id: id
+            })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification('Jugador eliminado de whitelist', 'success');
+            await loadFurrPermsWhitelist();
+        } else {
+            showNotification(data.error || 'Error al eliminar', 'error');
+        }
+    } catch (error) {
+        console.error('Error removing FurrPerms whitelist:', error);
+        showNotification('Error al eliminar', 'error');
+    }
+}
+
+async function clearFurrPermsLogs() {
+    if (!confirm('¿Limpiar logs antiguos (más de 30 días)?')) return;
+
+    try {
+        const response = await fetch('api.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ action: 'clear_furr_perms_logs' })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification(`${data.deleted} logs eliminados`, 'success');
+            await loadFurrPermsLogs();
+        } else {
+            showNotification(data.error || 'Error al limpiar logs', 'error');
+        }
+    } catch (error) {
+        console.error('Error clearing FurrPerms logs:', error);
+        showNotification('Error al limpiar logs', 'error');
+    }
+}
+
+function isValidUUID(uuid) {
+    const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return regex.test(uuid);
+}
+
+async function exportData() {
+    try {
+        const response = await apiRequest('export_data');
+        if (response.success) {
+            const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `furrguard_export_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Datos exportados', 'success');
+        }
+    } catch (error) {
+        showToast('Error al exportar', 'error');
+    }
+}
+
