@@ -1,0 +1,9 @@
+{
+  "id": "furrguard",
+  "name": "FurrGuard",
+  "version": "${version}",
+  "description": "Sistema de seguridad anti-proxy/VPN/hosting para Minecraft con licencias FurrDownloads",
+  "authors": ["GrinchHorizon"],
+  "dependencies": [],
+  "main": "org.grinch.furrGuard.FurrGuard"
+}

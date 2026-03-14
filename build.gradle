@@ -1,0 +1,146 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.guardsquare:proguard-gradle:7.4.2'
+    }
+}
+
+import proguard.gradle.ProGuardTask
+
+plugins {
+    id 'java'
+    id 'eclipse'
+    id 'org.jetbrains.gradle.plugin.idea-ext' version '1.1.8'
+    id 'com.gradleup.shadow' version '8.3.8'
+    id 'xyz.jpenilla.run-velocity' version '2.3.1'
+}
+
+group = 'org.grinch'
+version = '1.0.0'
+
+repositories {
+    mavenCentral()
+    maven {
+        name = "papermc-repo"
+        url = "https://repo.papermc.io/repository/maven-public/"
+    }
+}
+
+dependencies {
+    compileOnly 'com.velocitypowered:velocity-api:3.4.0-SNAPSHOT'
+    annotationProcessor 'com.velocitypowered:velocity-api:3.4.0-SNAPSHOT'
+
+    implementation 'com.google.code.gson:gson:2.10.1'
+    implementation 'org.yaml:snakeyaml:2.2'
+}
+
+def targetJavaVersion = 17
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release.set(targetJavaVersion)
+}
+
+// ============================================
+// SHADOW JAR
+// ============================================
+
+shadowJar {
+    // Usamos el clasificador 'shadow' para evitar conflictos de escritura con Gradle
+    archiveClassifier.set('shadow')
+
+    relocate 'com.google.gson', 'org.grinch.furrGuard.libs.gson'
+    relocate 'org.yaml.snakeyaml', 'org.grinch.furrGuard.libs.snakeyaml'
+
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+
+    minimize()
+}
+
+tasks.processResources {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    filesMatching('velocity-plugin.json') {
+        expand 'version': project.version
+    }
+}
+
+tasks {
+    runVelocity {
+        velocityVersion("3.4.0-SNAPSHOT")
+    }
+}
+
+def templateSource = file('src/main/templates')
+def templateDest = layout.buildDirectory.dir('generated/sources/templates')
+def generateTemplates = tasks.register('generateTemplates', Copy) { task ->
+    def props = ['version': project.version]
+    task.inputs.properties props
+
+    task.from templateSource
+    task.into templateDest
+    task.expand props
+}
+
+sourceSets.main.java.srcDir(generateTemplates.map { it.outputs })
+
+project.idea.project.settings.taskTriggers.afterSync generateTemplates
+project.eclipse.synchronizationTasks(generateTemplates)
+
+// ============================================
+// PROGUARD - OFUSCACIÓN DEDICADA
+// ============================================
+
+task obfuscatePlugin(type: ProGuardTask, dependsOn: shadowJar) {
+    injars(shadowJar.archiveFile)
+
+    outjars("build/libs/FurrGuard-${project.version}-obfuscated.jar")
+
+    // Librerías de Java 17
+    def javaHome = System.getProperty('java.home')
+    libraryjars(fileTree(dir: "$javaHome/jmods", include: '*.jmod'))
+    libraryjars(sourceSets.main.compileClasspath)
+
+    // --- REGLAS ESTABLES MEMORIZADAS ---
+    dontshrink()
+    dontoptimize()
+    useuniqueclassmembernames()
+    repackageclasses('a')
+
+    keepattributes '*Annotation*,Signature,InnerClasses,EnclosingMethod'
+
+    // Protección de Enums
+    keepclassmembers 'enum * { \
+        public static **[] values(); \
+        public static ** valueOf(java.lang.String); \
+    }'
+    keep 'enum * { *; }'
+
+    // Protección General de Serializable
+    keepclassmembers 'class * implements java.io.Serializable { \
+        static final long serialVersionUID; \
+        private static final java.io.ObjectStreamField[] serialPersistentFields; \
+        !static !transient <fields>; \
+        private void writeObject(java.io.ObjectOutputStream); \
+        private void readObject(java.io.ObjectInputStream); \
+        java.lang.Object writeReplace(); \
+        java.lang.Object readResolve(); \
+    }'
+
+    // 🛡️ REGLA NUEVA: Proteger las respuestas de la API para que GSON pueda leer el JSON
+    keep 'class org.grinch.furrGuard.api.response.** { *; }'
+
+    // --- PROTECCIÓN DE CLASE PRINCIPAL ---
+    keep 'public class org.grinch.furrGuard.FurrGuard { *; }'
+
+    // Protección estricta para plugins de Velocity
+    keep '@com.velocitypowered.api.plugin.Plugin class * { *; }'
+}
+
+build {
+    dependsOn obfuscatePlugin
+}
