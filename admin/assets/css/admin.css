@@ -1016,6 +1016,9 @@ a { color: inherit; text-decoration: none; }
 .btn-icon svg {
     width: 18px;
     height: 18px;
+    stroke: currentColor;
+    fill: none;
+    flex-shrink: 0;
 }
 
 #refreshBtn.refreshing svg {
@@ -2890,11 +2893,21 @@ a { color: inherit; text-decoration: none; }
 .furrperms-header-actions .btn-secondary {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     padding: 10px 18px;
     font-size: 0.875rem;
     font-weight: 600;
     transition: var(--transition-normal);
+}
+
+.furrperms-header-actions .btn-primary svg,
+.furrperms-header-actions .btn-secondary svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    fill: none;
+    flex-shrink: 0;
 }
 
 .furrperms-header-actions .btn-primary {
@@ -3881,8 +3894,17 @@ a { color: inherit; text-decoration: none; }
     cursor: pointer;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     transition: all 0.2s ease;
+}
+
+.btn-secondary svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    stroke: currentColor;
+    fill: none;
 }
 
 .btn-secondary:hover {
@@ -4046,32 +4068,6 @@ a { color: inherit; text-decoration: none; }
     opacity: 0.6;
     cursor: not-allowed;
     transform: none;
-}
-
-/* Secondary Button */
-.btn-secondary {
-    background: rgba(255,255,255,0.1);
-    border: 1px solid rgba(255,255,255,0.2);
-    color: #fff;
-    padding: 10px 16px;
-    border-radius: 10px;
-    font-weight: 500;
-    font-size: 14px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    transition: all 0.2s ease;
-}
-
-.btn-secondary:hover {
-    background: rgba(255,255,255,0.15);
-    border-color: rgba(255,255,255,0.3);
-}
-
-.btn-secondary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
 }
 
 /* ============================================

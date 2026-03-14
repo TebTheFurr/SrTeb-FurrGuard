@@ -1,53 +1,149 @@
 /* ============================================
-   FURRPERMS SECTION - Complementary Styles
-   Hand-crafted Design System v3.0
+   FURRPERMS SECTION - Complete Styles
+   Hand-crafted Design System v3.1
    ============================================ */
 
-/* ==================== BUTTON ENHANCEMENTS ==================== */
+/* ==================== HEADER ACTIONS ==================== */
 
-.furrperms-header-actions .btn-primary {
-    position: relative;
-    overflow: visible;
+.furrperms-header-actions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    align-items: center;
+    flex-wrap: wrap;
 }
 
-.furrperms-header-actions .btn-primary::after {
+/* Primary Button - Add Player */
+.furrperms-header-actions .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: linear-gradient(135deg, var(--purple-500, #8b5cf6) 0%, var(--magenta-500, #c026d3) 100%);
+    border: none;
+    border-radius: var(--radius-sm, 8px);
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.furrperms-header-actions .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.35);
+}
+
+.furrperms-header-actions .btn-primary svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+/* Secondary Button - Refresh */
+.furrperms-header-actions .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--bg-elevated, #1a1a24);
+    border: 1px solid var(--border-subtle, rgba(139, 92, 246, 0.1));
+    border-radius: var(--radius-sm, 8px);
+    color: var(--text-secondary, #a1a1aa);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.furrperms-header-actions .btn-secondary:hover {
+    border-color: var(--purple-500, #8b5cf6);
+    color: var(--purple-400, #a78bfa);
+    background: rgba(139, 92, 246, 0.08);
+}
+
+.furrperms-header-actions .btn-secondary svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    transition: transform 0.5s ease;
+}
+
+.furrperms-header-actions .btn-secondary:hover svg {
+    animation: spinner 0.6s linear infinite;
+}
+
+@keyframes spinner {
+    to { transform: rotate(360deg); }
+}
+
+/* ==================== DELETE BUTTON (Icon Only) ==================== */
+
+#section-furrperms .btn-icon.btn-danger {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: var(--radius-sm, 8px);
+    color: #ef4444;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative;
+}
+
+#section-furrperms .btn-icon.btn-danger:hover {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+#section-furrperms .btn-icon.btn-danger svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    flex-shrink: 0;
+}
+
+/* Ripple effect on hover */
+#section-furrperms .btn-icon.btn-danger::after {
     content: '';
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 100%;
-    height: 100%;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.25), transparent 70%);
+    width: 36px;
+    height: 36px;
+    background: radial-gradient(circle, rgba(239, 68, 68, 0.3), transparent 70%);
     transform: translate(-50%, -50%) scale(0);
-    opacity: 0;
-    transition: transform 0.4s, opacity 0.2s;
-    border-radius: inherit;
+    transition: transform 0.25s ease;
+    border-radius: 50%;
     pointer-events: none;
+    z-index: -1;
 }
 
-.furrperms-header-actions .btn-primary:active::after {
+#section-furrperms .btn-icon.btn-danger:hover::after {
     transform: translate(-50%, -50%) scale(1);
-    opacity: 1;
-    transition: 0s;
 }
 
-/* Refresh Button */
-.furrperms-header-actions .btn-secondary svg {
-    transition: transform 0.5s var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
-}
-
-.furrperms-header-actions .btn-secondary:hover svg {
-    animation: spin 0.6s linear infinite;
-}
-
-/* ==================== STATUS BADGE ENHANCEMENTS ==================== */
+/* ==================== STATUS BADGE ==================== */
 
 .status-badge {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
     padding: 4px 12px;
-    border-radius: var(--radius-full, 9999px);
+    border-radius: 9999px;
     font-size: 0.7rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -72,99 +168,71 @@
 }
 
 .status-badge.allowed {
-    background: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(16, 185, 129, 0.08));
-    color: var(--accent-green, #22c55e);
-    border: 1px solid rgba(34, 197, 94, 0.25);
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(16, 185, 129, 0.08));
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.3);
 }
 
 .status-badge.allowed::after {
     content: '';
-    width: 5px;
-    height: 5px;
-    background: var(--accent-green, #22c55e);
+    width: 6px;
+    height: 6px;
+    background: #22c55e;
     border-radius: 50%;
-    box-shadow: 0 0 6px var(--accent-green, #22c55e);
+    box-shadow: 0 0 6px #22c55e;
     animation: statusPulse 2s infinite;
 }
 
 .status-badge.blocked {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(220, 38, 38, 0.08));
-    color: var(--accent-red, #ef4444);
-    border: 1px solid rgba(239, 68, 68, 0.25);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.08));
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 .status-badge.blocked::after {
     content: '';
-    width: 5px;
-    height: 5px;
-    background: var(--accent-red, #ef4444);
+    width: 6px;
+    height: 6px;
+    background: #ef4444;
     border-radius: 50%;
-    box-shadow: 0 0 6px var(--accent-red, #ef4444);
+    box-shadow: 0 0 6px #ef4444;
     animation: statusPulse 2s infinite;
 }
 
 @keyframes statusPulse {
     0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.6; transform: scale(1.15); }
+    50% { opacity: 0.6; transform: scale(1.2); }
 }
 
 /* ==================== TAB STYLING ==================== */
 
 .furrperms-tab {
     position: relative;
-}
-
-.furrperms-tab[data-tab="furrperms-whitelist"]::before {
-    content: '';
-    position: absolute;
-    left: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 3px;
-    height: 3px;
-    background: rgba(255, 255, 255, 0.4);
-    border-radius: 50%;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-
-.furrperms-tab[data-tab="furrperms-whitelist"]::after {
-    content: '';
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 14px;
-    height: 14px;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/%3E%3Cpath d='M9 12l2 2 4-4'/%3E%3C/svg%3E") no-repeat center;
-    opacity: 0;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary, #a1a1aa);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
     transition: all 0.2s ease;
+    border-radius: var(--radius-sm, 8px);
 }
 
-.furrperms-tab[data-tab="furrperms-logs"]::before {
-    content: '';
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 14px;
-    height: 14px;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/%3E%3Cpolyline points='14 2 14 8 20 8'/%3E%3Cline x1='16' y1='13' x2='8' y2='13'/%3E%3Cline x1='16' y1='17' x2='8' y2='17'/%3E%3C/svg%3E") no-repeat center;
-    opacity: 0;
-    transition: all 0.2s ease;
+.furrperms-tab:hover {
+    color: var(--text-primary, #f4f4f5);
+    background: rgba(139, 92, 246, 0.08);
 }
 
-.furrperms-tab:hover::before,
-.furrperms-tab:hover::after,
-.furrperms-tab.active::before,
-.furrperms-tab.active::after {
-    opacity: 0.5;
+.furrperms-tab.active {
+    color: var(--purple-400, #a78bfa);
+    background: rgba(139, 92, 246, 0.12);
 }
 
 /* ==================== TABLE ROW ANIMATIONS ==================== */
 
 #section-furrperms .data-table tbody tr {
-    animation: rowSlide 0.25s var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+    animation: rowSlide 0.25s ease-out;
 }
 
 @keyframes rowSlide {
@@ -192,39 +260,47 @@
 
 #searchFurrPermsWhitelist,
 #searchFurrPermsLogs {
-    background: var(--bg-elevated, #161616);
-    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.05));
-    border-radius: var(--radius-md, 10px);
-    padding: var(--space-3, 12px) var(--space-4, 16px);
-    color: var(--text-normal, rgba(255, 255, 255, 0.88));
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--bg-elevated, #1a1a24);
+    border: 1px solid var(--border-subtle, rgba(139, 92, 246, 0.1));
+    border-radius: var(--radius-sm, 8px);
+    color: var(--text-primary, #f4f4f5);
+    font-size: 0.875rem;
     transition: all 0.2s ease;
 }
 
 #searchFurrPermsWhitelist:focus,
 #searchFurrPermsLogs:focus {
     outline: none;
-    border-color: rgba(99, 102, 241, 0.5);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-    background: var(--bg-surface, #0f0f0f);
+    border-color: var(--purple-500, #8b5cf6);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    background: var(--bg-secondary, #12121a);
+}
+
+#searchFurrPermsWhitelist::placeholder,
+#searchFurrPermsLogs::placeholder {
+    color: var(--text-muted, #71717a);
 }
 
 /* ==================== EMPTY STATE ==================== */
 
 .empty-state {
-    padding: var(--space-10, 40px) var(--space-6, 24px);
+    padding: 40px 24px;
     text-align: center;
-    color: var(--text-muted, rgba(255, 255, 255, 0.55));
-    position: relative;
+    color: var(--text-muted, #71717a);
 }
 
-.empty-state::before {
-    content: '';
-    display: block;
+.empty-state svg {
     width: 48px;
     height: 48px;
-    margin: 0 auto var(--space-4, 16px);
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5'%3E%3Cpath d='M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4'/%3E%3C/svg%3E") no-repeat center;
-    opacity: 0.3;
+    margin: 0 auto 12px;
+    opacity: 0.4;
+    color: var(--purple-500, #8b5cf6);
+}
+
+.empty-state p {
+    font-size: 0.9rem;
 }
 
 /* ==================== PAGINATION ==================== */
@@ -233,17 +309,17 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: var(--space-2, 8px);
-    margin-top: var(--space-6, 24px);
-    padding: var(--space-4, 16px);
+    gap: 8px;
+    margin-top: 24px;
+    padding: 16px;
 }
 
 .pagination-container button {
-    padding: var(--space-2, 8px) var(--space-4, 16px);
-    background: var(--bg-surface, #0f0f0f);
-    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.05));
-    border-radius: var(--radius-sm, 6px);
-    color: var(--text-muted, rgba(255, 255, 255, 0.55));
+    padding: 8px 16px;
+    background: var(--bg-elevated, #1a1a24);
+    border: 1px solid var(--border-subtle, rgba(139, 92, 246, 0.1));
+    border-radius: var(--radius-sm, 8px);
+    color: var(--text-secondary, #a1a1aa);
     font-family: inherit;
     font-size: 0.8rem;
     font-weight: 500;
@@ -252,45 +328,26 @@
 }
 
 .pagination-container button:hover {
-    background: var(--bg-hover, rgba(255, 255, 255, 0.04));
-    border-color: var(--border-default, rgba(255, 255, 255, 0.08));
-    color: var(--text-normal, rgba(255, 255, 255, 0.88));
+    background: rgba(139, 92, 246, 0.08);
+    border-color: var(--purple-500, #8b5cf6);
+    color: var(--text-primary, #f4f4f5);
 }
 
 .pagination-container button.active {
-    background: var(--accent-primary, #6366f1);
-    border-color: transparent;
-    color: #fff;
+    background: var(--purple-500, #8b5cf6);
+    border-color: var(--purple-500, #8b5cf6);
+    color: white;
 }
 
-/* ==================== DELETE BUTTON ==================== */
-
-#section-furrperms .btn-icon.btn-danger {
-    position: relative;
-}
-
-#section-furrperms .btn-icon.btn-danger::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 36px;
-    height: 36px;
-    background: radial-gradient(circle, rgba(239, 68, 68, 0.25), transparent 70%);
-    transform: translate(-50%, -50%) scale(0);
-    transition: transform 0.25s ease;
-    border-radius: 50%;
-    pointer-events: none;
-}
-
-#section-furrperms .btn-icon.btn-danger:hover::before {
-    transform: translate(-50%, -50%) scale(1);
+.pagination-container button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 /* ==================== MODAL ==================== */
 
 #addFurrPermsModal .modal-content {
-    border-top: 2px solid var(--accent-primary, #6366f1);
+    border-top: 3px solid var(--purple-500, #8b5cf6);
 }
 
 /* ==================== COMMAND CODE ==================== */
@@ -298,28 +355,28 @@
 .command-code {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-2, 8px);
-    padding: var(--space-2, 8px) var(--space-4, 16px);
-    background: var(--accent-red-bg, rgba(239, 68, 68, 0.12));
+    gap: 6px;
+    padding: 4px 10px;
+    background: rgba(239, 68, 68, 0.1);
     border: 1px solid rgba(239, 68, 68, 0.2);
-    border-radius: var(--radius-xs, 4px);
-    font-family: 'SF Mono', 'Fira Code', 'Monaco', monospace;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 0.8rem;
-    color: var(--accent-red, #ef4444);
+    color: #ef4444;
     font-weight: 500;
     transition: all 0.2s ease;
 }
 
 .command-code::before {
     content: '/';
-    opacity: 0.4;
+    opacity: 0.5;
     font-weight: 400;
 }
 
 .command-code.allowed {
-    background: var(--accent-green-bg, rgba(34, 197, 94, 0.12));
+    background: rgba(34, 197, 94, 0.1);
     border-color: rgba(34, 197, 94, 0.2);
-    color: var(--accent-green, #22c55e);
+    color: #22c55e;
 }
 
 .command-code.allowed::before {
@@ -354,11 +411,131 @@
 .loading-spinner {
     width: 32px;
     height: 32px;
-    margin: var(--space-5, 20px) auto;
-    border: 2px solid var(--border-default, rgba(255, 255, 255, 0.08));
-    border-top-color: var(--accent-primary, #6366f1);
+    margin: 20px auto;
+    border: 2px solid var(--border-subtle, rgba(139, 92, 246, 0.1));
+    border-top-color: var(--purple-500, #8b5cf6);
     border-radius: 50%;
-    animation: spin 0.7s linear infinite;
+    animation: spinner 0.7s linear infinite;
+}
+
+/* ==================== TABLE CONTROLS ==================== */
+
+.table-controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.table-controls .form-input {
+    flex: 1;
+    min-width: 200px;
+}
+
+/* Clear Logs Button */
+#clearFurrPermsLogsBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: var(--radius-sm, 8px);
+    color: #ef4444;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#clearFurrPermsLogsBtn:hover {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: white;
+}
+
+#clearFurrPermsLogsBtn svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+/* ==================== TABS CONTAINER ==================== */
+
+.furrperms-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    background: var(--bg-elevated, #1a1a24);
+    border-radius: var(--radius-md, 12px);
+    margin-bottom: 20px;
+    border: 1px solid var(--border-subtle, rgba(139, 92, 246, 0.1));
+}
+
+/* ==================== STATUS BAR ==================== */
+
+.furrperms-status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px 18px;
+    background: var(--bg-card, rgba(18, 18, 26, 0.6));
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-subtle, rgba(139, 92, 246, 0.1));
+    border-radius: var(--radius-lg, 16px);
+    border-left: 3px solid var(--purple-500, #8b5cf6);
+    margin-bottom: 20px;
+}
+
+.furrperms-status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: var(--bg-elevated, #1a1a24);
+    border: 1px solid var(--border-subtle, rgba(139, 92, 246, 0.1));
+    border-radius: var(--radius-sm, 8px);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.furrperms-status-indicator .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.furrperms-status-indicator.active .status-dot {
+    background: #22c55e;
+    box-shadow: 0 0 6px #22c55e;
+    animation: statusPulse 2s infinite;
+}
+
+.furrperms-status-indicator.inactive .status-dot {
+    background: #ef4444;
+    box-shadow: 0 0 6px #ef4444;
+    animation: statusPulse 2s infinite;
+}
+
+/* ==================== INFO BOX ==================== */
+
+.furrperms-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--text-muted, #71717a);
+    padding: 8px 14px;
+    background: var(--bg-elevated, #1a1a24);
+    border: 1px solid var(--border-subtle, rgba(139, 92, 246, 0.1));
+    border-radius: var(--radius-sm, 8px);
+}
+
+.furrperms-info svg {
+    width: 16px;
+    height: 16px;
+    color: var(--purple-400, #a78bfa);
 }
 
 /* ==================== RESPONSIVE ==================== */
@@ -366,6 +543,7 @@
 @media (max-width: 768px) {
     .furrperms-header-actions {
         flex-direction: column;
+        width: 100%;
     }
 
     .furrperms-header-actions .btn-primary,
@@ -378,8 +556,16 @@
         flex-direction: column;
     }
 
-    .table-controls .form-input,
-    .table-controls .styled-select {
+    .table-controls .form-input {
         width: 100%;
+    }
+
+    .furrperms-status-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .furrperms-tabs {
+        flex-wrap: wrap;
     }
 }
