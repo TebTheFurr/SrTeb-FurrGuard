@@ -1,8 +1,15 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+}
+
 plugins {
     id 'java'
     id 'eclipse'
     id 'org.jetbrains.gradle.plugin.idea-ext' version '1.1.8'
-    id("xyz.jpenilla.run-velocity") version "2.3.1"
+    id 'com.gradleup.shadow' version '8.3.8'
+    id 'xyz.jpenilla.run-velocity' version '2.3.1'
 }
 
 group = 'org.grinch'
@@ -17,20 +24,19 @@ repositories {
 }
 
 dependencies {
-    compileOnly("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
-    annotationProcessor("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
+    // Velocity (compileOnly)
+    compileOnly 'com.velocitypowered:velocity-api:3.4.0-SNAPSHOT'
+    annotationProcessor 'com.velocitypowered:velocity-api:3.4.0-SNAPSHOT'
+
+    // Paper (compileOnly) - for multi-platform support
+    compileOnly 'io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT'
+
+    // Shared
+    implementation 'com.google.code.gson:gson:2.10.1'
+    implementation 'org.yaml:snakeyaml:2.2'
 }
 
-tasks {
-    runVelocity {
-        // Configure the Velocity version for our task.
-        // This is the only required configuration besides applying the plugin.
-        // Your plugin's jar (or shadowJar if present) will be used automatically.
-        velocityVersion("3.4.0-SNAPSHOT")
-    }
-}
-
-def targetJavaVersion = 17
+def targetJavaVersion = 21
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
 }
@@ -40,18 +46,43 @@ tasks.withType(JavaCompile).configureEach {
     options.release.set(targetJavaVersion)
 }
 
+shadowJar {
+    archiveClassifier.set('')
+    relocate 'com.google.gson', 'org.grinch.furrsecurity.libs.gson'
+    relocate 'org.yaml.snakeyaml', 'org.grinch.furrsecurity.libs.snakeyaml'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.processResources {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    filesMatching('velocity-plugin.json') {
+        expand 'version': project.version
+    }
+    filesMatching('plugin.yml') {
+        expand 'version': project.version
+    }
+}
+
+tasks.jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks {
+    runVelocity {
+        velocityVersion("3.4.0-SNAPSHOT")
+    }
+}
+
 def templateSource = file('src/main/templates')
 def templateDest = layout.buildDirectory.dir('generated/sources/templates')
 def generateTemplates = tasks.register('generateTemplates', Copy) { task ->
     def props = ['version': project.version]
     task.inputs.properties props
-
     task.from templateSource
     task.into templateDest
     task.expand props
 }
 
 sourceSets.main.java.srcDir(generateTemplates.map { it.outputs })
-
 project.idea.project.settings.taskTriggers.afterSync generateTemplates
 project.eclipse.synchronizationTasks(generateTemplates)

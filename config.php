@@ -16,8 +16,8 @@ define('DISCORD_REDIRECT_URI', getenv('DISCORD_REDIRECT_URI') ?: '');
 define('FOUNDER_DISCORD_ID', getenv('FOUNDER_DISCORD_ID') ?: '');
 
 define('ROLE_PERMISSIONS', [
-    'founder' => ['overview','players','connections','ips','whitelist','blacklist','sanctions','providers','countries','continents','messages','logs','settings','users','modules','furrperms'],
-    'owner'   => ['overview','players','connections','ips','whitelist','blacklist','sanctions','countries','continents','messages','logs','modules','furrperms'],
+    'founder' => ['overview','players','connections','ips','whitelist','blacklist','sanctions','providers','countries','continents','messages','logs','settings','users','modules','furrperms','furrsecurity'],
+    'owner'   => ['overview','players','connections','ips','whitelist','blacklist','sanctions','countries','continents','messages','logs','modules','furrperms','furrsecurity'],
     'manager' => ['overview','players','connections','ips','whitelist','blacklist','sanctions','modules'],
     'sradmin' => ['overview','players','whitelist','blacklist','sanctions','modules'],
     'admin'   => ['overview','players','whitelist','blacklist','sanctions','modules'],

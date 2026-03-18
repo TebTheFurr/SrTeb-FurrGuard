@@ -122,6 +122,7 @@ $user = $isAuthenticated ? $_SESSION['furrguard_admin'] : null;
         <link rel="stylesheet" href="assets/css/admin.css?v=<?php echo filemtime(__DIR__ . '/assets/css/admin.css'); ?>">
         <link rel="stylesheet" href="assets/css/animations.css?v=<?php echo filemtime(__DIR__ . '/assets/css/animations.css'); ?>">
         <link rel="stylesheet" href="assets/css/furrperms.css?v=<?php echo filemtime(__DIR__ . '/assets/css/furrperms.css'); ?>">
+        <link rel="stylesheet" href="assets/css/furrsecurity.css?v=<?php echo filemtime(__DIR__ . '/assets/css/furrsecurity.css'); ?>">
         <script src="https://unpkg.com/skinview3d/bundles/skinview3d.bundle.js"></script>
     </head>
     <body>
@@ -321,6 +322,14 @@ $user = $isAuthenticated ? $_SESSION['furrguard_admin'] : null;
                                 <path d="M9 12l2 2 4-4"/>
                             </svg>
                             FurrPerms
+                        </a>
+                        <a href="#" class="nav-item" data-section="furrsecurity">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                <rect x="8" y="11" width="8" height="6" rx="1"/>
+                                <circle cx="12" cy="8" r="2"/>
+                            </svg>
+                            FurrSecurity
                         </a>
                     </div>
                 </div>
@@ -1377,6 +1386,190 @@ $user = $isAuthenticated ? $_SESSION['furrguard_admin'] : null;
                         </div>
                     </div>
                 </section>
+
+                <!-- FurrSecurity Section -->
+                <section id="section-furrsecurity" class="section">
+                    <div class="section-tag">Module</div>
+                    <div class="section-header">
+                        <h2>FurrSecurity - Verificación de Staff</h2>
+                    </div>
+
+                    <!-- Status Bar -->
+                    <div class="furrsecurity-status-bar">
+                        <div class="furrsecurity-status-indicator active" id="furrsecurityStatus">
+                            <span class="status-dot"></span>
+                            <span class="status-text">Módulo Activo</span>
+                        </div>
+                        <div class="furrsecurity-info">
+                            <svg class="info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="12" y1="16" x2="12" y2="12"/>
+                                <line x1="12" y1="8" x2="12.01" y2="8"/>
+                            </svg>
+                            <span>Verificación de identidad mediante Discord OAuth2 para cuentas de staff</span>
+                        </div>
+                    </div>
+
+                    <!-- Stats Grid -->
+                    <div class="furrsecurity-stats-grid">
+                        <div class="furrsecurity-stat-card">
+                            <div class="stat-icon staff">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="9" cy="7" r="4"/>
+                                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <span class="stat-value" id="furrsecurityTotalStaff">0</span>
+                                <span class="stat-label">Staff Whitelist</span>
+                            </div>
+                        </div>
+                        <div class="furrsecurity-stat-card">
+                            <div class="stat-icon active">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                    <polyline points="22 4 12 14.01 9 11.01"/>
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <span class="stat-value" id="furrsecurityActiveSessions">0</span>
+                                <span class="stat-label">Sesiones Activas</span>
+                            </div>
+                        </div>
+                        <div class="furrsecurity-stat-card">
+                            <div class="stat-icon pending">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <polyline points="12 6 12 12 16 14"/>
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <span class="stat-value" id="furrsecurityPendingVerifications">0</span>
+                                <span class="stat-label">Verificaciones Pendientes</span>
+                            </div>
+                        </div>
+                        <div class="furrsecurity-stat-card">
+                            <div class="stat-icon verified">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                    <path d="M9 12l2 2 4-4"/>
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <span class="stat-value" id="furrsecurityTotalVerified">0</span>
+                                <span class="stat-label">Verificados Hoy</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FurrSecurity Content -->
+                    <div class="furrsecurity-content">
+                        <div class="furrsecurity-header-actions">
+                            <button class="btn-primary" id="addFurrSecurityStaffBtn">
+                                <svg class="btn-icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="12" y1="6" x2="12" y2="18"/>
+                                    <line x1="6" y1="12" x2="18" y2="12"/>
+                                </svg>
+                                Añadir Staff
+                            </button>
+                            <button class="btn-secondary" id="refreshFurrSecurityBtn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M23 4v6h-6"/>
+                                    <path d="M1 20v-6h6"/>
+                                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                                </svg>
+                                Actualizar
+                            </button>
+                        </div>
+
+                        <!-- Inner Tabs -->
+                        <div class="furrsecurity-tabs">
+                            <button class="furrsecurity-tab active" data-tab="furrsecurity-staff">Staff Whitelist</button>
+                            <button class="furrsecurity-tab" data-tab="furrsecurity-sessions">Sesiones Activas</button>
+                            <button class="furrsecurity-tab" data-tab="furrsecurity-logs">Logs</button>
+                        </div>
+
+                        <!-- Staff Tab Content -->
+                        <div class="furrsecurity-tab-content active" id="tab-furrsecurity-staff">
+                            <div class="table-controls">
+                                <input type="text" class="form-input" id="searchFurrSecurityStaff" placeholder="Buscar por nick o Discord ID...">
+                            </div>
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Discord ID</th>
+                                            <th>Nick Minecraft</th>
+                                            <th>Añadido Por</th>
+                                            <th>Fecha</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="furrSecurityStaffTableBody">
+                                        <tr><td colspan="5" class="empty-state">Cargando...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Sessions Tab Content -->
+                        <div class="furrsecurity-tab-content" id="tab-furrsecurity-sessions">
+                            <div class="table-controls">
+                                <input type="text" class="form-input" id="searchFurrSecuritySessions" placeholder="Buscar por nick o UUID...">
+                            </div>
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Nick</th>
+                                            <th>Discord</th>
+                                            <th>Estado</th>
+                                            <th>Expira</th>
+                                            <th>IP</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="furrSecuritySessionsTableBody">
+                                        <tr><td colspan="6" class="empty-state">Cargando...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Logs Tab Content -->
+                        <div class="furrsecurity-tab-content" id="tab-furrsecurity-logs">
+                            <div class="table-controls">
+                                <select class="form-input styled-select" id="furrSecurityLogsFilter">
+                                    <option value="all">Todos</option>
+                                    <option value="verification_success">Verificaciones</option>
+                                    <option value="verification_failed">Fallos</option>
+                                    <option value="session_extended">Extensiones</option>
+                                    <option value="token_generated">Tokens</option>
+                                </select>
+                                <input type="text" class="form-input" id="searchFurrSecurityLogs" placeholder="Buscar en logs...">
+                            </div>
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Fecha</th>
+                                            <th>Nick</th>
+                                            <th>Acción</th>
+                                            <th>Detalles</th>
+                                            <th>IP</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="furrSecurityLogsTableBody">
+                                        <tr><td colspan="5" class="empty-state">Cargando...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="pagination-container" id="furrSecurityLogsPagination"></div>
+                        </div>
+                    </div>
+                </section>
             </div>
         </main>
 
@@ -1467,6 +1660,33 @@ $user = $isAuthenticated ? $_SESSION['furrguard_admin'] : null;
             <div class="modal-footer">
                 <button class="btn-ghost modal-cancel">Cancelar</button>
                 <button class="btn-primary" id="confirmAddFurrPermsWhitelist">Añadir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add FurrSecurity Staff Modal -->
+    <div id="addFurrSecurityModal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Añadir Staff - FurrSecurity</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Discord ID *</label>
+                    <input type="text" class="form-input" id="furrSecurityDiscordId" placeholder="Ej: 123456789012345678">
+                    <span class="form-help">ID numérico de Discord del usuario (17-20 dígitos)</span>
+                </div>
+                <div class="form-group">
+                    <label>Nick Minecraft *</label>
+                    <input type="text" class="form-input" id="furrSecurityNick" placeholder="Ej: Steve">
+                    <span class="form-help">Nick exacto del jugador en Minecraft (1-16 caracteres)</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-ghost modal-cancel">Cancelar</button>
+                <button class="btn-primary" id="confirmAddFurrSecurityStaff">Añadir</button>
             </div>
         </div>
     </div>

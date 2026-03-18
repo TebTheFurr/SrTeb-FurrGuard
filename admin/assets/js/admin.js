@@ -507,6 +507,9 @@ async function loadSectionData(section) {
         case 'furrperms':
             await loadFurrPermsSection();
             break;
+        case 'furrsecurity':
+            await loadFurrSecuritySection();
+            break;
     }
 }
 
@@ -3598,4 +3601,487 @@ function resetBlacklistModal() {
     if (tabOther) tabOther.style.display = 'none';
 
     updateBlacklistHelpText('ip');
+}
+
+/* ============================================
+   FurrSecurity Section - Staff Verification
+   ============================================ */
+
+let furrSecurityData = {
+    staff: [],
+    sessions: [],
+    logs: []
+};
+
+/**
+ * Load FurrSecurity section
+ */
+async function loadFurrSecuritySection() {
+    await loadFurrSecurityData();
+    initFurrSecurityListeners();
+}
+
+/**
+ * Load all FurrSecurity data
+ */
+async function loadFurrSecurityData() {
+    try {
+        const [statsRes, staffRes, sessionsRes, logsRes] = await Promise.all([
+            apiRequest('furrsecurity_get_stats'),
+            apiRequest('furrsecurity_get_staff'),
+            apiRequest('furrsecurity_get_sessions'),
+            apiRequest('furrsecurity_get_logs')
+        ]);
+
+        if (statsRes.success) {
+            updateFurrSecurityStats(statsRes.data);
+        }
+
+        if (staffRes.success) {
+            furrSecurityData.staff = staffRes.data || [];
+            renderFurrSecurityStaffTable();
+        }
+
+        if (sessionsRes.success) {
+            furrSecurityData.sessions = sessionsRes.data || [];
+            renderFurrSecuritySessionsTable();
+        }
+
+        if (logsRes.success) {
+            furrSecurityData.logs = logsRes.data.logs || [];
+            renderFurrSecurityLogsTable();
+        }
+    } catch (error) {
+        console.error('Error loading FurrSecurity data:', error);
+        showToast('Error al cargar datos de FurrSecurity', 'error');
+    }
+}
+
+/**
+ * Update FurrSecurity stats display
+ */
+function updateFurrSecurityStats(stats) {
+    const totalStaff = document.getElementById('furrsecurityTotalStaff');
+    const activeSessions = document.getElementById('furrsecurityActiveSessions');
+    const pendingVerifications = document.getElementById('furrsecurityPendingVerifications');
+    const totalVerified = document.getElementById('furrsecurityTotalVerified');
+
+    if (totalStaff) totalStaff.textContent = stats.total_staff || 0;
+    if (activeSessions) activeSessions.textContent = stats.active_sessions || 0;
+    if (pendingVerifications) pendingVerifications.textContent = stats.pending_verifications || 0;
+    if (totalVerified) totalVerified.textContent = stats.verified_today || 0;
+}
+
+/**
+ * Initialize FurrSecurity event listeners
+ */
+function initFurrSecurityListeners() {
+    // Tab switching
+    const tabs = document.querySelectorAll('.furrsecurity-tab');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            const tabName = tab.dataset.tab;
+            document.querySelectorAll('.furrsecurity-tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            const targetContent = document.getElementById('tab-' + tabName);
+            if (targetContent) targetContent.classList.add('active');
+        });
+    });
+
+    // Add staff button
+    const addStaffBtn = document.getElementById('addFurrSecurityStaffBtn');
+    if (addStaffBtn) {
+        addStaffBtn.addEventListener('click', () => openAddFurrSecurityStaffModal());
+    }
+
+    // Refresh button
+    const refreshBtn = document.getElementById('refreshFurrSecurityBtn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => loadFurrSecurityData());
+    }
+
+    // Search inputs
+    const searchStaff = document.getElementById('searchFurrSecurityStaff');
+    if (searchStaff) {
+        searchStaff.addEventListener('input', (e) => filterFurrSecurityStaff(e.target.value));
+    }
+
+    const searchSessions = document.getElementById('searchFurrSecuritySessions');
+    if (searchSessions) {
+        searchSessions.addEventListener('input', (e) => filterFurrSecuritySessions(e.target.value));
+    }
+
+    const searchLogs = document.getElementById('searchFurrSecurityLogs');
+    if (searchLogs) {
+        searchLogs.addEventListener('input', (e) => filterFurrSecurityLogs(e.target.value));
+    }
+
+    // Add staff form submit
+    const confirmAddStaffBtn = document.getElementById('confirmAddFurrSecurityStaff');
+    if (confirmAddStaffBtn) {
+        confirmAddStaffBtn.addEventListener('click', () => handleAddFurrSecurityStaffClick());
+    }
+}
+
+/**
+ * Render staff whitelist table
+ */
+function renderFurrSecurityStaffTable(data = null) {
+    const tbody = document.getElementById('furrSecurityStaffTableBody');
+    if (!tbody) return;
+
+    const staffList = data || furrSecurityData.staff;
+
+    if (!staffList || staffList.length === 0) {
+        tbody.textContent = '';
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 5;
+        td.className = 'empty-state';
+        td.textContent = 'No hay staff en la whitelist';
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+    }
+
+    tbody.textContent = '';
+    staffList.forEach(staff => {
+        const tr = document.createElement('tr');
+
+        // Discord ID
+        const tdDiscord = document.createElement('td');
+        const discordBadge = document.createElement('span');
+        discordBadge.className = 'discord-id-badge';
+        const discordIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        discordIcon.setAttribute('viewBox', '0 0 24 24');
+        discordIcon.setAttribute('fill', 'currentColor');
+        discordIcon.innerHTML = '<path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/>';
+        discordBadge.appendChild(discordIcon);
+        discordBadge.appendChild(document.createTextNode(' ' + escapeHtml(staff.discord_id)));
+        tdDiscord.appendChild(discordBadge);
+        tr.appendChild(tdDiscord);
+
+        // Nick
+        const tdNick = document.createElement('td');
+        tdNick.textContent = staff.minecraft_nick || '-';
+        tr.appendChild(tdNick);
+
+        // Added by
+        const tdAddedBy = document.createElement('td');
+        tdAddedBy.textContent = staff.added_by || '-';
+        tr.appendChild(tdAddedBy);
+
+        // Date
+        const tdDate = document.createElement('td');
+        tdDate.textContent = staff.added_at ? formatDate(staff.added_at) : '-';
+        tr.appendChild(tdDate);
+
+        // Actions
+        const tdActions = document.createElement('td');
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn-icon btn-danger';
+        deleteBtn.title = 'Eliminar';
+        deleteBtn.onclick = () => removeFurrSecurityStaff(staff.id, staff.minecraft_nick);
+        const deleteIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        deleteIcon.setAttribute('viewBox', '0 0 24 24');
+        deleteIcon.setAttribute('fill', 'none');
+        deleteIcon.setAttribute('stroke', 'currentColor');
+        deleteIcon.setAttribute('stroke-width', '2');
+        deleteIcon.innerHTML = '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>';
+        deleteBtn.appendChild(deleteIcon);
+        tdActions.appendChild(deleteBtn);
+        tr.appendChild(tdActions);
+
+        tbody.appendChild(tr);
+    });
+}
+
+/**
+ * Render sessions table
+ */
+function renderFurrSecuritySessionsTable(data = null) {
+    const tbody = document.getElementById('furrSecuritySessionsTableBody');
+    if (!tbody) return;
+
+    const sessionsList = data || furrSecurityData.sessions;
+
+    if (!sessionsList || sessionsList.length === 0) {
+        tbody.textContent = '';
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 6;
+        td.className = 'empty-state';
+        td.textContent = 'No hay sesiones activas';
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+    }
+
+    tbody.textContent = '';
+    sessionsList.forEach(session => {
+        const tr = document.createElement('tr');
+
+        // Nick
+        const tdNick = document.createElement('td');
+        tdNick.textContent = session.minecraft_nick || '-';
+        tr.appendChild(tdNick);
+
+        // Discord
+        const tdDiscord = document.createElement('td');
+        const discordBadge = document.createElement('span');
+        discordBadge.className = 'discord-id-badge';
+        discordBadge.textContent = session.discord_id || '-';
+        tdDiscord.appendChild(discordBadge);
+        tr.appendChild(tdDiscord);
+
+        // Status
+        const tdStatus = document.createElement('td');
+        const statusBadge = document.createElement('span');
+        statusBadge.className = 'status-badge ' + (session.status || 'pending');
+        statusBadge.textContent = session.status === 'verified' ? 'Verificado' : 'Pendiente';
+        tdStatus.appendChild(statusBadge);
+        tr.appendChild(tdStatus);
+
+        // Expires
+        const tdExpires = document.createElement('td');
+        const expiresDiv = document.createElement('div');
+        expiresDiv.className = 'session-expires';
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'time';
+        timeSpan.textContent = session.expires_at ? formatDate(session.expires_at) : '-';
+        expiresDiv.appendChild(timeSpan);
+        tdExpires.appendChild(expiresDiv);
+        tr.appendChild(tdExpires);
+
+        // IP
+        const tdIP = document.createElement('td');
+        tdIP.textContent = session.ip_address || '-';
+        tr.appendChild(tdIP);
+
+        // Actions
+        const tdActions = document.createElement('td');
+        if (session.status === 'verified') {
+            const revokeBtn = document.createElement('button');
+            revokeBtn.className = 'btn-icon btn-danger';
+            revokeBtn.title = 'Revocar';
+            revokeBtn.onclick = () => revokeFurrSecuritySession(session.id, session.minecraft_nick);
+            const revokeIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            revokeIcon.setAttribute('viewBox', '0 0 24 24');
+            revokeIcon.setAttribute('fill', 'none');
+            revokeIcon.setAttribute('stroke', 'currentColor');
+            revokeIcon.setAttribute('stroke-width', '2');
+            revokeIcon.innerHTML = '<circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>';
+            revokeBtn.appendChild(revokeIcon);
+            tdActions.appendChild(revokeBtn);
+        }
+        tr.appendChild(tdActions);
+
+        tbody.appendChild(tr);
+    });
+}
+
+/**
+ * Render logs table
+ */
+function renderFurrSecurityLogsTable(data = null) {
+    const tbody = document.getElementById('furrSecurityLogsTableBody');
+    if (!tbody) return;
+
+    const logsList = data || furrSecurityData.logs;
+
+    if (!logsList || logsList.length === 0) {
+        tbody.textContent = '';
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 6;
+        td.className = 'empty-state';
+        td.textContent = 'No hay logs disponibles';
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+    }
+
+    tbody.textContent = '';
+    logsList.forEach(log => {
+        const tr = document.createElement('tr');
+
+        // Time
+        const tdTime = document.createElement('td');
+        tdTime.textContent = log.created_at ? formatDate(log.created_at) : '-';
+        tr.appendChild(tdTime);
+
+        // Player
+        const tdPlayer = document.createElement('td');
+        tdPlayer.textContent = log.minecraft_nick || '-';
+        tr.appendChild(tdPlayer);
+
+        // Discord
+        const tdDiscord = document.createElement('td');
+        tdDiscord.textContent = log.discord_id || '-';
+        tr.appendChild(tdDiscord);
+
+        // Action
+        const tdAction = document.createElement('td');
+        tdAction.textContent = log.action || '-';
+        tr.appendChild(tdAction);
+
+        // Details
+        const tdDetails = document.createElement('td');
+        tdDetails.textContent = log.details || '-';
+        tr.appendChild(tdDetails);
+
+        // IP
+        const tdIP = document.createElement('td');
+        tdIP.textContent = log.ip_address || '-';
+        tr.appendChild(tdIP);
+
+        tbody.appendChild(tr);
+    });
+}
+
+/**
+ * Filter staff table
+ */
+function filterFurrSecurityStaff(query) {
+    if (!query) {
+        renderFurrSecurityStaffTable();
+        return;
+    }
+    query = query.toLowerCase();
+    const filtered = furrSecurityData.staff.filter(staff =>
+        (staff.minecraft_nick && staff.minecraft_nick.toLowerCase().includes(query)) ||
+        (staff.discord_id && staff.discord_id.toLowerCase().includes(query))
+    );
+    renderFurrSecurityStaffTable(filtered);
+}
+
+/**
+ * Filter sessions table
+ */
+function filterFurrSecuritySessions(query) {
+    if (!query) {
+        renderFurrSecuritySessionsTable();
+        return;
+    }
+    query = query.toLowerCase();
+    const filtered = furrSecurityData.sessions.filter(session =>
+        (session.minecraft_nick && session.minecraft_nick.toLowerCase().includes(query)) ||
+        (session.uuid && session.uuid.toLowerCase().includes(query))
+    );
+    renderFurrSecuritySessionsTable(filtered);
+}
+
+/**
+ * Filter logs table
+ */
+function filterFurrSecurityLogs(query) {
+    if (!query) {
+        renderFurrSecurityLogsTable();
+        return;
+    }
+    query = query.toLowerCase();
+    const filtered = furrSecurityData.logs.filter(log =>
+        (log.minecraft_nick && log.minecraft_nick.toLowerCase().includes(query)) ||
+        (log.action && log.action.toLowerCase().includes(query))
+    );
+    renderFurrSecurityLogsTable(filtered);
+}
+
+/**
+ * Open add staff modal
+ */
+function openAddFurrSecurityStaffModal() {
+    const modal = document.getElementById('addFurrSecurityModal');
+    if (modal) {
+        modal.classList.add('active');
+        const discordInput = document.getElementById('furrSecurityDiscordId');
+        const nickInput = document.getElementById('furrSecurityNick');
+        if (discordInput) discordInput.value = '';
+        if (nickInput) nickInput.value = '';
+    }
+}
+
+/**
+ * Handle add staff button click
+ */
+async function handleAddFurrSecurityStaffClick() {
+    const discordId = document.getElementById('furrSecurityDiscordId').value.trim();
+    const minecraftNick = document.getElementById('furrSecurityNick').value.trim();
+
+    if (!discordId || !minecraftNick) {
+        showToast('Por favor completa todos los campos', 'error');
+        return;
+    }
+
+    try {
+        const response = await apiRequest('furrsecurity_add_staff', {
+            discord_id: discordId,
+            minecraft_nick: minecraftNick
+        });
+
+        if (response.success) {
+            showToast('Staff añadido correctamente', 'success');
+            closeModal('addFurrSecurityModal');
+            await loadFurrSecurityData();
+        } else {
+            showToast(response.error || 'Error al añadir staff', 'error');
+        }
+    } catch (error) {
+        console.error('Error adding staff:', error);
+        showToast('Error al añadir staff', 'error');
+    }
+}
+
+/**
+ * Remove staff member
+ */
+async function removeFurrSecurityStaff(id, nick) {
+    if (!confirm('¿Estas seguro de eliminar a ' + nick + ' de la whitelist?')) {
+        return;
+    }
+
+    try {
+        const response = await apiRequest('furrsecurity_remove_staff', {
+            id: id
+        });
+
+        if (response.success) {
+            showToast('Staff eliminado correctamente', 'success');
+            await loadFurrSecurityData();
+        } else {
+            showToast(response.error || 'Error al eliminar staff', 'error');
+        }
+    } catch (error) {
+        console.error('Error removing staff:', error);
+        showToast('Error al eliminar staff', 'error');
+    }
+}
+
+/**
+ * Revoke session
+ */
+async function revokeFurrSecuritySession(id, nick) {
+    if (!confirm('¿Estas seguro de revocar la sesion de ' + nick + '?')) {
+        return;
+    }
+
+    try {
+        const response = await apiRequest('furrsecurity_revoke_session', {
+            id: id
+        });
+
+        if (response.success) {
+            showToast('Sesion revocada correctamente', 'success');
+            await loadFurrSecurityData();
+        } else {
+            showToast(response.error || 'Error al revocar sesion', 'error');
+        }
+    } catch (error) {
+        console.error('Error revoking session:', error);
+        showToast('Error al revocar sesion', 'error');
+    }
 }

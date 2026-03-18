@@ -112,6 +112,9 @@ try {
         'get_admin_users' => 'users', 'add_admin_user' => 'users', 'remove_admin_user' => 'users',
         'get_furr_perms_whitelist' => 'furrperms', 'add_furr_perms_whitelist' => 'furrperms', 'remove_furr_perms_whitelist' => 'furrperms',
         'get_furr_perms_logs' => 'furrperms', 'clear_furr_perms_logs' => 'furrperms',
+        'furrsecurity_get_staff' => 'furrsecurity', 'furrsecurity_add_staff' => 'furrsecurity', 'furrsecurity_remove_staff' => 'furrsecurity',
+        'furrsecurity_get_sessions' => 'furrsecurity', 'furrsecurity_get_logs' => 'furrsecurity', 'furrsecurity_revoke_session' => 'furrsecurity',
+        'furrsecurity_get_stats' => 'furrsecurity',
         'lookup_player' => 'players', 'get_name_history' => 'players',
         'migrate_blacklist' => 'settings', 'migrate_players' => 'settings',
     ];
@@ -315,6 +318,35 @@ try {
 
         case 'clear_furr_perms_logs':
             $response = clearFurrPermsLogs($db);
+            break;
+
+        // FurrSecurity Actions
+        case 'furrsecurity_get_staff':
+            $response = getFurrSecurityStaff($db, $input);
+            break;
+
+        case 'furrsecurity_add_staff':
+            $response = addFurrSecurityStaff($db, $input);
+            break;
+
+        case 'furrsecurity_remove_staff':
+            $response = removeFurrSecurityStaff($db, $input);
+            break;
+
+        case 'furrsecurity_get_sessions':
+            $response = getFurrSecuritySessions($db, $input);
+            break;
+
+        case 'furrsecurity_get_logs':
+            $response = getFurrSecurityLogs($db, $input);
+            break;
+
+        case 'furrsecurity_revoke_session':
+            $response = revokeFurrSecuritySession($db, $input);
+            break;
+
+        case 'furrsecurity_get_stats':
+            $response = getFurrSecurityStats($db);
             break;
 
         case 'lookup_player':
@@ -2457,4 +2489,230 @@ function migratePlayers($db) {
         'data' => $results
     ];
 }
-?>
+
+// ============================================
+// FURRSECURITY FUNCTIONS
+// ============================================
+
+/**
+ * Obtiene la lista de staff whitelist
+ */
+function getFurrSecurityStaff($db, $input) {
+    $search = trim($input['search'] ?? '');
+
+    $where = '1=1';
+    $params = [];
+
+    if ($search) {
+        $where .= ' AND (minecraft_nick LIKE :search OR discord_id LIKE :search)';
+        $params['search'] = "%$search%";
+    }
+
+    $stmt = $db->prepare("
+        SELECT id, discord_id, minecraft_nick, added_by, added_at
+        FROM furrsecurity_staff
+        WHERE $where
+        ORDER BY added_at DESC
+    ");
+    $stmt->execute($params);
+    $staff = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    return [
+        'success' => true,
+        'data' => $staff
+    ];
+}
+
+/**
+ * Añade un miembro al staff whitelist
+ */
+function addFurrSecurityStaff($db, $input) {
+    $discordId = trim($input['discord_id'] ?? '');
+    $minecraftNick = trim($input['minecraft_nick'] ?? '');
+
+    if (empty($discordId) || empty($minecraftNick)) {
+        return ['success' => false, 'error' => 'Discord ID y nick son requeridos'];
+    }
+
+    // Validar formato de Discord ID (17-20 dígitos)
+    if (!preg_match('/^\d{17,20}$/', $discordId)) {
+        return ['success' => false, 'error' => 'Discord ID inválido (debe tener 17-20 dígitos)'];
+    }
+
+    // Validar formato de nick de Minecraft (1-16 caracteres alfanuméricos + underscore)
+    if (!preg_match('/^[a-zA-Z0-9_]{1,16}$/', $minecraftNick)) {
+        return ['success' => false, 'error' => 'Nick de Minecraft inválido (1-16 caracteres alfanuméricos)'];
+    }
+
+    $username = $_SESSION['furrguard_admin']['username'] ?? 'Admin';
+
+    // Verificar si ya existe
+    $check = $db->prepare("SELECT id FROM furrsecurity_staff WHERE discord_id = ? OR minecraft_nick = ?");
+    $check->execute([$discordId, $minecraftNick]);
+    if ($check->fetch()) {
+        return ['success' => false, 'error' => 'Ya existe un registro con este Discord ID o nick'];
+    }
+
+    $stmt = $db->prepare("INSERT INTO furrsecurity_staff (discord_id, minecraft_nick, added_by) VALUES (?, ?, ?)");
+    $stmt->execute([$discordId, $minecraftNick, $username]);
+
+    logActivity($db, 'furrsecurity', 'add_staff', "Staff añadido: $minecraftNick (Discord: $discordId)");
+
+    return ['success' => true, 'id' => $db->lastInsertId()];
+}
+
+/**
+ * Elimina un miembro del staff whitelist
+ */
+function removeFurrSecurityStaff($db, $input) {
+    $id = (int)($input['id'] ?? 0);
+
+    if ($id <= 0) {
+        return ['success' => false, 'error' => 'ID inválido'];
+    }
+
+    $stmt = $db->prepare("SELECT minecraft_nick FROM furrsecurity_staff WHERE id = ?");
+    $stmt->execute([$id]);
+    $entry = $stmt->fetch();
+
+    if (!$entry) {
+        return ['success' => false, 'error' => 'Entrada no encontrada'];
+    }
+
+    $db->prepare("DELETE FROM furrsecurity_staff WHERE id = ?")->execute([$id]);
+
+    logActivity($db, 'furrsecurity', 'remove_staff', "Staff eliminado: {$entry['minecraft_nick']}");
+
+    return ['success' => true];
+}
+
+/**
+ * Obtiene las sesiones de verificación activas
+ */
+function getFurrSecuritySessions($db, $input) {
+    $search = trim($input['search'] ?? '');
+    $includeExpired = isset($input['include_expired']) ? (bool)$input['include_expired'] : false;
+
+    $where = $includeExpired ? '1=1' : "status = 'verified' AND expires_at > NOW()";
+    $params = [];
+
+    if ($search) {
+        $where .= ' AND (minecraft_nick LIKE :search OR uuid LIKE :search OR discord_id LIKE :search)';
+        $params['search'] = "%$search%";
+    }
+
+    $stmt = $db->prepare("
+        SELECT id, uuid, discord_id, minecraft_nick, status, verified_at, expires_at, ip_address, created_at
+        FROM furrsecurity_verifications
+        WHERE $where
+        ORDER BY created_at DESC
+        LIMIT 100
+    ");
+    $stmt->execute($params);
+    $sessions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    return [
+        'success' => true,
+        'data' => $sessions
+    ];
+}
+
+/**
+ * Obtiene los logs de FurrSecurity
+ */
+function getFurrSecurityLogs($db, $input) {
+    $page = max(1, (int)($input['page'] ?? 1));
+    $perPage = 50;
+    $offset = ($page - 1) * $perPage;
+    $filter = $input['filter'] ?? 'all';
+    $search = trim($input['search'] ?? '');
+
+    $where = '1=1';
+    $params = [];
+
+    if ($filter !== 'all') {
+        $where .= ' AND action = :filter';
+        $params['filter'] = $filter;
+    }
+
+    if ($search) {
+        $where .= ' AND (minecraft_nick LIKE :search OR uuid LIKE :search OR discord_id LIKE :search OR details LIKE :search)';
+        $params['search'] = "%$search%";
+    }
+
+    // Contar total
+    $countStmt = $db->prepare("SELECT COUNT(*) FROM furrsecurity_logs WHERE $where");
+    $countStmt->execute($params);
+    $totalCount = (int)$countStmt->fetchColumn();
+
+    // Obtener logs
+    $params['limit'] = $perPage;
+    $params['offset'] = $offset;
+
+    $stmt = $db->prepare("
+        SELECT id, uuid, minecraft_nick, discord_id, action, details, ip_address, created_at
+        FROM furrsecurity_logs
+        WHERE $where
+        ORDER BY created_at DESC
+        LIMIT :limit OFFSET :offset
+    ");
+    $stmt->execute($params);
+    $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    return [
+        'success' => true,
+        'data' => [
+            'logs' => $logs,
+            'pagination' => [
+                'current_page' => $page,
+                'total_pages' => ceil($totalCount / $perPage),
+                'total' => $totalCount
+            ]
+        ]
+    ];
+}
+
+/**
+ * Revoca una sesión de verificación
+ */
+function revokeFurrSecuritySession($db, $input) {
+    $id = (int)($input['id'] ?? 0);
+
+    if ($id <= 0) {
+        return ['success' => false, 'error' => 'ID inválido'];
+    }
+
+    $stmt = $db->prepare("SELECT minecraft_nick, status FROM furrsecurity_verifications WHERE id = ?");
+    $stmt->execute([$id]);
+    $session = $stmt->fetch();
+
+    if (!$session) {
+        return ['success' => false, 'error' => 'Sesión no encontrada'];
+    }
+
+    $db->prepare("UPDATE furrsecurity_verifications SET status = 'expired', expires_at = NOW() WHERE id = ?")->execute([$id]);
+
+    logActivity($db, 'furrsecurity', 'revoke_session', "Sesión revocada: {$session['minecraft_nick']}");
+
+    return ['success' => true];
+}
+
+/**
+ * Obtiene estadísticas de FurrSecurity
+ */
+function getFurrSecurityStats($db) {
+    $totalStaff = $db->query("SELECT COUNT(*) FROM furrsecurity_staff")->fetchColumn();
+    $activeSessions = $db->query("SELECT COUNT(*) FROM furrsecurity_verifications WHERE status = 'verified' AND expires_at > NOW()")->fetchColumn();
+    $pendingVerifications = $db->query("SELECT COUNT(*) FROM furrsecurity_verifications WHERE status = 'pending'")->fetchColumn();
+    $verifiedToday = $db->query("SELECT COUNT(*) FROM furrsecurity_verifications WHERE status = 'verified' AND DATE(verified_at) = CURDATE()")->fetchColumn();
+
+    return [
+        'success' => true,
+        'data' => [
+            'total_staff' => (int)$totalStaff,
+            'active_sessions' => (int)$activeSessions,
+            'pending_verifications' => (int)$pendingVerifications,
+            'verified_today' => (int)$verifiedToday
+        ]
+    ];
+}
