@@ -100,9 +100,16 @@ task obfuscatePlugin(type: ProGuardTask, dependsOn: shadowJar) {
 
     outjars("build/libs/FurrGuard-${project.version}-obfuscated.jar")
 
-    // Librerías de Java 17
+    // Librerías de Java 17+ - usar jmods correctamente
     def javaHome = System.getProperty('java.home')
-    libraryjars(fileTree(dir: "$javaHome/jmods", include: '*.jmod'))
+    // Incluir los jmods necesarios de Java
+    libraryjars("$javaHome/jmods/java.base.jmod", jarfilter: 'classes')
+    libraryjars("$javaHome/jmods/java.sql.jmod", jarfilter: 'classes')
+    libraryjars("$javaHome/jmods/java.logging.jmod", jarfilter: 'classes')
+    libraryjars("$javaHome/jmods/java.management.jmod", jarfilter: 'classes')
+    libraryjars("$javaHome/jmods/java.naming.jmod", jarfilter: 'classes')
+    libraryjars("$javaHome/jmods/java.desktop.jmod", jarfilter: 'classes')
+    libraryjars("$javaHome/jmods/java.instrument.jmod", jarfilter: 'classes')
     libraryjars(sourceSets.main.compileClasspath)
 
     // --- REGLAS ESTABLES MEMORIZADAS ---
@@ -110,6 +117,12 @@ task obfuscatePlugin(type: ProGuardTask, dependsOn: shadowJar) {
     dontoptimize()
     useuniqueclassmembernames()
     repackageclasses('a')
+
+    // Ignorar advertencias de dependencias opcionales
+    dontwarn 'sun.misc.**'
+    dontwarn 'java.sql.**'
+    dontwarn 'org.grinch.furrGuard.libs.gson.internal.**'
+    dontwarn 'org.grinch.furrGuard.libs.snakeyaml.**'
 
     keepattributes '*Annotation*,Signature,InnerClasses,EnclosingMethod'
 
