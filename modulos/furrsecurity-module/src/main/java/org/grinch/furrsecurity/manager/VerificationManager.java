@@ -166,7 +166,7 @@ public class VerificationManager {
 
     /**
      * Start verification in proxy mode (no token generation, just lock and poll for session)
-     * Used when Paper is behind Velocity - Velocity handles token generation
+     * Used when Paper is behind Velocity - Velocity handles token generation and messaging
      */
     private void startProxyModeVerification(UUID uuid, String nick, String ip) {
         // Don't start verification if already locked
@@ -174,27 +174,13 @@ public class VerificationManager {
             return;
         }
 
-        // Lock player
+        // Lock player (Velocity handles messaging, Paper only locks)
         plugin.getPlayerLockManager().lockPlayer(uuid);
-
-        // Send verification message (player should verify via Velocity's link)
-        plugin.getPlatformHandler().sendMessage(uuid,
-                plugin.getMessageUtil().prefixed("verification_required"));
-        plugin.getPlatformHandler().sendMessage(uuid,
-                plugin.getMessageUtil().prefixed("verification_proxy_mode"));
-
-        // Notify admins
-        if (plugin.getConfig().isNotifyAdmins()) {
-            Map<String, String> adminPlaceholders = Map.of("player", nick);
-            plugin.getPlatformHandler().broadcastToPermission(
-                    plugin.getConfig().getAdminPermission(),
-                    plugin.getMessageUtil().prefixed("admin_notification", adminPlaceholders));
-        }
 
         // Start polling for session status (instead of token status)
         startProxyModePolling(uuid, nick, ip);
 
-        plugin.getLogger().info("Started proxy mode verification for " + nick + " (" + uuid + ")");
+        plugin.getLogger().info("Started proxy mode verification for " + nick + " (" + uuid + ") - Velocity handles messaging");
     }
 
     /**
