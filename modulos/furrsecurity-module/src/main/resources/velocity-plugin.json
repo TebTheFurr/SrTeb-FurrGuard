@@ -1,0 +1,10 @@
+{
+  "id": "furrsecurity",
+  "name": "FurrSecurity",
+  "version": "${version}",
+  "description": "Staff Verification System for Minecraft",
+  "url": "https://srteb.eu",
+  "authors": ["GrinchHorizon"],
+  "dependencies": [],
+  "main": "org.grinch.furrsecurity.velocity.FurrSecurityVelocity"
+}

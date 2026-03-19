@@ -1,0 +1,28 @@
+name: FurrSecurity
+version: ${version}
+main: org.grinch.furrsecurity.paper.FurrSecurityPaper
+api-version: '1.21'
+description: Staff Verification System for Minecraft
+author: GrinchHorizon
+website: https://srteb.eu
+
+commands:
+  furrsecurity:
+    description: Main FurrSecurity command
+    usage: /<command> [reload|status|verify|check|unlock|stats|help]
+    aliases: [fsec, fs]
+    permission: furrsecurity.admin
+
+permissions:
+  furrsecurity.admin:
+    description: Admin permission for FurrSecurity
+    default: op
+  furrsecurity.staff:
+    description: Marks player as staff requiring verification
+    default: false
+  furrsecurity.notify:
+    description: Receive notifications about verification requests
+    default: op
+  furrsecurity.bypass:
+    description: Bypass verification requirement
+    default: false
