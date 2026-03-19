@@ -40,6 +40,10 @@ public class MessageUtil {
         messages.put("player_not_found", "&cJugador no encontrado.");
         messages.put("stats_header", "&8&m------------------&c FurrSecurity &8&m------------------");
         messages.put("stats_line", "&7{key}: &f{value}");
+        messages.put("kick_unverified", "&cNo completaste la verificacion a tiempo.\n&7Por favor, vuelve a entrar e intenta de nuevo.");
+        messages.put("kick_blacklisted", "&cHas sido añadido a la lista negra por seguridad.\n&7Contacta a un administrador.");
+        messages.put("verification_timeout", "&eTu enlace de verificacion ha expirado. Saliendo...");
+        messages.put("auto_blacklisted", "&cHas sido añadido a la blacklist automaticamente por 3 intentos fallidos.");
     }
 
     public String get(String key) {

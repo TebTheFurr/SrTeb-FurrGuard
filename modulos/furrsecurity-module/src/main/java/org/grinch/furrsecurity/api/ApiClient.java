@@ -79,6 +79,10 @@ public class ApiClient {
                 result.success = true;
                 result.token = response.get("token").getAsString();
                 result.verifyUrl = response.get("verify_url").getAsString();
+                result.existing = response.has("existing") && response.get("existing").getAsBoolean();
+                if (response.has("token_expires_in_seconds")) {
+                    result.tokenExpiresInSeconds = response.get("token_expires_in_seconds").getAsLong();
+                }
             } else {
                 result.success = false;
                 result.error = response.has("error") ? response.get("error").getAsString() : "Unknown error";
@@ -98,8 +102,12 @@ public class ApiClient {
             TokenStatus status = new TokenStatus();
             status.status = response.has("status") ? response.get("status").getAsString() : "unknown";
             status.verified = response.has("verified") && response.get("verified").getAsBoolean();
+            status.tokenExpired = "token_expired".equals(status.status) || "expired".equals(status.status);
             if (response.has("expires_at")) {
                 status.expiresAt = response.get("expires_at").getAsString();
+            }
+            if (response.has("token_expires_in_seconds")) {
+                status.tokenExpiresInSeconds = response.get("token_expires_in_seconds").getAsLong();
             }
             return status;
         });
@@ -152,6 +160,30 @@ public class ApiClient {
         params.put("nick", nick);
 
         return post("player_disconnect", params).thenApply(response -> null);
+    }
+
+    /**
+     * Record a failed verification attempt (token expired without verification)
+     * Returns the number of failed attempts and whether player was blacklisted
+     */
+    public CompletableFuture<FailedAttemptResult> recordFailedAttempt(String uuid, String nick, String ip) {
+        Map<String, String> params = new HashMap<>();
+        params.put("uuid", uuid);
+        params.put("nick", nick);
+        params.put("ip", ip);
+
+        return post("record_failed_attempt", params).thenApply(response -> {
+            FailedAttemptResult result = new FailedAttemptResult();
+            result.success = response.has("success") && response.get("success").getAsBoolean();
+            if (response.has("failed_attempts")) {
+                result.failedAttempts = response.get("failed_attempts").getAsInt();
+            }
+            result.blacklisted = response.has("blacklisted") && response.get("blacklisted").getAsBoolean();
+            if (response.has("error")) {
+                result.error = response.get("error").getAsString();
+            }
+            return result;
+        });
     }
 
     /**
@@ -250,12 +282,16 @@ public class ApiClient {
         public String token;
         public String verifyUrl;
         public String error;
+        public boolean existing; // True if returning existing token
+        public long tokenExpiresInSeconds; // Time until token link expires
     }
 
     public static class TokenStatus {
         public String status;
         public boolean verified;
+        public boolean tokenExpired; // True if token link expired without verification
         public String expiresAt;
+        public long tokenExpiresInSeconds; // Time until token link expires
     }
 
     public static class SessionInfo {
@@ -270,6 +306,13 @@ public class ApiClient {
         public boolean success;
         public int sessionsExpired;
         public String message;
+        public String error;
+    }
+
+    public static class FailedAttemptResult {
+        public boolean success;
+        public int failedAttempts;
+        public boolean blacklisted;
         public String error;
     }
 }

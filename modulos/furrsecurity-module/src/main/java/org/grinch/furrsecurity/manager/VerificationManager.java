@@ -17,6 +17,7 @@ public class VerificationManager {
     private final Map<UUID, Integer> pollingAttempts = new ConcurrentHashMap<>();
 
     private static final int MAX_POLLING_ATTEMPTS = 120; // 10 minutes at 5s intervals
+    private static final int TOKEN_EXPIRATION_SECONDS = 180; // 3 minutes for token to expire
 
     public VerificationManager(FurrSecurity plugin) {
         this.plugin = plugin;
@@ -86,6 +87,8 @@ public class VerificationManager {
             plugin.getApiClient().verifyTokenStatus(token).thenAccept(status -> {
                 if (status.verified) {
                     onVerificationComplete(uuid, status);
+                } else if (status.tokenExpired) {
+                    onTokenExpired(uuid, token);
                 }
             });
         };
@@ -129,6 +132,42 @@ public class VerificationManager {
         plugin.getSessionManager().startSession(uuid);
 
         plugin.getLogger().info("Verification complete for " + uuid);
+    }
+
+    /**
+     * Called when verification token expires without verification
+     */
+    private void onTokenExpired(UUID uuid, String token) {
+        // Stop polling first
+        stopPolling(uuid);
+
+        // Check if player is still locked
+        if (!plugin.getPlayerLockManager().isLocked(uuid)) {
+            return;
+        }
+
+        String nick = plugin.getPlatformHandler().getPlayerName(uuid);
+        String ip = plugin.getPlatformHandler().getPlayerIP(uuid);
+
+        plugin.getLogger().warning("Token expired for " + nick + " (" + uuid + ") without verification");
+
+        // Record failed attempt and check if should be blacklisted
+        plugin.getApiClient().recordFailedAttempt(uuid.toString(), nick, ip)
+                .thenAccept(result -> {
+                    if (result.success && result.blacklisted) {
+                        // Player was auto-blacklisted after 3 failed attempts
+                        plugin.getLogger().warning(nick + " has been auto-blacklisted after 3 failed verification attempts");
+                        plugin.getPlatformHandler().kickPlayer(uuid,
+                                plugin.getMessageUtil().get("kick_blacklisted"));
+                    } else {
+                        // Normal kick for single failed attempt
+                        plugin.getPlatformHandler().kickPlayer(uuid,
+                                plugin.getMessageUtil().get("kick_unverified"));
+                    }
+                });
+
+        // Unlock player (they will be kicked anyway)
+        plugin.getPlayerLockManager().unlockPlayer(uuid);
     }
 
     /**
@@ -185,6 +224,7 @@ public class VerificationManager {
 
     /**
      * Start polling for session status in proxy mode
+     * In proxy mode, Velocity handles token expiration and kicking
      */
     private void startProxyModePolling(UUID uuid, String nick, String ip) {
         pollingAttempts.put(uuid, 0);

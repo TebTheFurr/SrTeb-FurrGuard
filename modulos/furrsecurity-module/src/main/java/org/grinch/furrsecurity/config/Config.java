@@ -26,6 +26,8 @@ public class Config {
     private boolean enabled;
     private boolean proxyMode;  // If true, skip verification (proxy handles it)
     private int sessionDuration;
+    private int tokenExpiration; // Time in seconds for verification link to expire
+    private int maxFailedAttempts; // Max failed attempts before auto-blacklist
     private String verifyUrl;
     private List<Long> alertTimes;
     private long earlyVerifyTime;
@@ -70,6 +72,8 @@ public class Config {
             enabled = getBoolean("enabled", true);
             proxyMode = getBoolean("proxy-mode", false);
             sessionDuration = getInt("session-duration", 28800);
+            tokenExpiration = getInt("token-expiration", 180); // 3 minutes default
+            maxFailedAttempts = getInt("max-failed-attempts", 3);
             verifyUrl = getString("verify-url", "https://furrguard.srteb.eu/verify.php");
             alertTimes = getList("alert-times", List.of(3600L, 1800L, 300L, 240L, 180L, 120L, 60L, 30L));
             earlyVerifyTime = getLong("early-verify-time", 300L);
@@ -121,6 +125,13 @@ public class Config {
                 # Session duration in seconds (default: 8 hours)
                 session-duration: 28800
 
+                # Token expiration in seconds (time player has to verify)
+                # After this time, the player will be kicked
+                token-expiration: 180
+
+                # Maximum failed verification attempts before auto-blacklist
+                max-failed-attempts: 3
+
                 # Verification URL shown to players
                 verify-url: "https://furrguard.srteb.eu/verify.php"
 
@@ -158,6 +169,8 @@ public class Config {
         enabled = true;
         proxyMode = false;
         sessionDuration = 28800;
+        tokenExpiration = 180; // 3 minutes
+        maxFailedAttempts = 3;
         verifyUrl = "https://furrguard.srteb.eu/verify.php";
         alertTimes = List.of(3600L, 1800L, 300L, 240L, 180L, 120L, 60L, 30L);
         earlyVerifyTime = 300L;
@@ -241,6 +254,14 @@ public class Config {
 
     public int getSessionDuration() {
         return sessionDuration;
+    }
+
+    public int getTokenExpiration() {
+        return tokenExpiration;
+    }
+
+    public int getMaxFailedAttempts() {
+        return maxFailedAttempts;
     }
 
     public String getVerifyUrl() {
