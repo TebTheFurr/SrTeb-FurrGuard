@@ -45,8 +45,9 @@ public class VerificationManager {
                         Map<String, String> placeholders = Map.of("url", result.verifyUrl);
                         plugin.getPlatformHandler().sendMessage(uuid,
                                 plugin.getMessageUtil().prefixed("verification_required"));
-                        plugin.getPlatformHandler().sendMessage(uuid,
-                                plugin.getMessageUtil().prefixed("verification_link", placeholders));
+                        plugin.getPlatformHandler().sendClickableLink(uuid,
+                                plugin.getMessageUtil().prefixed("verification_link", placeholders),
+                                result.verifyUrl);
 
                         // Notify admins
                         if (plugin.getConfig().isNotifyAdmins()) {

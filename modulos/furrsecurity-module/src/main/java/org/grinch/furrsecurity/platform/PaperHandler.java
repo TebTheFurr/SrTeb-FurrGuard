@@ -1,5 +1,8 @@
 package org.grinch.furrsecurity.platform;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Server;
 import org.bukkit.command.PluginCommand;
@@ -113,6 +116,21 @@ public class PaperHandler implements PlatformHandler {
         Player player = Bukkit.getPlayer(uuid);
         if (player != null) {
             player.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', message));
+        }
+    }
+
+    @Override
+    public void sendClickableLink(UUID uuid, String message, String url) {
+        Player player = Bukkit.getPlayer(uuid);
+        if (player != null) {
+            // Replace {url} placeholder with the actual URL as clickable text
+            String displayText = message.replace("{url}", url);
+
+            // Paper has native Adventure support
+            Component component = LegacyComponentSerializer.legacyAmpersand().deserialize(displayText)
+                    .clickEvent(ClickEvent.openUrl(url));
+
+            player.sendMessage(component);
         }
     }
 

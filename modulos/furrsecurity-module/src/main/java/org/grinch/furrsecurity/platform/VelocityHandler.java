@@ -7,6 +7,7 @@ import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.scheduler.ScheduledTask;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.grinch.furrsecurity.FurrSecurity;
 import org.grinch.furrsecurity.command.FurrSecurityCommand;
@@ -102,6 +103,19 @@ public class VelocityHandler implements PlatformHandler {
     public void sendMessage(UUID uuid, String message) {
         server.getPlayer(uuid).ifPresent(player -> {
             Component component = LegacyComponentSerializer.legacyAmpersand().deserialize(message);
+            player.sendMessage(component);
+        });
+    }
+
+    @Override
+    public void sendClickableLink(UUID uuid, String message, String url) {
+        server.getPlayer(uuid).ifPresent(player -> {
+            // Replace {url} placeholder with the actual URL as clickable text
+            String displayText = message.replace("{url}", url);
+
+            Component component = LegacyComponentSerializer.legacyAmpersand().deserialize(displayText)
+                    .clickEvent(ClickEvent.openUrl(url));
+
             player.sendMessage(component);
         });
     }

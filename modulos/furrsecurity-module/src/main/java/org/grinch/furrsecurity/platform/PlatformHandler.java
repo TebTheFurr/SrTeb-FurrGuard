@@ -56,6 +56,14 @@ public interface PlatformHandler {
     void sendMessage(UUID uuid, String message);
 
     /**
+     * Send a clickable link to a player
+     * @param uuid Player UUID
+     * @param message The message to display (may contain {url} placeholder)
+     * @param url The URL to open when clicked
+     */
+    void sendClickableLink(UUID uuid, String message, String url);
+
+    /**
      * Send a message to all players with a specific permission
      */
     void broadcastToPermission(String permission, String message);
