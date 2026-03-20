@@ -1,14 +1,22 @@
 package org.grinch.furrsecurity.listener;
 
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryInteractEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.*;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.grinch.furrsecurity.FurrSecurity;
 import org.grinch.furrsecurity.manager.PlayerLockManager;
 
@@ -44,6 +52,9 @@ public class PaperListener implements Listener {
                 player.hasPermission("furrguard.*");
 
         if (isStaff) {
+            // Apply blindness effect while locked (will be removed when verified)
+            applyVerificationBlindness(player);
+
             // Check verification status
             // In proxy mode, use proxy-aware session check (no token generation, just lock and poll)
             plugin.getVerificationManager().checkSession(uuid, username, ip, proxyMode);
