@@ -59,6 +59,11 @@ public class FurrSecurityCommand {
     public List<String> handleTabComplete(String[] args) {
         List<String> completions = new ArrayList<>();
 
+        if (args.length == 0) {
+            // No arguments yet, return empty list
+            return completions;
+        }
+
         if (args.length == 1) {
             completions.addAll(Arrays.asList("reload", "status", "check", "reset", "stats", "help"));
         } else if (args.length == 2) {
