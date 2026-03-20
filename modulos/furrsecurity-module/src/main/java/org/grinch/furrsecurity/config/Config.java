@@ -34,6 +34,7 @@ public class Config {
     private boolean lockMovement;
     private boolean lockCommands;
     private boolean lockInventory;
+    private boolean lockChat;
     private boolean lockServerSwitch;
     private boolean notifyAdmins;
     private String adminPermission;
@@ -80,6 +81,7 @@ public class Config {
             lockMovement = getBoolean("lock.movement", true);
             lockCommands = getBoolean("lock.commands", true);
             lockInventory = getBoolean("lock.inventory", true);
+            lockChat = getBoolean("lock.chat", true);
             lockServerSwitch = getBoolean("lock.server-switch", true);
             notifyAdmins = getBoolean("notify-admins", true);
             adminPermission = getString("admin-permission", "furrsecurity.notify");
@@ -155,6 +157,7 @@ public class Config {
                   movement: true
                   commands: true
                   inventory: true
+                  chat: true
                   server-switch: true
 
                 # Admin notification settings
@@ -177,6 +180,7 @@ public class Config {
         lockMovement = true;
         lockCommands = true;
         lockInventory = true;
+        lockChat = true;
         lockServerSwitch = true;
         notifyAdmins = true;
         adminPermission = "furrsecurity.notify";
@@ -286,6 +290,10 @@ public class Config {
 
     public boolean isLockInventory() {
         return lockInventory;
+    }
+
+    public boolean isLockChat() {
+        return lockChat;
     }
 
     public boolean isLockServerSwitch() {

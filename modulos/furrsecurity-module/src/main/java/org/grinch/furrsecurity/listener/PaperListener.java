@@ -7,6 +7,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryInteractEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.*;
 import org.grinch.furrsecurity.FurrSecurity;
 import org.grinch.furrsecurity.manager.PlayerLockManager;
@@ -145,6 +146,38 @@ public class PaperListener implements Listener {
             if (plugin.getPlayerLockManager().isLocked(uuid)) {
                 event.setCancelled(true);
             }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onInventoryOpen(InventoryOpenEvent event) {
+        if (!plugin.getConfig().isLockInventory()) return;
+
+        if (event.getPlayer() instanceof Player) {
+            Player player = (Player) event.getPlayer();
+            UUID uuid = player.getUniqueId();
+
+            if (plugin.getPlayerLockManager().isLocked(uuid)) {
+                // Close any open inventory and block opening new ones
+                event.setCancelled(true);
+                player.closeInventory();
+                sendLockedMessage(player, "locked_inventory");
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onPlayerChat(AsyncPlayerChatEvent event) {
+        if (!plugin.getConfig().isLockChat()) return;
+
+        Player player = event.getPlayer();
+        UUID uuid = player.getUniqueId();
+
+        if (plugin.getPlayerLockManager().isLocked(uuid)) {
+            event.setCancelled(true);
+            // Need to send message on main thread
+            plugin.getPlatformHandler().runSync(() ->
+                    sendLockedMessage(player, "locked_chat"));
         }
     }
 

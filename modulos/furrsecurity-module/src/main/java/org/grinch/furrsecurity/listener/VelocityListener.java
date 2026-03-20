@@ -87,12 +87,14 @@ public class VelocityListener {
 
     @Subscribe(order = PostOrder.EARLY)
     public void onChat(PlayerChatEvent event) {
+        if (!plugin.getConfig().isLockChat()) return;
+
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
 
         if (plugin.getPlayerLockManager().isLocked(uuid)) {
-            // Optionally block chat while locked
-            // event.setResult(PlayerChatEvent.ChatResult.denied());
+            event.setResult(PlayerChatEvent.ChatResult.denied());
+            sendLockedMessage(player, "locked_chat");
         }
     }
 

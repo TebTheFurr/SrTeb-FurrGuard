@@ -27,6 +27,8 @@ public class ApiClient {
     private final String apiUrl;
     private final String apiKey;
     private final int timeout;
+    private static final int MAX_RETRIES = 2;
+    private static final int RETRY_DELAY_MS = 1000;
 
     public ApiClient(FurrSecurity plugin) {
         this.plugin = plugin;
@@ -211,53 +213,111 @@ public class ApiClient {
     }
 
     /**
-     * Make a POST request to the API
+     * Make a POST request to the API with retry logic
      */
     private CompletableFuture<JsonObject> post(String action, Map<String, String> params) {
         return CompletableFuture.supplyAsync(() -> {
-            try {
-                String urlStr = apiUrl + "?action=" + action;
-                URL url = new URL(urlStr);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            Exception lastException = null;
 
-                conn.setRequestMethod("POST");
-                conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-                conn.setRequestProperty("X-API-Key", apiKey);
-                conn.setDoOutput(true);
-                conn.setConnectTimeout(timeout);
-                conn.setReadTimeout(timeout);
-
-                // Build POST body
-                StringBuilder body = new StringBuilder();
-                for (Map.Entry<String, String> entry : params.entrySet()) {
-                    if (body.length() > 0) body.append("&");
-                    body.append(entry.getKey()).append("=").append(urlEncode(entry.getValue()));
-                }
-
-                try (OutputStream os = conn.getOutputStream()) {
-                    os.write(body.toString().getBytes(StandardCharsets.UTF_8));
-                }
-
-                int responseCode = conn.getResponseCode();
-                if (responseCode != 200) {
-                    plugin.getLogger().warning("API returned status " + responseCode + " for action " + action);
-                    return new JsonObject();
-                }
-
-                try (BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-                    StringBuilder response = new StringBuilder();
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        response.append(line);
+            for (int attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+                if (attempt > 0) {
+                    try {
+                        Thread.sleep(RETRY_DELAY_MS);
+                        plugin.getLogger().info("Retrying API request for action " + action + " (attempt " + (attempt + 1) + ")");
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
                     }
-                    return JsonParser.parseString(response.toString()).getAsJsonObject();
                 }
-            } catch (IOException e) {
-                plugin.getLogger().log(Level.WARNING, "API request failed for action " + action + ": " + e.getMessage());
-                return new JsonObject();
+
+                try {
+                    String urlStr = apiUrl + "?action=" + action;
+                    URL url = new URL(urlStr);
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+                    conn.setRequestMethod("POST");
+                    conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+                    conn.setRequestProperty("X-API-Key", apiKey);
+                    conn.setDoOutput(true);
+                    conn.setConnectTimeout(timeout);
+                    conn.setReadTimeout(timeout);
+
+                    // Build POST body
+                    StringBuilder body = new StringBuilder();
+                    for (Map.Entry<String, String> entry : params.entrySet()) {
+                        if (body.length() > 0) body.append("&");
+                        body.append(entry.getKey()).append("=").append(urlEncode(entry.getValue()));
+                    }
+
+                    try (OutputStream os = conn.getOutputStream()) {
+                        os.write(body.toString().getBytes(StandardCharsets.UTF_8));
+                    }
+
+                    int responseCode = conn.getResponseCode();
+
+                    // Read error response body for better debugging
+                    if (responseCode != 200) {
+                        String errorBody = readErrorResponse(conn);
+                        plugin.getLogger().warning("API returned status " + responseCode + " for action " + action +
+                                (errorBody.isEmpty() ? "" : ": " + errorBody));
+
+                        // Don't retry on 4xx errors (client errors)
+                        if (responseCode >= 400 && responseCode < 500) {
+                            return new JsonObject();
+                        }
+                        // Retry on 5xx or other errors
+                        continue;
+                    }
+
+                    try (BufferedReader reader = new BufferedReader(
+                            new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                        StringBuilder response = new StringBuilder();
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            response.append(line);
+                        }
+
+                        String responseStr = response.toString();
+                        if (responseStr.isEmpty()) {
+                            plugin.getLogger().warning("Empty response from API for action " + action);
+                            return new JsonObject();
+                        }
+
+                        return JsonParser.parseString(responseStr).getAsJsonObject();
+                    }
+                } catch (IOException e) {
+                    lastException = e;
+                    plugin.getLogger().log(Level.WARNING, "API request failed for action " + action + " (attempt " + (attempt + 1) + "): " + e.getMessage());
+                } catch (Exception e) {
+                    lastException = e;
+                    plugin.getLogger().log(Level.SEVERE, "Unexpected error in API request for action " + action + ": " + e.getMessage());
+                    break;
+                }
             }
+
+            // All retries failed
+            if (lastException != null) {
+                plugin.getLogger().log(Level.WARNING, "All API request attempts failed for action " + action);
+            }
+            return new JsonObject();
         });
+    }
+
+    /**
+     * Read error response body from failed request
+     */
+    private String readErrorResponse(HttpURLConnection conn) {
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8))) {
+            StringBuilder response = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                response.append(line);
+            }
+            return response.toString();
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     private String urlEncode(String value) {

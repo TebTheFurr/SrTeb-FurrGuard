@@ -33,6 +33,7 @@ public class MessageUtil {
         messages.put("locked_movement", "&cEstas bloqueado hasta verificar tu identidad.");
         messages.put("locked_command", "&cNo puedes ejecutar comandos hasta verificar.");
         messages.put("locked_inventory", "&cNo puedes interactuar con inventarios hasta verificar.");
+        messages.put("locked_chat", "&cNo puedes enviar mensajes hasta verificar.");
         messages.put("locked_server_switch", "&cNo puedes cambiar de servidor hasta verificar.");
         messages.put("admin_notification", "&c[FurrSecurity] &7{player} &erequiere verificacion.");
         messages.put("reload_success", "&aConfiguracion recargada.");
