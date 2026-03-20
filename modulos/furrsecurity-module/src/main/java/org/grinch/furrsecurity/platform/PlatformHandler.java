@@ -94,4 +94,14 @@ public interface PlatformHandler {
     Object runSyncTimer(Runnable task, long delayTicks, long periodTicks);
 
     void cancelTask(Object task);
+
+    /**
+     * Remove blindness effect from a player (after verification)
+     */
+    void removeBlindness(UUID uuid);
+
+    /**
+     * Apply blindness effect to a player (when locked for verification)
+     */
+    void applyBlindness(UUID uuid);
 }

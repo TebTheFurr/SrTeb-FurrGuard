@@ -1,8 +1,5 @@
 package org.grinch.furrsecurity.listener;
 
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -15,8 +12,6 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryInteractEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.*;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 import org.grinch.furrsecurity.FurrSecurity;
 import org.grinch.furrsecurity.manager.PlayerLockManager;
 
@@ -52,10 +47,8 @@ public class PaperListener implements Listener {
                 player.hasPermission("furrguard.*");
 
         if (isStaff) {
-            // Apply blindness effect while locked (will be removed when verified)
-            applyVerificationBlindness(player);
-
             // Check verification status
+            // Blindness is applied when player is locked (in PlayerLockManager)
             // In proxy mode, use proxy-aware session check (no token generation, just lock and poll)
             plugin.getVerificationManager().checkSession(uuid, username, ip, proxyMode);
         }
@@ -229,6 +222,66 @@ public class PaperListener implements Listener {
 
         if (plugin.getPlayerLockManager().isLocked(uuid)) {
             event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onEntityDamage(EntityDamageEvent event) {
+        // PvP and Mob immunity for locked players
+        if (!(event.getEntity() instanceof Player)) return;
+
+        Player player = (Player) event.getEntity();
+        UUID uuid = player.getUniqueId();
+
+        if (plugin.getPlayerLockManager().isLocked(uuid)) {
+            // Cancel damage from mobs and other entities (PvP + mob immunity)
+            EntityDamageEvent.DamageCause cause = event.getCause();
+
+            // Block all entity-based damage (melee, projectiles, etc.)
+            if (cause == EntityDamageEvent.DamageCause.ENTITY_ATTACK ||
+                    cause == EntityDamageEvent.DamageCause.PROJECTILE ||
+                    cause == EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK ||
+                    cause == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) {
+                event.setCancelled(true);
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+        // Prevent locked players from attacking others
+        if (event.getDamager() instanceof Player) {
+            Player attacker = (Player) event.getDamager();
+            UUID attackerUuid = attacker.getUniqueId();
+
+            if (plugin.getPlayerLockManager().isLocked(attackerUuid)) {
+                event.setCancelled(true);
+            }
+        }
+
+        // Prevent locked players from being attacked by other players (PvP immunity)
+        if (event.getEntity() instanceof Player) {
+            Player victim = (Player) event.getEntity();
+            UUID victimUuid = victim.getUniqueId();
+
+            if (plugin.getPlayerLockManager().isLocked(victimUuid)) {
+                if (event.getDamager() instanceof Player) {
+                    event.setCancelled(true);
+                }
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onEntityTarget(EntityTargetEvent event) {
+        // Prevent mobs from targeting locked players
+        if (event.getTarget() instanceof Player) {
+            Player player = (Player) event.getTarget();
+            UUID uuid = player.getUniqueId();
+
+            if (plugin.getPlayerLockManager().isLocked(uuid)) {
+                event.setCancelled(true);
+            }
         }
     }
 

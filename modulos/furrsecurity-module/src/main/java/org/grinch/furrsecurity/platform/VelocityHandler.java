@@ -192,6 +192,16 @@ public class VelocityHandler implements PlatformHandler {
         }
     }
 
+    @Override
+    public void removeBlindness(UUID uuid) {
+        // No-op in Velocity - potion effects are handled by backend servers (Paper)
+    }
+
+    @Override
+    public void applyBlindness(UUID uuid) {
+        // No-op in Velocity - potion effects are handled by backend servers (Paper)
+    }
+
     public ProxyServer getServer() {
         return server;
     }

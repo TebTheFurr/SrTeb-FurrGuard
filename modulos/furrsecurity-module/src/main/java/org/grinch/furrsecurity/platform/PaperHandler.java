@@ -8,6 +8,8 @@ import org.bukkit.Server;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.grinch.furrsecurity.FurrSecurity;
 import org.grinch.furrsecurity.command.FurrSecurityCommand;
 import org.grinch.furrsecurity.command.PaperCommandWrapper;
@@ -195,6 +197,39 @@ public class PaperHandler implements PlatformHandler {
         } else if (task instanceof Integer) {
             Bukkit.getScheduler().cancelTask((Integer) task);
         }
+    }
+
+    @Override
+    public void removeBlindness(UUID uuid) {
+        // Must run on main thread for potion effects
+        runSync(() -> {
+            Player player = Bukkit.getPlayer(uuid);
+            if (player != null && player.hasPotionEffect(PotionEffectType.BLINDNESS)) {
+                player.removePotionEffect(PotionEffectType.BLINDNESS);
+            }
+        });
+    }
+
+    @Override
+    public void applyBlindness(UUID uuid) {
+        // Must run on main thread for potion effects
+        runSync(() -> {
+            Player player = Bukkit.getPlayer(uuid);
+            if (player != null) {
+                // Remove existing blindness first
+                player.removePotionEffect(PotionEffectType.BLINDNESS);
+
+                // Apply infinite blindness (removed when verified)
+                PotionEffect blindness = new PotionEffect(
+                        PotionEffectType.BLINDNESS,
+                        Integer.MAX_VALUE,
+                        1,
+                        false,  // no ambient
+                        false   // no particles
+                );
+                player.addPotionEffect(blindness);
+            }
+        });
     }
 
     public JavaPlugin getPaperPlugin() {

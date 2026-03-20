@@ -35,6 +35,10 @@ public class PlayerLockManager {
             return; // Already locked
         }
         lockedPlayers.add(uuid);
+
+        // Apply blindness effect when locked (Paper only)
+        plugin.getPlatformHandler().applyBlindness(uuid);
+
         String nick = plugin.getPlatformHandler().getPlayerName(uuid);
         plugin.getLogger().info("Locked player: " + (nick != null ? nick : uuid));
     }
@@ -49,6 +53,10 @@ public class PlayerLockManager {
         }
         pendingTokens.remove(uuid);
         lastLocations.remove(uuid);
+
+        // Remove blindness effect after verification (Paper only)
+        plugin.getPlatformHandler().removeBlindness(uuid);
+
         String nick = plugin.getPlatformHandler().getPlayerName(uuid);
         plugin.getLogger().info("Unlocked player: " + (nick != null ? nick : uuid));
     }
