@@ -9,7 +9,7 @@
 
 require_once __DIR__ . '/config/env.php';
 
-define('FURRGUARD_VERSION', '1.0.0');
+define('FURRGUARD_VERSION', '1.5.0');
 define('DISCORD_CLIENT_ID', getenv('DISCORD_CLIENT_ID') ?: '');
 define('DISCORD_CLIENT_SECRET', getenv('DISCORD_CLIENT_SECRET') ?: '');
 define('DISCORD_REDIRECT_URI', getenv('DISCORD_REDIRECT_URI') ?: '');

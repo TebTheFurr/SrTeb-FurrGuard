@@ -4,7 +4,7 @@
  * @author GrinchHorizon
  * @copyright SrTeb Limited
  * @website https://srteb.eu
- * @version 1.0.0
+ * @version 1.5.0
  */
 
 const API_URL = 'api.php';
