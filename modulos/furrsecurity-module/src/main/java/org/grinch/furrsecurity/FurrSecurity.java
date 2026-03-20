@@ -171,6 +171,10 @@ public class FurrSecurity {
         return messageUtil;
     }
 
+    public Object getPluginObject() {
+        return plugin;
+    }
+
     public String getVersion() {
         return "1.0.0";
     }

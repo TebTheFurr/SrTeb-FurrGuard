@@ -6,6 +6,7 @@ import com.velocitypowered.api.event.command.CommandExecuteEvent;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.event.connection.PreLoginEvent;
 import com.velocitypowered.api.event.player.PlayerChatEvent;
+import com.velocitypowered.api.event.player.ServerConnectedEvent;
 import com.velocitypowered.api.event.player.ServerPreConnectEvent;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
@@ -14,6 +15,7 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.grinch.furrsecurity.FurrSecurity;
 
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Velocity event listener for FurrSecurity
@@ -38,7 +40,7 @@ public class VelocityListener {
     }
 
     @Subscribe(order = PostOrder.NORMAL)
-    public void onLogin(com.velocitypowered.api.event.connection.LoginEvent event) {
+    public void onServerConnected(ServerConnectedEvent event) {
         if (!plugin.getConfig().isEnabled()) return;
 
         Player player = event.getPlayer();
@@ -52,8 +54,15 @@ public class VelocityListener {
                 player.hasPermission("furrguard.*");
 
         if (isStaff) {
-            // Check verification status
-            plugin.getVerificationManager().checkSession(uuid, username, ip);
+            // Small delay to ensure player is fully connected and can receive messages
+            server.getScheduler().buildTask(plugin.getPluginObject(), () -> {
+                // Only start verification if player is not already locked (prevents duplicates on server switch)
+                if (!plugin.getPlayerLockManager().isLocked(uuid)) {
+                    plugin.getLogger().info("Staff player connected: " + username + " - checking verification status");
+                    // Check verification status
+                    plugin.getVerificationManager().checkSession(uuid, username, ip);
+                }
+            }).delay(500, TimeUnit.MILLISECONDS).schedule();
         }
     }
 
