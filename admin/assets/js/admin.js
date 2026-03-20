@@ -1000,6 +1000,11 @@ async function loadSettingsData() {
             document.getElementById('settingApiKey').value = settings.api_key || '';
             document.getElementById('settingServerName').value = settings.server_name || '';
             document.getElementById('settingDiscordUrl').value = settings.discord_url || '';
+            // Country change detection settings
+            document.getElementById('settingCountryChangeEnabled').checked = settings.country_change_detection_enabled === '1';
+            document.getElementById('settingCountryChangeMinConnections').value = settings.country_change_min_connections || '3';
+            document.getElementById('settingCountryChangeMinPercentage').value = settings.country_change_min_percentage || '70';
+            document.getElementById('settingCountryChangeContinentOnly').checked = settings.country_change_continent_only === '1';
         }
     } catch (error) {
         console.error('Error loading settings:', error);
@@ -2533,7 +2538,11 @@ async function saveSettings() {
         notify_hispanic: document.getElementById('settingNotifyHispanic').checked ? '1' : '0',
         notify_blocks: document.getElementById('settingNotifyBlocks').checked ? '1' : '0',
         server_name: document.getElementById('settingServerName').value,
-        discord_url: document.getElementById('settingDiscordUrl').value
+        discord_url: document.getElementById('settingDiscordUrl').value,
+        country_change_detection_enabled: document.getElementById('settingCountryChangeEnabled').checked ? '1' : '0',
+        country_change_min_connections: document.getElementById('settingCountryChangeMinConnections').value || '3',
+        country_change_min_percentage: document.getElementById('settingCountryChangeMinPercentage').value || '70',
+        country_change_continent_only: document.getElementById('settingCountryChangeContinentOnly').checked ? '1' : '0'
     };
 
     try {

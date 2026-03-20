@@ -952,3 +952,231 @@ function mergeNameHistorySources(array $rows, string $currentName): array {
 
     return $merged;
 }
+
+/**
+ * Mapeo de continentes para códigos de país
+ * Basado en estándar ISO 3166-1 alpha-2
+ */
+function getContinentForCountry(string $countryCode): string {
+    $continents = [
+        // Europa
+        'EU' => ['AD', 'AL', 'AT', 'AX', 'BA', 'BE', 'BG', 'BY', 'CH', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FO', 'FR', 'GB', 'GG', 'GI', 'GR', 'HR', 'HU', 'IE', 'IM', 'IS', 'IT', 'JE', 'LI', 'LT', 'LU', 'LV', 'MC', 'MD', 'ME', 'MK', 'MT', 'NL', 'NO', 'PL', 'PT', 'RO', 'RS', 'RU', 'SE', 'SI', 'SJ', 'SK', 'SM', 'UA', 'VA'],
+        // América del Norte
+        'NA' => ['AG', 'AI', 'AS', 'BB', 'BM', 'BS', 'BZ', 'CA', 'CR', 'CU', 'DM', 'DO', 'GD', 'GL', 'GP', 'GT', 'HN', 'HT', 'JM', 'KN', 'KY', 'LC', 'MF', 'MQ', 'MS', 'MX', 'NI', 'PA', 'PM', 'PR', 'SV', 'TC', 'TT', 'US', 'VC', 'VG', 'VI'],
+        // América del Sur
+        'SA' => ['AR', 'BO', 'BR', 'CL', 'CO', 'EC', 'FK', 'GF', 'GY', 'PE', 'PY', 'SR', 'UY', 'VE'],
+        // Asia
+        'AS' => ['AE', 'AF', 'BD', 'BH', 'BN', 'BT', 'CN', 'CY', 'GE', 'HK', 'ID', 'IL', 'IN', 'IQ', 'IR', 'JO', 'JP', 'KG', 'KH', 'KP', 'KR', 'KW', 'KZ', 'LA', 'LB', 'LK', 'MM', 'MN', 'MO', 'MV', 'MY', 'NP', 'OM', 'PH', 'PK', 'PS', 'QA', 'SA', 'SG', 'SY', 'TH', 'TJ', 'TL', 'TM', 'TW', 'UZ', 'VN', 'YE'],
+        // África
+        'AF' => ['AO', 'BF', 'BI', 'BJ', 'BW', 'CD', 'CF', 'CG', 'CI', 'CM', 'CV', 'DJ', 'DZ', 'EG', 'EH', 'ER', 'ET', 'GA', 'GH', 'GM', 'GN', 'GQ', 'GW', 'KE', 'KM', 'LR', 'LS', 'LY', 'MA', 'MG', 'ML', 'MR', 'MU', 'MW', 'MZ', 'NA', 'NE', 'NG', 'RE', 'RW', 'SC', 'SD', 'SH', 'SL', 'SN', 'SO', 'ST', 'SZ', 'TD', 'TG', 'TN', 'TZ', 'UG', 'YT', 'ZA', 'ZM', 'ZW'],
+        // Oceanía
+        'OC' => ['AU', 'CC', 'CK', 'CX', 'FJ', 'FM', 'GU', 'KI', 'MH', 'MP', 'NC', 'NF', 'NR', 'NU', 'NZ', 'PF', 'PG', 'PN', 'PW', 'SB', 'TO', 'TV', 'UM', 'VU', 'WF', 'WS']
+    ];
+
+    $code = strtoupper($countryCode);
+    foreach ($continents as $continent => $countries) {
+        if (in_array($code, $countries, true)) {
+            return $continent;
+        }
+    }
+    return 'UNKNOWN';
+}
+
+/**
+ * Detecta si hay un cambio drástico de país para un jugador
+ * Retorna array con información del cambio o null si no hay cambio sospechoso
+ *
+ * @param PDO $db Conexión a la base de datos
+ * @param string|null $uuid UUID del jugador
+ * @param string $nick Nick del jugador
+ * @param string $currentCountry Código de país actual (ISO 3166-1 alpha-2)
+ * @return array|null Información del cambio sospechoso o null
+ */
+function detectDrasticCountryChange(PDO $db, ?string $uuid, string $nick, string $currentCountry): ?array {
+    // Verificar si la detección está habilitada
+    $enabled = getSetting($db, 'country_change_detection_enabled', '1') === '1';
+    if (!$enabled) {
+        return null;
+    }
+
+    // Mínimo de conexiones previas para detectar patrón
+    $minConnections = (int)getSetting($db, 'country_change_min_connections', '3');
+
+    // Obtener historial de países del jugador
+    $playerId = null;
+    $historicalCountries = [];
+
+    // Buscar por UUID primero
+    if ($uuid) {
+        $stmt = $db->prepare("
+            SELECT country_code, COUNT(*) as count
+            FROM player_connections
+            WHERE uuid = :uuid
+              AND country_code IS NOT NULL
+              AND country_code != ''
+            GROUP BY country_code
+            ORDER BY count DESC
+        ");
+        $stmt->execute(['uuid' => $uuid]);
+        $historicalCountries = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+        // Obtener total de conexiones
+        $stmtTotal = $db->prepare("SELECT COUNT(*) FROM player_connections WHERE uuid = :uuid");
+        $stmtTotal->execute(['uuid' => $uuid]);
+        $totalConnections = (int)$stmtTotal->fetchColumn();
+    }
+
+    // Si no hay datos por UUID, buscar por nick
+    if (empty($historicalCountries) && $nick) {
+        $stmt = $db->prepare("
+            SELECT country_code, COUNT(*) as count
+            FROM player_connections
+            WHERE nick = :nick
+              AND country_code IS NOT NULL
+              AND country_code != ''
+            GROUP BY country_code
+            ORDER BY count DESC
+        ");
+        $stmt->execute(['nick' => $nick]);
+        $historicalCountries = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+        // Obtener total de conexiones
+        $stmtTotal = $db->prepare("SELECT COUNT(*) FROM player_connections WHERE nick = :nick");
+        $stmtTotal->execute(['nick' => $nick]);
+        $totalConnections = (int)$stmtTotal->fetchColumn();
+    }
+
+    // Si no hay suficientes conexiones previas, no aplicar detección
+    if ($totalConnections < $minConnections || empty($historicalCountries)) {
+        return null;
+    }
+
+    // Si el país actual ya está en el historial, no es sospechoso
+    $currentCountryUpper = strtoupper($currentCountry);
+    if (isset($historicalCountries[$currentCountryUpper])) {
+        return null;
+    }
+
+    // Obtener el país más común del jugador
+    $mostCommonCountry = array_key_first($historicalCountries);
+    $mostCommonCount = $historicalCountries[$mostCommonCountry];
+    $mostCommonPercentage = ($mostCommonCount / $totalConnections) * 100;
+
+    // Verificar si el país más común representa un porcentaje significativo
+    $minPercentage = (float)getSetting($db, 'country_change_min_percentage', '70.0');
+    if ($mostCommonPercentage < $minPercentage) {
+        // El jugador se conecta desde múltiples países regularmente, no es sospechoso
+        return null;
+    }
+
+    // Verificar cambio de continente (más sospechoso)
+    $currentContinent = getContinentForCountry($currentCountryUpper);
+    $historicalContinent = getContinentForCountry($mostCommonCountry);
+
+    $isContinentChange = ($currentContinent !== $historicalContinent && $currentContinent !== 'UNKNOWN' && $historicalContinent !== 'UNKNOWN');
+
+    // Si solo está activada la detección de cambio de continente
+    $continentOnlyMode = getSetting($db, 'country_change_continent_only', '0') === '1';
+    if ($continentOnlyMode && !$isContinentChange) {
+        return null;
+    }
+
+    // Construir información del cambio
+    return [
+        'detected' => true,
+        'current_country' => $currentCountryUpper,
+        'current_continent' => $currentContinent,
+        'historical_country' => $mostCommonCountry,
+        'historical_continent' => $historicalContinent,
+        'is_continent_change' => $isContinentChange,
+        'historical_connections' => $totalConnections,
+        'country_percentage' => round($mostCommonPercentage, 1),
+        'all_countries' => $historicalCountries
+    ];
+}
+
+/**
+ * Aplica blacklist automática por cuenta comprometida
+ *
+ * @param PDO $db Conexión a la base de datos
+ * @param string|null $uuid UUID del jugador
+ * @param string $nick Nick del jugador
+ * @param string $ip IP del jugador
+ * @param array $countryChangeInfo Información del cambio de país
+ * @return bool True si se aplicó correctamente
+ */
+function applyCompromisedAccountBlacklist(PDO $db, ?string $uuid, string $nick, string $ip, array $countryChangeInfo): bool {
+    $reason = 'Cuenta comprometida';
+
+    // Agregar información adicional al reason
+    $reason .= sprintf(
+        ' (Cambio de país: %s -> %s)',
+        $countryChangeInfo['historical_country'],
+        $countryChangeInfo['current_country']
+    );
+
+    $addedBy = 'FurrGuard Auto-Detection';
+
+    try {
+        // Aplicar blacklist por UUID si está disponible
+        if ($uuid) {
+            $banId = generateBanId();
+            $stmt = $db->prepare("
+                INSERT INTO blacklist (ban_id, type, value, reason, added_by, active)
+                VALUES (:ban_id, 'uuid', :value, :reason, :added_by, 1)
+                ON DUPLICATE KEY UPDATE reason = :reason_upd, added_by = :added_by_upd, active = 1, updated_at = NOW()
+            ");
+            $stmt->execute([
+                'ban_id' => $banId,
+                'value' => normalizeUuid($uuid),
+                'reason' => $reason,
+                'added_by' => $addedBy,
+                'reason_upd' => $reason,
+                'added_by_upd' => $addedBy
+            ]);
+        }
+
+        // Aplicar blacklist por nick
+        $banIdNick = generateBanId();
+        $stmt = $db->prepare("
+            INSERT INTO blacklist (ban_id, type, value, reason, added_by, active)
+            VALUES (:ban_id, 'nick', :value, :reason, :added_by, 1)
+            ON DUPLICATE KEY UPDATE reason = :reason_upd, added_by = :added_by_upd, active = 1, updated_at = NOW()
+        ");
+        $stmt->execute([
+            'ban_id' => $banIdNick,
+            'value' => $nick,
+            'reason' => $reason,
+            'added_by' => $addedBy,
+            'reason_upd' => $reason,
+            'added_by_upd' => $addedBy
+        ]);
+
+        // Aplicar blacklist a la IP actual
+        $banIdIp = generateBanId();
+        $stmt = $db->prepare("
+            INSERT INTO blacklist (ban_id, type, value, reason, added_by, active)
+            VALUES (:ban_id, 'ip', :value, :reason, :added_by, 1)
+            ON DUPLICATE KEY UPDATE reason = :reason_upd, added_by = :added_by_upd, active = 1, updated_at = NOW()
+        ");
+        $stmt->execute([
+            'ban_id' => $banIdIp,
+            'value' => $ip,
+            'reason' => $reason,
+            'added_by' => $addedBy,
+            'reason_upd' => $reason,
+            'added_by_upd' => $addedBy
+        ]);
+
+        // Registrar en activity logs
+        logActivity($db, 'security', 'compromised_account', "Jugador: {$nick}, País histórico: {$countryChangeInfo['historical_country']}, País actual: {$countryChangeInfo['current_country']}");
+
+        // Incrementar versión de cache para notificar al plugin
+        incrementCacheVersion($db);
+
+        return true;
+    } catch (PDOException $e) {
+        error_log("Error applying compromised account blacklist: " . $e->getMessage());
+        return false;
+    }
+}

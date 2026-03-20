@@ -1624,7 +1624,7 @@ function getSettings($db) {
 }
 
 function saveSettings($db, $settings) {
-    $allowedKeys = ['block_proxy', 'block_vpn', 'block_hosting', 'webhook_url', 'notify_connections', 'notify_hispanic', 'notify_blocks', 'server_name', 'discord_url'];
+    $allowedKeys = ['block_proxy', 'block_vpn', 'block_hosting', 'webhook_url', 'notify_connections', 'notify_hispanic', 'notify_blocks', 'server_name', 'discord_url', 'country_change_detection_enabled', 'country_change_min_connections', 'country_change_min_percentage', 'country_change_continent_only'];
 
     // Filter allowed keys
     $filtered = array_intersect_key($settings, array_flip($allowedKeys));

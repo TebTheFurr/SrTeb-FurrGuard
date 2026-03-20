@@ -1090,6 +1090,43 @@ $user = $isAuthenticated ? $_SESSION['furrguard_admin'] : null;
                             </div>
                         </div>
                         <div class="settings-card">
+                            <h3>Protección de Cuentas</h3>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Detectar Cuenta Comprometida</span>
+                                    <span class="setting-desc">Bloquea automáticamente cuentas que conectan desde un país diferente al habitual</span>
+                                </div>
+                                <label class="toggle">
+                                    <input type="checkbox" id="settingCountryChangeEnabled">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-item full-width">
+                                <div class="setting-info">
+                                    <span class="setting-label">Mínimo de Conexiones</span>
+                                    <span class="setting-desc">Conexiones mínimas antes de aplicar la detección (evita falsos positivos en jugadores nuevos)</span>
+                                </div>
+                                <input type="number" class="setting-input" id="settingCountryChangeMinConnections" min="1" max="50" value="3" style="width: 80px;">
+                            </div>
+                            <div class="setting-item full-width">
+                                <div class="setting-info">
+                                    <span class="setting-label">Porcentaje de Confianza (%)</span>
+                                    <span class="setting-desc">Porcentaje mínimo de conexiones desde un país para considerarlo habitual</span>
+                                </div>
+                                <input type="number" class="setting-input" id="settingCountryChangeMinPercentage" min="50" max="100" step="5" value="70" style="width: 80px;">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Solo Cambio de Continente</span>
+                                    <span class="setting-desc">Detectar solo cuando el cambio es entre continentes diferentes (más permisivo)</span>
+                                </div>
+                                <label class="toggle">
+                                    <input type="checkbox" id="settingCountryChangeContinentOnly">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="settings-card">
                             <h3>Notificaciones</h3>
                             <div class="setting-item full-width">
                                 <div class="setting-info">

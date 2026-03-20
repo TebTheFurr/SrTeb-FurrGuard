@@ -208,6 +208,59 @@ function handleCheckPlayer(PDO $db): void {
         return;
     }
 
+    // Detectar cambio drástico de país (cuenta comprometida)
+    $currentCountryCode = $ipData['countryCode'] ?? null;
+    $countryChangeInfo = null;
+    if ($currentCountryCode) {
+        $countryChangeInfo = detectDrasticCountryChange($db, $uuidOrNull, $nick, $currentCountryCode);
+        if ($countryChangeInfo !== null) {
+            // Aplicar blacklist automática por cuenta comprometida
+            applyCompromisedAccountBlacklist($db, $uuidOrNull, $nick, $ip, $countryChangeInfo);
+
+            // Log de la conexión bloqueada
+            $connectionData = [
+                'uuid' => $uuidOrNull,
+                'nick' => $nick,
+                'ip' => $ip,
+                'ip_version' => getIpVersion($ip),
+                'country' => $ipData['country'] ?? null,
+                'country_code' => $ipData['countryCode'] ?? null,
+                'region' => $ipData['regionName'] ?? null,
+                'city' => $ipData['city'] ?? null,
+                'isp' => $ipData['isp'] ?? null,
+                'org' => $ipData['org'] ?? null,
+                'asn' => $ipData['as'] ?? null,
+                'asname' => $ipData['asname'] ?? null,
+                'is_proxy' => ($ipData['proxy'] ?? false) ? 1 : 0,
+                'is_vpn' => 0,
+                'is_hosting' => ($ipData['hosting'] ?? false) ? 1 : 0,
+                'is_mobile' => ($ipData['mobile'] ?? false) ? 1 : 0,
+                'latitude' => $ipData['lat'] ?? null,
+                'longitude' => $ipData['lon'] ?? null,
+                'timezone' => $ipData['timezone'] ?? null,
+                'game_version' => $gameVersion,
+                'blocked' => 1,
+                'block_reason' => 'compromised_account',
+                'raw_data' => json_encode($ipData)
+            ];
+            logPlayerConnection($db, $connectionData);
+
+            echo json_encode([
+                'allowed' => false,
+                'reason' => 'compromised_account',
+                'block_reason' => 'Cuenta comprometida',
+                'details' => sprintf(
+                    'Cambio de país detectado: %s → %s',
+                    $countryChangeInfo['historical_country'],
+                    $countryChangeInfo['current_country']
+                ),
+                'country_change' => $countryChangeInfo,
+                'ip_data' => $ipData
+            ]);
+            return;
+        }
+    }
+
     $blacklistEntry = isPlayerBlacklisted($db, $uuidOrNull, $nick, $ip, $asn);
     if ($blacklistEntry) {
         $blockedName = null;
