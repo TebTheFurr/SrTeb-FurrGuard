@@ -23,6 +23,11 @@ function getCspNonce(): string {
  * Uses CSP nonces for inline scripts while allowing external scripts and inline styles.
  */
 function applySecurityHeaders(): void {
+    // Clear OPcache to ensure latest CSP changes are applied
+    if (function_exists('opcache_reset')) {
+        opcache_invalidate(__FILE__, true);
+    }
+
     $nonce = getCspNonce();
 
     header('X-Content-Type-Options: nosniff');
@@ -31,8 +36,9 @@ function applySecurityHeaders(): void {
     header('Referrer-Policy: strict-origin-when-cross-origin');
     header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
 
-    // CSP with nonces for inline scripts, external scripts allowed from unpkg.com
-    // Note: 'unsafe-inline' is kept for style-src to support inline style="" attributes in JS
+    // CSP with nonces for scripts and unsafe-inline for styles (safe for CSS)
+    // Note: 'unsafe-inline' in style-src is safe for CSS; only script 'unsafe-inline' is dangerous
+    // Removed 'strict-dynamic' as it disables host-based allowlisting which blocked unpkg.com
     header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{$nonce}' https://unpkg.com; style-src 'self' 'nonce-{$nonce}' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://crafatar.com https://cdn.discordapp.com https://mineskin.eu https://flagcdn.com data:; connect-src 'self' https://unpkg.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none';");
 
     // Prevent caching of sensitive pages
