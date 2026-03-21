@@ -20,7 +20,7 @@ function getCspNonce(): string {
 
 /**
  * Apply security headers to all responses.
- * Uses CSP nonces instead of unsafe-inline for scripts and styles.
+ * Uses CSP nonces for inline scripts while allowing external scripts and inline styles.
  */
 function applySecurityHeaders(): void {
     // Clear OPcache to ensure latest CSP changes are applied
