@@ -31,10 +31,11 @@ function applySecurityHeaders(): void {
     header('Referrer-Policy: strict-origin-when-cross-origin');
     header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
 
-    // CSP with nonces for inline scripts, external scripts allowed from unpkg.com
-    // Note: 'unsafe-inline' is kept for style-src to support inline style="" attributes set by JS
+    // CSP with nonces for inline scripts and styles, external scripts allowed from unpkg.com
+    // Note: When nonce is present, 'unsafe-inline' is ignored per CSP spec
+    // JS must use CSS classes instead of inline style="" attributes
     // media-src allows data: URIs for audio/video elements
-    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{$nonce}' https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://crafatar.com https://cdn.discordapp.com https://mineskin.eu https://flagcdn.com data:; media-src 'self' data:; connect-src 'self' https://unpkg.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none';");
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{$nonce}' https://unpkg.com; style-src 'self' 'nonce-{$nonce}' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://crafatar.com https://cdn.discordapp.com https://mineskin.eu https://flagcdn.com data:; media-src 'self' data:; connect-src 'self' https://unpkg.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none';");
 
     // Prevent caching of sensitive pages
     if (strpos($_SERVER['REQUEST_URI'] ?? '', '/admin/') !== false) {

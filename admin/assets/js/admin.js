@@ -15,6 +15,164 @@ let currentSection = 'overview';
 let currentUser = null;
 let skinViewer = null;
 
+/* ============================================
+   CSP-COMPLIANT DOM HELPERS
+   Use these instead of inline style manipulations
+   ============================================ */
+
+/**
+ * Show an element (removes 'hidden' class)
+ * @param {HTMLElement} el - Element to show
+ */
+function showElement(el) {
+    if (el) el.classList.remove('hidden');
+}
+
+/**
+ * Hide an element (adds 'hidden' class)
+ * @param {HTMLElement} el - Element to hide
+ */
+function hideElement(el) {
+    if (el) el.classList.add('hidden');
+}
+
+/**
+ * Toggle element visibility
+ * @param {HTMLElement} el - Element to toggle
+ * @param {boolean} show - Whether to show or hide
+ */
+function toggleElement(el, show) {
+    if (el) {
+        if (show) {
+            el.classList.remove('hidden');
+        } else {
+            el.classList.add('hidden');
+        }
+    }
+}
+
+/**
+ * Set avatar image or placeholder
+ * @param {HTMLElement} el - Avatar container element
+ * @param {string} name - Player name for placeholder letter
+ * @param {string} imageUrl - Optional image URL
+ */
+function setAvatar(el, name, imageUrl = null) {
+    if (!el) return;
+    el.innerHTML = '';
+    if (imageUrl) {
+        const img = document.createElement('img');
+        img.src = imageUrl;
+        img.className = 'avatar-img';
+        img.alt = 'Avatar';
+        img.onerror = function() {
+            el.innerHTML = name ? name.charAt(0).toUpperCase() : '?';
+            el.className = 'avatar-placeholder';
+        };
+        el.appendChild(img);
+        el.className = '';
+    } else {
+        el.innerHTML = name ? name.charAt(0).toUpperCase() : '?';
+        el.className = 'avatar-placeholder';
+    }
+}
+
+/**
+ * Set badge style based on type
+ * @param {HTMLElement} el - Badge element
+ * @param {string} type - 'premium', 'offline', 'unverified', 'offline-uuid'
+ */
+function setBadge(el, type) {
+    if (!el) return;
+    el.classList.remove('badge-premium', 'badge-offline', 'badge-unverified', 'badge-offline-uuid');
+    switch(type) {
+        case 'premium':
+            el.classList.add('badge-premium');
+            el.textContent = 'Premium';
+            break;
+        case 'offline':
+            el.classList.add('badge-offline');
+            el.textContent = 'No Premium';
+            break;
+        case 'unverified':
+            el.classList.add('badge-offline-uuid');
+            el.textContent = 'No Verificado';
+            break;
+        case 'offline-uuid':
+            el.classList.add('badge-offline-uuid');
+            el.textContent = 'Offline';
+            break;
+    }
+    showElement(el);
+}
+
+/**
+ * Set UUID text style
+ * @param {HTMLElement} el - UUID element
+ * @param {string} type - 'normal', 'offline', 'muted', 'placeholder'
+ * @param {string} text - Text content
+ */
+function setUuidStyle(el, type, text) {
+    if (!el) return;
+    el.textContent = text;
+    el.classList.remove('uuid-normal', 'uuid-offline', 'uuid-muted', 'uuid-placeholder');
+    el.classList.add('uuid-' + type);
+}
+
+/**
+ * Set tab button active/inactive state
+ * @param {HTMLElement} tab - Tab button element
+ * @param {boolean} active - Whether tab is active
+ */
+function setTabState(tab, active) {
+    if (!tab) return;
+    tab.classList.remove('tab-btn-active', 'tab-btn-inactive');
+    tab.classList.add(active ? 'tab-btn-active' : 'tab-btn-inactive');
+}
+
+/**
+ * Set avatar element state
+ * @param {HTMLElement} el - Avatar container element
+ * @param {Object|null} data - Player data or null for placeholder
+ */
+function setAvatar(el, data) {
+    if (!el) return;
+    el.innerHTML = '';
+    if (data && data.name) {
+        if (data.is_premium) {
+            const img = document.createElement('img');
+            img.src = 'https://mineskin.eu/avatar/' + encodeURIComponent(data.name) + '/48.png';
+            img.className = 'avatar-img';
+            img.alt = 'Avatar';
+            img.onerror = function() {
+                el.innerHTML = data.name.charAt(0).toUpperCase();
+                el.className = 'avatar-placeholder';
+            };
+            el.appendChild(img);
+            el.className = '';
+        } else {
+            el.innerHTML = data.name.charAt(0).toUpperCase();
+            el.className = 'avatar-placeholder';
+        }
+    } else {
+        el.innerHTML = '?';
+        el.className = 'avatar-placeholder';
+    }
+}
+
+/**
+ * Set UUID element style and content
+ * @param {HTMLElement} el - UUID element
+ * @param {string} style - 'normal', 'offline', 'muted', 'placeholder'
+ * @param {string} text - Text content
+ */
+function setUuidStyle(el, style, text) {
+    if (!el) return;
+    el.textContent = text;
+    el.classList.remove('uuid-normal', 'uuid-offline', 'uuid-muted', 'uuid-placeholder');
+    el.classList.add('uuid-' + style);
+}
+
 /**
  * Detecta si una UUID pertenece a un jugador offline/no-premium
  * Las UUIDs offline de Minecraft tienen el bit 4 de la versión (position 14) siempre en 0
@@ -57,9 +215,9 @@ function getBanTypeForPlayer(uuid, nick) {
  */
 function staggerReveal(elements, delay = 50) {
     elements.forEach((el, i) => {
-        el.style.animationDelay = `${i * delay}ms`;
-        el.classList.add('reveal');
-        el.style.opacity = '1';
+        // Use CSS custom property for animation delay (CSP-compliant)
+        el.style.setProperty('--stagger-delay', `${i * delay}ms`);
+        el.classList.add('reveal', 'opacity-1');
     });
 }
 
@@ -145,27 +303,24 @@ function initCounterAnimations() {
  */
 function createRipple(e) {
     const button = e.currentTarget;
+
+    // Add ripple container class if not present
+    if (!button.classList.contains('ripple-container')) {
+        button.classList.add('ripple-container');
+    }
+
     const ripple = document.createElement('span');
+    ripple.classList.add('ripple');
     const rect = button.getBoundingClientRect();
     const size = Math.max(rect.width, rect.height);
     const x = e.clientX - rect.left - size / 2;
     const y = e.clientY - rect.top - size / 2;
 
-    ripple.style.cssText = `
-        position: absolute;
-        width: ${size}px;
-        height: ${size}px;
-        left: ${x}px;
-        top: ${y}px;
-        background: rgba(139, 92, 246, 0.3);
-        border-radius: 50%;
-        transform: scale(0);
-        animation: ripple 0.6s ease-out;
-        pointer-events: none;
-    `;
+    // Use CSS custom properties for dynamic values (CSP-compliant)
+    ripple.style.setProperty('--ripple-size', `${size}px`);
+    ripple.style.setProperty('--ripple-x', `${x}px`);
+    ripple.style.setProperty('--ripple-y', `${y}px`);
 
-    button.style.position = 'relative';
-    button.style.overflow = 'hidden';
     button.appendChild(ripple);
 
     setTimeout(() => ripple.remove(), 600);
@@ -216,13 +371,12 @@ function initSectionAnimations() {
             if (activeSection) {
                 const elements = activeSection.querySelectorAll('.stat-card, .card, .table-container');
                 elements.forEach((el, i) => {
-                    el.style.opacity = '0';
-                    el.style.transform = 'translateY(10px)';
+                    // Use CSS classes instead of inline styles (CSP-compliant)
+                    el.classList.add('section-animate-init');
 
                     setTimeout(() => {
-                        el.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-                        el.style.opacity = '1';
-                        el.style.transform = 'translateY(0)';
+                        el.classList.remove('section-animate-init');
+                        el.classList.add('section-animate-visible');
                     }, i * 50);
                 });
             }
@@ -324,23 +478,23 @@ function applyRolePermissions() {
     document.querySelectorAll('.nav-item[data-section]').forEach(item => {
         const section = item.dataset.section;
         if (section && !allowed.includes(section)) {
-            item.style.display = 'none';
+            hideElement(item);
         } else {
-            item.style.display = '';
+            showElement(item);
         }
     });
 
     // Hide categories where all children are hidden
     document.querySelectorAll('.nav-category').forEach(cat => {
         const items = cat.querySelectorAll('.nav-item[data-section]');
-        const allHidden = Array.from(items).every(item => item.style.display === 'none');
-        cat.style.display = allHidden ? 'none' : '';
+        const allHidden = Array.from(items).every(item => item.classList.contains('hidden'));
+        toggleElement(cat, !allHidden);
     });
 
     // Show migration card only for Founders
     const migrationCard = document.getElementById('migrationCard');
     if (migrationCard) {
-        migrationCard.style.display = role === 'founder' ? '' : 'none';
+        toggleElement(migrationCard, role === 'founder');
     }
 
     if (!allowed.includes(currentSection)) {
@@ -1896,7 +2050,7 @@ function initModalListeners() {
 
     document.getElementById('blDuration')?.addEventListener('change', () => {
         const custom = document.getElementById('blDuration').value === 'custom';
-        document.getElementById('blCustomDurationGroup').style.display = custom ? '' : 'none';
+        toggleElement(document.getElementById('blCustomDurationGroup'), custom);
         if (!custom) document.getElementById('blCustomDuration').value = '';
     });
 
@@ -1945,7 +2099,7 @@ function initModalListeners() {
     document.getElementById('confirmBlacklist')?.addEventListener('click', async () => {
         // Check which tab is active
         const tabPlayer = document.getElementById('blTabPlayer');
-        const isPlayerTab = tabPlayer && tabPlayer.style.display !== 'none';
+        const isPlayerTab = tabPlayer && !tabPlayer.classList.contains('hidden');
 
         if (isPlayerTab) {
             // Player tab - use unified system
@@ -2131,7 +2285,7 @@ function initModalListeners() {
 
     document.getElementById('editBlDuration')?.addEventListener('change', () => {
         const custom = document.getElementById('editBlDuration').value === 'custom';
-        document.getElementById('editBlCustomDurationGroup').style.display = custom ? '' : 'none';
+        toggleElement(document.getElementById('editBlCustomDurationGroup'), custom);
         if (!custom) document.getElementById('editBlCustomDuration').value = '';
     });
 
@@ -2280,12 +2434,12 @@ async function openBlacklistModal(prefillType = null, prefillValue = '', readonl
 
         if (tabPlayer && tabOther) {
             tabPlayer.classList.add('active');
-            tabPlayer.style.cssText = 'flex:1;padding:10px;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.3);border-radius:8px;color:#fff;cursor:pointer;';
+            setTabState(tabPlayer, true);
             tabOther.classList.remove('active');
-            tabOther.style.cssText = 'flex:1;padding:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:rgba(255,255,255,0.6);cursor:pointer;';
+            setTabState(tabOther, false);
         }
-        if (blTabPlayer) blTabPlayer.style.display = 'block';
-        if (blTabOther) blTabOther.style.display = 'none';
+        showElement(blTabPlayer);
+        hideElement(blTabOther);
 
         // Pre-llenar el nombre del jugador
         const playerNameInput = document.getElementById('blPlayerName');
@@ -2306,12 +2460,12 @@ async function openBlacklistModal(prefillType = null, prefillValue = '', readonl
 
         if (tabPlayer && tabOther) {
             tabOther.classList.add('active');
-            tabOther.style.cssText = 'flex:1;padding:10px;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.3);border-radius:8px;color:#fff;cursor:pointer;';
+            setTabState(tabOther, true);
             tabPlayer.classList.remove('active');
-            tabPlayer.style.cssText = 'flex:1;padding:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:rgba(255,255,255,0.6);cursor:pointer;';
+            setTabState(tabPlayer, false);
         }
-        if (blTabPlayer) blTabPlayer.style.display = 'none';
-        if (blTabOther) blTabOther.style.display = 'block';
+        hideElement(blTabPlayer);
+        showElement(blTabOther);
 
         document.getElementById('blType').value = prefillType;
         document.getElementById('blValue').value = prefillValue;
@@ -2323,7 +2477,7 @@ async function openBlacklistModal(prefillType = null, prefillValue = '', readonl
 
     document.getElementById('blReason').value = '';
     document.getElementById('blDuration').value = '0';
-    document.getElementById('blCustomDurationGroup').style.display = 'none';
+    hideElement(document.getElementById('blCustomDurationGroup'));
     document.getElementById('blCustomDuration').value = '';
 
     if (readonly) {
@@ -2496,7 +2650,7 @@ function editBlacklistEntry(id, type, value, reason, expiresAt) {
     document.getElementById('editBlValue').value = value;
     document.getElementById('editBlReason').value = reason;
     document.getElementById('editBlDuration').value = '-1';
-    document.getElementById('editBlCustomDurationGroup').style.display = 'none';
+    hideElement(document.getElementById('editBlCustomDurationGroup'));
     document.getElementById('editBlCustomDuration').value = '';
     document.getElementById('editBlacklistModal').classList.add('active');
 }
@@ -3193,61 +3347,33 @@ async function lookupPlayer() {
     try {
         const response = await apiRequest('lookup_player', { player_name: playerName });
 
-        lookupResult.style.display = 'block';
+        showElement(lookupResult);
 
         if (response.success && response.data) {
             const data = response.data;
             lookedUpPlayer = data;
 
-            // Update avatar
+            // Update avatar using helper (CSP-compliant)
             const avatarEl = document.getElementById('blPlayerAvatar');
             if (data.is_premium && data.name) {
-                // Use mineskin.eu (same system used elsewhere in the panel)
-                avatarEl.textContent = '';
-                avatarEl.style.background = 'transparent';
-                const img = document.createElement('img');
-                img.src = 'https://mineskin.eu/avatar/' + encodeURIComponent(data.name) + '/48.png';
-                img.style.cssText = 'width:48px;height:48px;border-radius:8px;display:block;';
-                img.alt = 'Avatar';
-                img.onerror = function() {
-                    // Fallback to first letter if image fails
-                    avatarEl.textContent = data.name.charAt(0).toUpperCase();
-                    avatarEl.style.background = 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)';
-                    avatarEl.style.display = 'flex';
-                    avatarEl.style.alignItems = 'center';
-                    avatarEl.style.justifyContent = 'center';
-                };
-                avatarEl.appendChild(img);
+                setAvatar(avatarEl, data.name, 'https://mineskin.eu/avatar/' + encodeURIComponent(data.name) + '/48.png');
             } else {
-                avatarEl.textContent = playerName.charAt(0).toUpperCase();
-                avatarEl.style.background = 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)';
-                avatarEl.style.display = 'flex';
-                avatarEl.style.alignItems = 'center';
-                avatarEl.style.justifyContent = 'center';
+                setAvatar(avatarEl, playerName);
             }
 
             // Update name display
             document.getElementById('blPlayerNameDisplay').textContent = data.name || playerName;
 
-            // Update premium badge
+            // Update premium badge using helper (CSP-compliant)
             const badgeEl = document.getElementById('blPremiumBadge');
-            badgeEl.style.display = 'inline-block';
-            if (data.is_premium) {
-                badgeEl.textContent = 'Premium';
-                badgeEl.style.cssText = 'background:linear-gradient(135deg,#fbbf24 0%,#f59e0b 100%);color:#1a1a2e;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;text-transform:uppercase;';
-            } else {
-                badgeEl.textContent = 'No Premium';
-                badgeEl.style.cssText = 'background:rgba(107,114,128,0.2);border:1px solid rgba(107,114,128,0.3);color:#9ca3af;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;text-transform:uppercase;';
-            }
+            setBadge(badgeEl, data.is_premium ? 'premium' : 'offline');
 
-            // Update UUID display
+            // Update UUID display using helper (CSP-compliant)
             const uuidEl = document.getElementById('blPlayerUuid');
             if (data.is_premium && data.uuid) {
-                uuidEl.textContent = data.uuid;
-                uuidEl.style.color = 'rgba(255,255,255,0.7)';
+                setUuidStyle(uuidEl, 'normal', data.uuid);
             } else {
-                uuidEl.textContent = 'Jugador offline (sin UUID verificable)';
-                uuidEl.style.color = 'rgba(255,255,255,0.4)';
+                setUuidStyle(uuidEl, 'muted', 'Jugador offline (sin UUID verificable)');
             }
 
             showToast((data.is_premium ? 'Premium' : 'No Premium') + ' detectado', 'success');
@@ -3258,38 +3384,25 @@ async function lookupPlayer() {
                 uuid: null,
                 name: playerName
             };
-            document.getElementById('blPlayerAvatar').textContent = playerName.charAt(0).toUpperCase();
-            document.getElementById('blPlayerAvatar').style.background = 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)';
-            document.getElementById('blPlayerAvatar').style.display = 'flex';
-            document.getElementById('blPlayerAvatar').style.alignItems = 'center';
-            document.getElementById('blPlayerAvatar').style.justifyContent = 'center';
+            setAvatar(document.getElementById('blPlayerAvatar'), playerName);
             document.getElementById('blPlayerNameDisplay').textContent = playerName;
-            document.getElementById('blPremiumBadge').style.display = 'inline-block';
-            document.getElementById('blPremiumBadge').textContent = 'No Verificado';
-            document.getElementById('blPremiumBadge').style.cssText = 'background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;text-transform:uppercase;';
-            document.getElementById('blPlayerUuid').textContent = 'Se añadira como no-premium';
-            document.getElementById('blPlayerUuid').style.color = 'rgba(255,200,100,0.7)';
+            setBadge(document.getElementById('blPremiumBadge'), 'unverified');
+            setUuidStyle(document.getElementById('blPlayerUuid'), 'offline', 'Se añadira como no-premium');
             showToast('No verificado - se añadira como no-premium', 'warning');
         }
     } catch (error) {
         // Network error - treat as non-premium so user can still add
+        const fallbackName = playerNameInput.value.trim();
         lookedUpPlayer = {
             is_premium: false,
             uuid: null,
-            name: playerNameInput.value.trim()
+            name: fallbackName
         };
-        lookupResult.style.display = 'block';
-        document.getElementById('blPlayerAvatar').textContent = playerNameInput.value.trim().charAt(0).toUpperCase();
-        document.getElementById('blPlayerAvatar').style.background = 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)';
-        document.getElementById('blPlayerAvatar').style.display = 'flex';
-        document.getElementById('blPlayerAvatar').style.alignItems = 'center';
-        document.getElementById('blPlayerAvatar').style.justifyContent = 'center';
-        document.getElementById('blPlayerNameDisplay').textContent = playerNameInput.value.trim();
-        document.getElementById('blPremiumBadge').style.display = 'inline-block';
-        document.getElementById('blPremiumBadge').textContent = 'Error de red';
-        document.getElementById('blPremiumBadge').style.cssText = 'background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;text-transform:uppercase;';
-        document.getElementById('blPlayerUuid').textContent = 'Se añadira como no-premium';
-        document.getElementById('blPlayerUuid').style.color = 'rgba(255,200,100,0.7)';
+        showElement(lookupResult);
+        setAvatar(document.getElementById('blPlayerAvatar'), fallbackName);
+        document.getElementById('blPlayerNameDisplay').textContent = fallbackName;
+        setBadge(document.getElementById('blPremiumBadge'), 'unverified');
+        setUuidStyle(document.getElementById('blPlayerUuid'), 'offline', 'Se añadira como no-premium');
         showToast('Error de conexion - se añadira como no-premium', 'warning');
     } finally {
         lookupBtn.disabled = false;
@@ -3370,7 +3483,7 @@ async function migrateBlacklist() {
 
     if (statusEl) {
         statusEl.textContent = 'Iniciando migracion...';
-        statusEl.style.display = 'block';
+        showElement(statusEl);
     }
 
     try {
@@ -3380,7 +3493,8 @@ async function migrateBlacklist() {
             showToast('Migracion completada correctamente', 'success');
             if (statusEl) {
                 statusEl.textContent = 'Migracion completada: ' + (response.data?.migrated || 0) + ' entradas procesadas';
-                statusEl.style.color = '#4ade80';
+                statusEl.classList.remove('status-error');
+                statusEl.classList.add('status-success');
             }
             loadBlacklistData();
             loadBadgeCounts();
@@ -3388,14 +3502,16 @@ async function migrateBlacklist() {
             showToast(response.error || 'Error en la migracion', 'error');
             if (statusEl) {
                 statusEl.textContent = 'Error: ' + response.error;
-                statusEl.style.color = '#f87171';
+                statusEl.classList.remove('status-success');
+                statusEl.classList.add('status-error');
             }
         }
     } catch (error) {
         showToast('Error en la migracion', 'error');
         if (statusEl) {
             statusEl.textContent = 'Error de conexion';
-            statusEl.style.color = '#f87171';
+            statusEl.classList.remove('status-success');
+            statusEl.classList.add('status-error');
         }
     } finally {
         migrateBtn.disabled = false;
@@ -3419,7 +3535,7 @@ async function migratePlayers() {
     migrateBtn.textContent = 'Migrando...';
 
     if (statusEl) {
-        statusEl.style.display = 'block';
+        showElement(statusEl);
         if (statusTextEl) statusTextEl.textContent = 'Iniciando migración de jugadores...';
     }
 
@@ -3434,8 +3550,8 @@ async function migratePlayers() {
                 statusTextEl.textContent = msg;
             }
             if (statusEl) {
-                statusEl.style.background = 'rgba(34, 197, 94, 0.1)';
-                statusEl.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+                statusEl.classList.remove('bg-error');
+                statusEl.classList.add('bg-success');
             }
             loadBadgeCounts();
         } else {
@@ -3444,8 +3560,8 @@ async function migratePlayers() {
                 statusTextEl.textContent = 'Error: ' + response.error;
             }
             if (statusEl) {
-                statusEl.style.background = 'rgba(239, 68, 68, 0.1)';
-                statusEl.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                statusEl.classList.remove('bg-success');
+                statusEl.classList.add('bg-error');
             }
         }
     } catch (error) {
@@ -3480,19 +3596,15 @@ function initBlacklistModalTabs() {
             // Update active tab
             tabs.forEach(t => {
                 t.classList.remove('active');
-                t.style.background = 'rgba(255,255,255,0.05)';
-                t.style.border = '1px solid rgba(255,255,255,0.1)';
-                t.style.color = 'rgba(255,255,255,0.6)';
+                setTabState(t, false);
             });
             tab.classList.add('active');
-            tab.style.background = 'rgba(99,102,241,0.2)';
-            tab.style.border = '1px solid rgba(99,102,241,0.3)';
-            tab.style.color = '#fff';
+            setTabState(tab, true);
 
             // Show/hide content
             const tabName = tab.dataset.tab;
-            if (tabPlayer) tabPlayer.style.display = tabName === 'player' ? 'block' : 'none';
-            if (tabOther) tabOther.style.display = tabName === 'other' ? 'block' : 'none';
+            toggleElement(tabPlayer, tabName === 'player');
+            toggleElement(tabOther, tabName === 'other');
         });
     });
 
@@ -3537,27 +3649,22 @@ function resetBlacklistModal() {
     if (playerNameInput) playerNameInput.value = '';
 
     const lookupResult = document.getElementById('blLookupResult');
-    if (lookupResult) lookupResult.style.display = 'none';
+    hideElement(lookupResult);
 
     // Reset avatar to default state
     const avatarEl = document.getElementById('blPlayerAvatar');
     if (avatarEl) {
-        avatarEl.textContent = '?';
-        avatarEl.style.background = 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)';
-        avatarEl.style.display = 'flex';
-        avatarEl.style.alignItems = 'center';
-        avatarEl.style.justifyContent = 'center';
+        setAvatar(avatarEl, null);
     }
 
     // Reset premium badge
     const badgeEl = document.getElementById('blPremiumBadge');
-    if (badgeEl) badgeEl.style.display = 'none';
+    hideElement(badgeEl);
 
     // Reset UUID display
     const uuidEl = document.getElementById('blPlayerUuid');
     if (uuidEl) {
-        uuidEl.textContent = '-';
-        uuidEl.style.color = 'rgba(255,255,255,0.5)';
+        setUuidStyle(uuidEl, 'placeholder', '-');
     }
 
     // Reset player name display
@@ -3570,8 +3677,7 @@ function resetBlacklistModal() {
     const durationSelect = document.getElementById('blDuration');
     if (durationSelect) durationSelect.value = '0';
 
-    const customDurationGroup = document.getElementById('blCustomDurationGroup');
-    if (customDurationGroup) customDurationGroup.style.display = 'none';
+    hideElement(document.getElementById('blCustomDurationGroup'));
 
     const customDuration = document.getElementById('blCustomDuration');
     if (customDuration) customDuration.value = '';
@@ -3592,22 +3698,15 @@ function resetBlacklistModal() {
     // Reset tabs to player
     const tabs = document.querySelectorAll('.modal-tab');
     tabs.forEach(tab => {
-        tab.classList.remove('active');
-        tab.style.background = 'rgba(255,255,255,0.05)';
-        tab.style.border = '1px solid rgba(255,255,255,0.1)';
-        tab.style.color = 'rgba(255,255,255,0.6)';
-        if (tab.dataset.tab === 'player') {
-            tab.classList.add('active');
-            tab.style.background = 'rgba(99,102,241,0.2)';
-            tab.style.border = '1px solid rgba(99,102,241,0.3)';
-            tab.style.color = '#fff';
-        }
+        const isPlayerTab = tab.dataset.tab === 'player';
+        tab.classList.toggle('active', isPlayerTab);
+        setTabState(tab, isPlayerTab);
     });
 
     const tabPlayer = document.getElementById('blTabPlayer');
     const tabOther = document.getElementById('blTabOther');
-    if (tabPlayer) tabPlayer.style.display = 'block';
-    if (tabOther) tabOther.style.display = 'none';
+    showElement(tabPlayer);
+    hideElement(tabOther);
 
     updateBlacklistHelpText('ip');
 }

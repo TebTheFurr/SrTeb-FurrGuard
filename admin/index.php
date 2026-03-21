@@ -140,7 +140,7 @@ $user = $isAuthenticated ? $_SESSION['furrguard_admin'] : null;
             <div class="login-glow"></div>
             <div class="login-content">
                 <div class="login-icon">
-                    <img src="../icono-furguard.png" alt="FurrGuard" style="width:40px;height:40px;object-fit:contain;">
+                    <img src="../icono-furguard.png" alt="FurrGuard" class="logo-icon-lg">
                 </div>
                 <h1>FurrGuard</h1>
                 <p>Panel de Administración</p>
@@ -175,7 +175,7 @@ $user = $isAuthenticated ? $_SESSION['furrguard_admin'] : null;
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-brand">
-                <div class="brand-logo"><img src="../icono-furguard.png" alt="FurrGuard" style="width:26px;height:26px;object-fit:contain;"></div>
+                <div class="brand-logo"><img src="../icono-furguard.png" alt="FurrGuard" class="logo-icon"></div>
                 <div class="brand-info">
                     <span class="brand-name">FurrGuard</span>
                     <span class="brand-version">v<?php echo FURRGUARD_VERSION; ?></span>
@@ -996,13 +996,13 @@ $user = $isAuthenticated ? $_SESSION['furrguard_admin'] : null;
                     <div class="section-header">
                         <h2>Mensajes del Plugin</h2>
                     </div>
-                    <p style="color: var(--text-tertiary); margin-bottom: 24px;">
+                    <p class="text-tertiary mb-24">
                         Personaliza los mensajes que muestra el plugin. Usa códigos de color de Minecraft (&a, &c, etc.) y variables como {player}, {reason}, {ip}, {country}.
                     </p>
                     <div class="messages-editor" id="messagesEditor">
                         <div class="loading-spinner"></div>
                     </div>
-                    <div class="settings-actions" style="margin-top: 24px;">
+                    <div class="settings-actions settings-actions-mt">
                         <button class="btn-primary" id="saveMessages">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
@@ -1105,14 +1105,14 @@ $user = $isAuthenticated ? $_SESSION['furrguard_admin'] : null;
                                     <span class="setting-label">Mínimo de Conexiones</span>
                                     <span class="setting-desc">Conexiones mínimas antes de aplicar la detección (evita falsos positivos en jugadores nuevos)</span>
                                 </div>
-                                <input type="number" class="setting-input" id="settingCountryChangeMinConnections" min="1" max="50" value="3" style="width: 80px;">
+                                <input type="number" class="setting-input input-sm" id="settingCountryChangeMinConnections" min="1" max="50" value="3">
                             </div>
                             <div class="setting-item full-width">
                                 <div class="setting-info">
                                     <span class="setting-label">Porcentaje de Confianza (%)</span>
                                     <span class="setting-desc">Porcentaje mínimo de conexiones desde un país para considerarlo habitual</span>
                                 </div>
-                                <input type="number" class="setting-input" id="settingCountryChangeMinPercentage" min="50" max="100" step="5" value="70" style="width: 80px;">
+                                <input type="number" class="setting-input input-sm" id="settingCountryChangeMinPercentage" min="50" max="100" step="5" value="70">
                             </div>
                             <div class="setting-item">
                                 <div class="setting-info">
@@ -1184,7 +1184,7 @@ $user = $isAuthenticated ? $_SESSION['furrguard_admin'] : null;
                                 </div>
                             </div>
                         </div>
-                        <div class="settings-card full-width" id="migrationCard" style="display:none;">
+                        <div class="settings-card full-width hidden" id="migrationCard">
                             <h3>Migración de Sistema</h3>
                             <div class="setting-item full-width">
                                 <div class="setting-info">
@@ -1192,26 +1192,26 @@ $user = $isAuthenticated ? $_SESSION['furrguard_admin'] : null;
                                     <span class="setting-desc">Verifica todas las entradas de blacklist de jugadores y las actualiza según su estado premium/no-premium actual. Esta acción puede tardar varios minutos.</span>
                                 </div>
                                 <button class="btn-warning" id="migrateBlacklistBtn">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;vertical-align:middle;margin-right:5px;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm">
                                         <path d="M21 12a9 9 0 11-6.219-8.56"/>
                                         <polyline points="21 3 21 9 15 9"/>
                                     </svg>
                                     Migrar Blacklist
                                 </button>
                             </div>
-                            <div id="migrationStatus" style="display:none;margin-top:15px;padding:15px;border-radius:10px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);">
-                                <div style="display:flex;align-items:center;gap:10px;">
-                                    <div class="loading-spinner" style="width:20px;height:20px;border-width:2px;"></div>
+                            <div id="migrationStatus" class="status-migration status-migration-warning">
+                                <div class="flex-gap-sm">
+                                    <div class="loading-spinner icon-spinner-sm"></div>
                                     <span id="migrationStatusText">Migrando...</span>
                                 </div>
                             </div>
-                            <div class="setting-item full-width" style="margin-top:20px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.1);">
+                            <div class="setting-item full-width settings-section-spacing">
                                 <div class="setting-info">
                                     <span class="setting-label">Migrar Jugadores Registrados</span>
                                     <span class="setting-desc">Verifica todos los jugadores registrados en la base de datos y actualiza sus UUIDs según su estado premium/no-premium. Esta acción puede tardar varios minutos.</span>
                                 </div>
                                 <button class="btn-warning" id="migratePlayersBtn">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;vertical-align:middle;margin-right:5px;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm">
                                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                                         <circle cx="9" cy="7" r="4"/>
                                         <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
@@ -1220,9 +1220,9 @@ $user = $isAuthenticated ? $_SESSION['furrguard_admin'] : null;
                                     Migrar Jugadores
                                 </button>
                             </div>
-                            <div id="playerMigrationStatus" style="display:none;margin-top:15px;padding:15px;border-radius:10px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);">
-                                <div style="display:flex;align-items:center;gap:10px;">
-                                    <div class="loading-spinner" style="width:20px;height:20px;border-width:2px;"></div>
+                            <div id="playerMigrationStatus" class="status-migration status-migration-info">
+                                <div class="flex-gap-sm">
+                                    <div class="loading-spinner icon-spinner-sm"></div>
                                     <span id="playerMigrationStatusText">Migrando jugadores...</span>
                                 </div>
                             </div>
@@ -1819,19 +1819,19 @@ $user = $isAuthenticated ? $_SESSION['furrguard_admin'] : null;
             </div>
             <div class="modal-body">
                 <!-- Tabs para seleccionar tipo -->
-                <div class="modal-tabs" style="display:flex;gap:5px;margin-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:10px;">
-                    <button type="button" class="modal-tab active" data-tab="player" style="flex:1;padding:10px;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.3);border-radius:8px;color:#fff;cursor:pointer;">Jugador</button>
-                    <button type="button" class="modal-tab" data-tab="other" style="flex:1;padding:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:rgba(255,255,255,0.6);cursor:pointer;">IP / AS / CIDR</button>
+                <div class="modal-tabs modal-tabs-container">
+                    <button type="button" class="modal-tab active tab-btn tab-btn-active" data-tab="player">Jugador</button>
+                    <button type="button" class="modal-tab tab-btn tab-btn-inactive" data-tab="other">IP / AS / CIDR</button>
                 </div>
 
                 <!-- Tab: Jugador (Unificado) -->
                 <div id="blTabPlayer" class="bl-tab-content">
                     <div class="form-group">
                         <label>Nombre del Jugador</label>
-                        <div style="display:flex;gap:10px;">
-                            <input type="text" class="form-input" id="blPlayerName" placeholder="Introduce el nick del jugador..." style="flex:1;">
-                            <button type="button" class="btn-secondary" id="blLookupBtn" style="white-space:nowrap;padding:10px 15px;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" style="vertical-align:middle;margin-right:5px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <div class="player-lookup-result">
+                            <input type="text" class="form-input flex-1" id="blPlayerName" placeholder="Introduce el nick del jugador...">
+                            <button type="button" class="btn-secondary btn-nowrap" id="blLookupBtn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" class="icon-sm"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                                 Verificar
                             </button>
                         </div>
@@ -1839,17 +1839,17 @@ $user = $isAuthenticated ? $_SESSION['furrguard_admin'] : null;
                     </div>
 
                     <!-- Resultado del lookup -->
-                    <div id="blLookupResult" style="display:none;margin-bottom:20px;padding:15px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);">
-                        <div style="display:flex;align-items:center;gap:15px;">
-                            <div id="blPlayerAvatar" style="width:48px;height:48px;border-radius:8px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:bold;color:#fff;">
+                    <div id="blLookupResult" class="hidden lookup-result-box">
+                        <div class="player-lookup-result lookup-result-gap">
+                            <div id="blPlayerAvatar" class="avatar-placeholder player-avatar-lookup">
                                 ?
                             </div>
-                            <div style="flex:1;">
-                                <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;">
-                                    <span id="blPlayerNameDisplay" style="font-weight:600;font-size:16px;">-</span>
-                                    <span id="blPremiumBadge" class="premium-badge" style="display:none;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;text-transform:uppercase;">Premium</span>
+                            <div class="flex-1">
+                                <div class="flex-gap-sm mb-5">
+                                    <span id="blPlayerNameDisplay" class="player-name-display">-</span>
+                                    <span id="blPremiumBadge" class="badge-premium hidden">Premium</span>
                                 </div>
-                                <div id="blPlayerUuid" style="font-family:monospace;font-size:12px;color:rgba(255,255,255,0.5);">-</div>
+                                <div id="blPlayerUuid" class="uuid-placeholder uuid-display">-</div>
                             </div>
                         </div>
                     </div>
@@ -1871,16 +1871,16 @@ $user = $isAuthenticated ? $_SESSION['furrguard_admin'] : null;
                             <option value="custom">Personalizado</option>
                         </select>
                     </div>
-                    <div class="form-group" id="blCustomDurationGroup" style="display:none;">
+                    <div class="form-group hidden" id="blCustomDurationGroup">
                         <label>Duración personalizada (minutos)</label>
                         <input type="number" class="form-input" id="blCustomDuration" placeholder="Minutos" min="1">
                     </div>
-                    <div class="form-group" style="display:flex;align-items:center;gap:10px;margin-top:10px;">
-                        <label class="toggle" style="margin:0;">
+                    <div class="form-group flex-gap-sm mt-10">
+                        <label class="toggle toggle-no-margin">
                             <input type="checkbox" id="blStainIp" checked>
                             <span class="toggle-slider"></span>
                         </label>
-                        <div style="flex:1;">
+                        <div class="flex-1">
                             <span class="setting-label">Manchar IP automáticamente</span>
                             <span class="setting-desc">También añadirá las IPs usadas por este jugador a la blacklist</span>
                         </div>
@@ -1888,7 +1888,7 @@ $user = $isAuthenticated ? $_SESSION['furrguard_admin'] : null;
                 </div>
 
                 <!-- Tab: Otros tipos (IP, CIDR, AS) -->
-                <div id="blTabOther" class="bl-tab-content" style="display:none;">
+                <div id="blTabOther" class="bl-tab-content hidden">
                     <div class="form-group">
                         <label>Tipo</label>
                         <select class="form-input styled-select" id="blType">
@@ -1920,7 +1920,7 @@ $user = $isAuthenticated ? $_SESSION['furrguard_admin'] : null;
                             <option value="custom">Personalizado</option>
                         </select>
                     </div>
-                    <div class="form-group" id="blCustomDurationGroupOther" style="display:none;">
+                    <div class="form-group hidden" id="blCustomDurationGroupOther">
                         <label>Duración personalizada (minutos)</label>
                         <input type="number" class="form-input" id="blCustomDurationOther" placeholder="Minutos" min="1">
                     </div>
@@ -2162,7 +2162,7 @@ $user = $isAuthenticated ? $_SESSION['furrguard_admin'] : null;
                         <option value="custom">Personalizado</option>
                     </select>
                 </div>
-                <div class="form-group" id="editBlCustomDurationGroup" style="display:none;">
+                <div class="form-group hidden" id="editBlCustomDurationGroup">
                     <label>Duración personalizada (minutos)</label>
                     <input type="number" class="form-input" id="editBlCustomDuration" placeholder="Minutos" min="1">
                 </div>
