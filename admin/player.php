@@ -76,7 +76,7 @@ $user = $_SESSION['furrguard_admin'];
     <link rel="stylesheet" href="assets/css/admin.css?v=<?php echo filemtime(__DIR__ . '/assets/css/admin.css'); ?>">
     <link rel="stylesheet" href="assets/css/animations.css?v=<?php echo filemtime(__DIR__ . '/assets/css/animations.css'); ?>">
     <script src="https://unpkg.com/skinview3d/bundles/skinview3d.bundle.js"></script>
-    <style nonce="<?php echo getCspNonce(); ?>">
+    <style>
         .player-page {
             min-height: 100vh;
             padding: 24px;
@@ -681,7 +681,7 @@ $user = $_SESSION['furrguard_admin'];
     <div id="connectionModal"></div>
     <div id="connectionModalContainer">
         <div class="modal-header">
-            <h3 class="modal-title modal-title-lg">Detalle de Conexion</h3>
+            <h3 class="modal-title" style="font-size:1.125rem;font-weight:600;color:var(--text-primary);">Detalle de Conexion</h3>
             <button class="modal-close" onclick="closeConnectionModal()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
                     <path d="M18 6L6 18M6 6l12 12"/>
@@ -746,25 +746,25 @@ $user = $_SESSION['furrguard_admin'];
                 <div id="blTabPlayer" class="bl-tab-content active">
                     <div class="form-group">
                         <label>Nombre del Jugador</label>
-                        <div class="player-lookup-result">
-                            <input type="text" class="form-input flex-1" id="blPlayerName" placeholder="Introduce el nick del jugador...">
-                            <button type="button" class="btn-secondary btn-nowrap" id="blLookupBtn">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" class="icon-sm"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <div style="display:flex;gap:10px;">
+                            <input type="text" class="form-input" id="blPlayerName" placeholder="Introduce el nick del jugador..." style="flex:1;">
+                            <button type="button" class="btn-secondary" id="blLookupBtn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" style="vertical-align:middle;margin-right:5px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                                 Verificar
                             </button>
                         </div>
                         <span class="form-help">El sistema detectara automaticamente si es premium o no-premium</span>
                     </div>
 
-                    <div id="blLookupResult" class="hidden lookup-result-box">
-                        <div class="player-lookup-result lookup-result-gap">
-                            <div id="blPlayerAvatar" class="avatar-placeholder player-avatar-lookup">?</div>
-                            <div class="flex-1">
-                                <div class="flex-gap-sm mb-5">
-                                    <span id="blPlayerNameDisplay" class="player-name-display">-</span>
-                                    <span id="blPremiumBadge" class="badge-premium hidden">Premium</span>
+                    <div id="blLookupResult" style="display:none;margin-bottom:20px;padding:15px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);">
+                        <div style="display:flex;align-items:center;gap:15px;">
+                            <div id="blPlayerAvatar" style="width:48px;height:48px;border-radius:8px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:bold;color:#fff;">?</div>
+                            <div style="flex:1;">
+                                <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;">
+                                    <span id="blPlayerNameDisplay" style="font-weight:600;font-size:16px;">-</span>
+                                    <span id="blPremiumBadge" style="display:none;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;text-transform:uppercase;">Premium</span>
                                 </div>
-                                <div id="blPlayerUuid" class="uuid-placeholder uuid-display">-</div>
+                                <div id="blPlayerUuid" style="font-family:monospace;font-size:12px;color:rgba(255,255,255,0.5);">-</div>
                             </div>
                         </div>
                     </div>
@@ -786,16 +786,16 @@ $user = $_SESSION['furrguard_admin'];
                             <option value="custom">Personalizado</option>
                         </select>
                     </div>
-                    <div class="form-group hidden" id="blCustomDurationGroup">
+                    <div class="form-group" id="blCustomDurationGroup" style="display:none;">
                         <label>Duracion personalizada (minutos)</label>
                         <input type="number" class="form-input" id="blCustomDuration" placeholder="Minutos" min="1">
                     </div>
-                    <div class="form-group flex-gap-sm mt-10">
-                        <label class="toggle toggle-no-margin">
+                    <div class="form-group" style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+                        <label class="toggle" style="margin:0;">
                             <input type="checkbox" id="blStainIp" checked>
                             <span class="toggle-slider"></span>
                         </label>
-                        <div class="flex-1">
+                        <div style="flex:1;">
                             <span class="setting-label">Manchar IP automaticamente</span>
                             <span class="setting-desc">Tambien anadira las IPs usadas por este jugador a la blacklist</span>
                         </div>
@@ -854,7 +854,7 @@ $user = $_SESSION['furrguard_admin'];
         </div>
     </footer>
 
-    <script nonce="<?php echo getCspNonce(); ?>">
+    <script>
         const API_URL = 'api.php';
         let skinViewer = null;
         let currentPlayerUuid = <?php echo json_encode($uuid); ?>;
@@ -914,7 +914,7 @@ $user = $_SESSION['furrguard_admin'];
             try {
                 const playerResponse = await apiRequest('get_player_detail', { uuid: currentPlayerUuid });
                 if (!playerResponse.success) {
-                    document.getElementById('playerDataContent').innerHTML = '<div class="empty-state"><p>Jugador no encontrado</p><a href="index.php" class="btn btn-primary mt-16">Volver al Panel</a></div>';
+                    document.getElementById('playerDataContent').innerHTML = '<div class="empty-state"><p>Jugador no encontrado</p><a href="index.php" class="btn btn-primary" style="margin-top:16px">Volver al Panel</a></div>';
                     return;
                 }
                 playerData = playerResponse.data;
@@ -942,7 +942,7 @@ $user = $_SESSION['furrguard_admin'];
         function initSkinViewer(nick) {
             const container = document.getElementById('playerSkinViewer');
             if (!container || typeof skinview3d === 'undefined') {
-                container.innerHTML = '<img src="https://mineskin.eu/avatar/' + encodeURIComponent(nick) + '/200.png" class="avatar-rounded">';
+                container.innerHTML = '<img src="https://mineskin.eu/avatar/' + encodeURIComponent(nick) + '/200.png" style="border-radius:8px">';
                 return;
             }
             if (skinViewer) skinViewer.dispose();
@@ -969,9 +969,9 @@ $user = $_SESSION['furrguard_admin'];
 
             let premiumBoxHtml = '';
             if (premiumInfo.is_premium) {
-                premiumBoxHtml = '<div class="premium-status-box premium"><div class="premium-avatar"><img src="https://mineskin.eu/avatar/' + encodeURIComponent(premiumInfo.name) + '/56.png" alt=""></div><div class="premium-info"><div class="premium-name">' + escapeHtml(premiumInfo.name) + '</div><div class="premium-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon-sm-svg icon-sm-svg-success"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Premium Verificado</div><div class="premium-uuid">UUID: ' + (premiumInfo.uuid || player.uuid) + '</div></div></div>';
+                premiumBoxHtml = '<div class="premium-status-box premium"><div class="premium-avatar"><img src="https://mineskin.eu/avatar/' + encodeURIComponent(premiumInfo.name) + '/56.png" alt=""></div><div class="premium-info"><div class="premium-name">' + escapeHtml(premiumInfo.name) + '</div><div class="premium-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;margin-right:4px;color:#10b981;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Premium Verificado</div><div class="premium-uuid">UUID: ' + (premiumInfo.uuid || player.uuid) + '</div></div></div>';
             } else {
-                premiumBoxHtml = '<div class="premium-status-box not-premium"><div class="premium-avatar"><div class="premium-avatar-placeholder">' + player.last_nick.charAt(0).toUpperCase() + '</div></div><div class="premium-info"><div class="premium-name">' + escapeHtml(player.last_nick) + '</div><div class="premium-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon-sm-svg icon-sm-svg-error"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>No Premium (Offline)</div><div class="premium-uuid">Bloquear por Nick, no por UUID</div></div></div>';
+                premiumBoxHtml = '<div class="premium-status-box not-premium"><div class="premium-avatar"><div class="premium-avatar-placeholder">' + player.last_nick.charAt(0).toUpperCase() + '</div></div><div class="premium-info"><div class="premium-name">' + escapeHtml(player.last_nick) + '</div><div class="premium-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;margin-right:4px;color:#ef4444;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>No Premium (Offline)</div><div class="premium-uuid">Bloquear por Nick, no por UUID</div></div></div>';
             }
 
             const statusClass = player.is_online ? 'status-online' : 'status-offline';
@@ -981,14 +981,14 @@ $user = $_SESSION['furrguard_admin'];
             let blClass = '', blText = 'No';
             if (player.is_blacklisted) { blClass = 'blacklisted'; blText = 'Si'; }
 
-            let ipsHtml = ips.length > 0 ? ips.map(ip => '<div class="history-item"><div class="history-item-content"><div class="history-item-value">' + escapeHtml(ip.ip) + '</div><div class="history-item-meta">' + (ip.country ? '<span class="country-flag"><img src="https://flagcdn.com/16x12/' + (ip.country_code?.toLowerCase() || 'xx') + '.png" alt="">' + ip.country + '</span>' : '') + '</div></div><div class="history-item-date">' + formatDate(ip.first_used) + '</div></div>').join('') : '<div class="empty-state empty-state-padded">Sin historial de IPs</div>';
+            let ipsHtml = ips.length > 0 ? ips.map(ip => '<div class="history-item"><div class="history-item-content"><div class="history-item-value">' + escapeHtml(ip.ip) + '</div><div class="history-item-meta">' + (ip.country ? '<span class="country-flag"><img src="https://flagcdn.com/16x12/' + (ip.country_code?.toLowerCase() || 'xx') + '.png" alt="">' + ip.country + '</span>' : '') + '</div></div><div class="history-item-date">' + formatDate(ip.first_used) + '</div></div>').join('') : '<div class="empty-state" style="padding:20px">Sin historial de IPs</div>';
 
             document.getElementById('playerDataContent').innerHTML =
                 '<div class="player-data-section"><div class="player-data-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Estado de Cuenta</div>' + premiumBoxHtml + '</div>' +
                 '<div class="player-data-section"><div class="player-data-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Informacion General</div><div class="info-grid"><div class="info-item"><div class="info-label">Estado</div><div class="info-value ' + statusClass + '">' + statusText + '</div></div><div class="info-item"><div class="info-label">Whitelisted</div><div class="info-value ' + wlClass + '">' + wlText + '</div></div><div class="info-item"><div class="info-label">Blacklisted</div><div class="info-value ' + blClass + '">' + blText + '</div></div><div class="info-item"><div class="info-label">Conexiones</div><div class="info-value">' + (player.total_connections || 0) + '</div></div><div class="info-item"><div class="info-label">Primera vez</div><div class="info-value">' + formatDate(player.first_seen) + '</div></div><div class="info-item"><div class="info-label">Ultima vez</div><div class="info-value">' + formatDate(player.last_seen) + '</div></div><div class="info-item"><div class="info-label">Ultima IP</div><div class="info-value">' + (player.last_ip || 'N/A') + '</div></div><div class="info-item"><div class="info-label">Ultimo Pais</div><div class="info-value">' + (player.last_country || 'Desconocido') + '</div></div></div></div>' +
-                '<div class="player-data-section"><div class="player-data-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/><path d="M3 3l18 18"/></svg>Historial de Nombres</div><div id="nameHistoryContent"><div class="loading-spinner spinner-center"></div></div></div>' +
+                '<div class="player-data-section"><div class="player-data-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/><path d="M3 3l18 18"/></svg>Historial de Nombres</div><div id="nameHistoryContent"><div class="loading-spinner" style="margin:20px auto"></div></div></div>' +
                 '<div class="player-data-section"><div class="player-data-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>Historial de IPs (' + ips.length + ')</div><div class="history-list">' + ipsHtml + '</div></div>' +
-                '<div class="player-data-section"><div class="player-data-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Ultimas Conexiones</div><div id="connectionsContent"><div class="loading-spinner spinner-center"></div></div></div>';
+                '<div class="player-data-section"><div class="player-data-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Ultimas Conexiones</div><div id="connectionsContent"><div class="loading-spinner" style="margin:20px auto"></div></div></div>';
 
             loadPlayerConnections();
             loadNameHistory();
@@ -1000,7 +1000,7 @@ $user = $_SESSION['furrguard_admin'];
             const container = document.getElementById('nameHistoryContent');
             if (!container) return;
 
-            container.innerHTML = '<div class="loading-spinner spinner-center"></div>';
+            container.innerHTML = '<div class="loading-spinner" style="margin:20px auto"></div>';
 
             try {
                 const response = await apiRequest('get_name_history', { player_name: playerName });
@@ -1008,11 +1008,11 @@ $user = $_SESSION['furrguard_admin'];
                     nameHistoryData = response.data;
                     renderNameHistory(response.data);
                 } else {
-                    container.innerHTML = '<div class="empty-state empty-state-padded">No hay historial disponible</div>';
+                    container.innerHTML = '<div class="empty-state" style="padding:20px;color:var(--text-muted)">No hay historial disponible</div>';
                 }
             } catch (error) {
                 console.error('Error loading name history:', error);
-                container.innerHTML = '<div class="empty-state empty-state-padded">Error al cargar historial</div>';
+                container.innerHTML = '<div class="empty-state" style="padding:20px;color:var(--text-muted)">Error al cargar historial</div>';
             }
         }
 
@@ -1024,7 +1024,7 @@ $user = $_SESSION['furrguard_admin'];
             const currentName = playerData.player.last_nick;
 
             if (history.length === 0) {
-                container.innerHTML = '<div class="empty-state empty-state-padded">Sin historial de cambios</div>';
+                container.innerHTML = '<div class="empty-state" style="padding:20px;color:var(--text-muted)">Sin historial de cambios</div>';
                 return;
             }
 
@@ -1128,13 +1128,13 @@ $user = $_SESSION['furrguard_admin'];
             const footer = document.getElementById('connectionModalFooter');
             modal.classList.add('active');
             container.classList.add('active');
-            body.innerHTML = '<div class="loading-spinner spinner-center-lg"></div>';
+            body.innerHTML = '<div class="loading-spinner" style="margin:40px auto"></div>';
             footer.innerHTML = '';
             try {
                 const response = await apiRequest('get_connection_detail', { id: connectionId });
                 if (response.success) {
                     const c = response.data.connection;
-                    body.innerHTML = '<div class="connection-detail-grid"><div class="connection-detail-item"><span class="connection-detail-label">Nick</span><span class="connection-detail-value">' + escapeHtml(c.nick) + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">UUID</span><span class="connection-detail-value uuid-mono">' + (c.uuid || 'N/A') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">IP</span><span class="connection-detail-value">' + escapeHtml(c.ip) + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">Pais</span><span class="connection-detail-value">' + (c.country ? '<span class="country-flag"><img src="https://flagcdn.com/16x12/' + (c.country_code?.toLowerCase() || 'xx') + '.png" alt="">' + c.country + '</span>' : 'N/A') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">ISP</span><span class="connection-detail-value">' + (c.isp || 'N/A') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">ASN</span><span class="connection-detail-value">' + (c.asn || 'N/A') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">Proxy</span><span class="connection-detail-value ' + (c.is_proxy ? 'status-blocked' : 'status-allowed') + '">' + (c.is_proxy ? 'Si' : 'No') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">VPN</span><span class="connection-detail-value ' + (c.is_vpn ? 'status-blocked' : 'status-allowed') + '">' + (c.is_vpn ? 'Si' : 'No') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">Hosting</span><span class="connection-detail-value ' + (c.is_hosting ? 'status-blocked' : 'status-allowed') + '">' + (c.is_hosting ? 'Si' : 'No') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">Estado</span><span class="connection-detail-value ' + (c.blocked ? 'status-blocked' : 'status-allowed') + '">' + (c.blocked ? 'Bloqueado' : 'Permitido') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">Fecha</span><span class="connection-detail-value">' + formatDate(c.created_at) + '</span></div></div>';
+                    body.innerHTML = '<div class="connection-detail-grid"><div class="connection-detail-item"><span class="connection-detail-label">Nick</span><span class="connection-detail-value">' + escapeHtml(c.nick) + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">UUID</span><span class="connection-detail-value" style="font-family:var(--font-mono);font-size:0.75rem">' + (c.uuid || 'N/A') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">IP</span><span class="connection-detail-value">' + escapeHtml(c.ip) + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">Pais</span><span class="connection-detail-value">' + (c.country ? '<span class="country-flag"><img src="https://flagcdn.com/16x12/' + (c.country_code?.toLowerCase() || 'xx') + '.png" alt="">' + c.country + '</span>' : 'N/A') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">ISP</span><span class="connection-detail-value">' + (c.isp || 'N/A') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">ASN</span><span class="connection-detail-value">' + (c.asn || 'N/A') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">Proxy</span><span class="connection-detail-value ' + (c.is_proxy ? 'status-blocked' : 'status-allowed') + '">' + (c.is_proxy ? 'Si' : 'No') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">VPN</span><span class="connection-detail-value ' + (c.is_vpn ? 'status-blocked' : 'status-allowed') + '">' + (c.is_vpn ? 'Si' : 'No') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">Hosting</span><span class="connection-detail-value ' + (c.is_hosting ? 'status-blocked' : 'status-allowed') + '">' + (c.is_hosting ? 'Si' : 'No') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">Estado</span><span class="connection-detail-value ' + (c.blocked ? 'status-blocked' : 'status-allowed') + '">' + (c.blocked ? 'Bloqueado' : 'Permitido') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">Fecha</span><span class="connection-detail-value">' + formatDate(c.created_at) + '</span></div></div>';
                     footer.innerHTML = '<button class="btn btn-ghost" onclick="closeConnectionModal()">Cerrar</button>';
                 }
             } catch (error) {
@@ -1361,7 +1361,7 @@ $user = $_SESSION['furrguard_admin'];
                 lookupResult.style.display = 'none';
             } finally {
                 lookupBtn.disabled = false;
-                lookupBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" class="icon-btn-svg"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Verificar';
+                lookupBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" style="vertical-align:middle;margin-right:5px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Verificar';
             }
         }
 

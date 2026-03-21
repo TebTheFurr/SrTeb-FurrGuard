@@ -133,3 +133,4 @@ function db(): ?PDO {
         return null;
     }
 }
+?>

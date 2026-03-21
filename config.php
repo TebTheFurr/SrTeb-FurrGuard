@@ -87,45 +87,6 @@ function getStoredApiKey(): ?string {
     }
 }
 
-/**
- * Get the hashed API key from database.
- * Returns the hash if the key is hashed, or hashes the plaintext key for comparison.
- */
-function getStoredApiKeyHash(): ?string {
-    try {
-        $db = db();
-        $stmt = $db->prepare("SELECT value FROM settings WHERE `key` = 'api_key_hash'");
-        $stmt->execute();
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if ($result && !empty($result['value'])) {
-            return $result['value'];
-        }
-
-        // Fallback: if no hash exists, check for plaintext key and hash it
-        $plaintextKey = getStoredApiKey();
-        if ($plaintextKey !== null) {
-            // Migrate plaintext to hash on first use
-            $hash = hash('sha256', $plaintextKey);
-            $stmt = $db->prepare("INSERT INTO settings (`key`, value) VALUES ('api_key_hash', :hash) ON DUPLICATE KEY UPDATE value = :hash2");
-            $stmt->execute(['hash' => $hash, 'hash2' => $hash]);
-            return $hash;
-        }
-
-        return null;
-    } catch (Exception $e) {
-        error_log("Error getting API key hash: " . $e->getMessage());
-        return null;
-    }
-}
-
-/**
- * Hash an API key for storage or comparison.
- */
-function hashApiKey(string $apiKey): string {
-    return hash('sha256', $apiKey);
-}
-
 function validateApiKey(): bool {
     $apiKey = null;
 
@@ -146,21 +107,8 @@ function validateApiKey(): bool {
         return false;
     }
 
-    // Validate API key format (should be 64 hex characters for SHA256-based keys)
-    if (!preg_match('/^[a-f0-9]{64}$/i', $apiKey)) {
-        // Also accept legacy format keys (32-128 alphanumeric chars)
-        if (!preg_match('/^[a-zA-Z0-9]{32,128}$/', $apiKey)) {
-            return false;
-        }
-    }
-
-    $storedHash = getStoredApiKeyHash();
-    if ($storedHash === null) {
-        return false;
-    }
-
-    // Use timing-safe comparison
-    return hash_equals($storedHash, hashApiKey($apiKey));
+    $storedKey = getStoredApiKey();
+    return $storedKey !== null && hash_equals($storedKey, $apiKey);
 }
 
 function requireApiKey(): void {
@@ -180,3 +128,4 @@ function getDiscordLoginUrl(): string {
     ]);
     return 'https://discord.com/api/oauth2/authorize?' . $params;
 }
+?>

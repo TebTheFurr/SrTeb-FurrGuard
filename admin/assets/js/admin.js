@@ -15,164 +15,6 @@ let currentSection = 'overview';
 let currentUser = null;
 let skinViewer = null;
 
-/* ============================================
-   CSP-COMPLIANT DOM HELPERS
-   Use these instead of inline style manipulations
-   ============================================ */
-
-/**
- * Show an element (removes 'hidden' class)
- * @param {HTMLElement} el - Element to show
- */
-function showElement(el) {
-    if (el) el.classList.remove('hidden');
-}
-
-/**
- * Hide an element (adds 'hidden' class)
- * @param {HTMLElement} el - Element to hide
- */
-function hideElement(el) {
-    if (el) el.classList.add('hidden');
-}
-
-/**
- * Toggle element visibility
- * @param {HTMLElement} el - Element to toggle
- * @param {boolean} show - Whether to show or hide
- */
-function toggleElement(el, show) {
-    if (el) {
-        if (show) {
-            el.classList.remove('hidden');
-        } else {
-            el.classList.add('hidden');
-        }
-    }
-}
-
-/**
- * Set avatar image or placeholder
- * @param {HTMLElement} el - Avatar container element
- * @param {string} name - Player name for placeholder letter
- * @param {string} imageUrl - Optional image URL
- */
-function setAvatar(el, name, imageUrl = null) {
-    if (!el) return;
-    el.innerHTML = '';
-    if (imageUrl) {
-        const img = document.createElement('img');
-        img.src = imageUrl;
-        img.className = 'avatar-img';
-        img.alt = 'Avatar';
-        img.onerror = function() {
-            el.innerHTML = name ? name.charAt(0).toUpperCase() : '?';
-            el.className = 'avatar-placeholder';
-        };
-        el.appendChild(img);
-        el.className = '';
-    } else {
-        el.innerHTML = name ? name.charAt(0).toUpperCase() : '?';
-        el.className = 'avatar-placeholder';
-    }
-}
-
-/**
- * Set badge style based on type
- * @param {HTMLElement} el - Badge element
- * @param {string} type - 'premium', 'offline', 'unverified', 'offline-uuid'
- */
-function setBadge(el, type) {
-    if (!el) return;
-    el.classList.remove('badge-premium', 'badge-offline', 'badge-unverified', 'badge-offline-uuid');
-    switch(type) {
-        case 'premium':
-            el.classList.add('badge-premium');
-            el.textContent = 'Premium';
-            break;
-        case 'offline':
-            el.classList.add('badge-offline');
-            el.textContent = 'No Premium';
-            break;
-        case 'unverified':
-            el.classList.add('badge-offline-uuid');
-            el.textContent = 'No Verificado';
-            break;
-        case 'offline-uuid':
-            el.classList.add('badge-offline-uuid');
-            el.textContent = 'Offline';
-            break;
-    }
-    showElement(el);
-}
-
-/**
- * Set UUID text style
- * @param {HTMLElement} el - UUID element
- * @param {string} type - 'normal', 'offline', 'muted', 'placeholder'
- * @param {string} text - Text content
- */
-function setUuidStyle(el, type, text) {
-    if (!el) return;
-    el.textContent = text;
-    el.classList.remove('uuid-normal', 'uuid-offline', 'uuid-muted', 'uuid-placeholder');
-    el.classList.add('uuid-' + type);
-}
-
-/**
- * Set tab button active/inactive state
- * @param {HTMLElement} tab - Tab button element
- * @param {boolean} active - Whether tab is active
- */
-function setTabState(tab, active) {
-    if (!tab) return;
-    tab.classList.remove('tab-btn-active', 'tab-btn-inactive');
-    tab.classList.add(active ? 'tab-btn-active' : 'tab-btn-inactive');
-}
-
-/**
- * Set avatar element state
- * @param {HTMLElement} el - Avatar container element
- * @param {Object|null} data - Player data or null for placeholder
- */
-function setAvatar(el, data) {
-    if (!el) return;
-    el.innerHTML = '';
-    if (data && data.name) {
-        if (data.is_premium) {
-            const img = document.createElement('img');
-            img.src = 'https://mineskin.eu/avatar/' + encodeURIComponent(data.name) + '/48.png';
-            img.className = 'avatar-img';
-            img.alt = 'Avatar';
-            img.onerror = function() {
-                el.innerHTML = data.name.charAt(0).toUpperCase();
-                el.className = 'avatar-placeholder';
-            };
-            el.appendChild(img);
-            el.className = '';
-        } else {
-            el.innerHTML = data.name.charAt(0).toUpperCase();
-            el.className = 'avatar-placeholder';
-        }
-    } else {
-        el.innerHTML = '?';
-        el.className = 'avatar-placeholder';
-    }
-}
-
-/**
- * Set UUID element style and content
- * @param {HTMLElement} el - UUID element
- * @param {string} style - 'normal', 'offline', 'muted', 'placeholder'
- * @param {string} text - Text content
- */
-function setUuidStyle(el, style, text) {
-    if (!el) return;
-    el.textContent = text;
-    el.classList.remove('uuid-normal', 'uuid-offline', 'uuid-muted', 'uuid-placeholder');
-    el.classList.add('uuid-' + style);
-}
-
 /**
  * Detecta si una UUID pertenece a un jugador offline/no-premium
  * Las UUIDs offline de Minecraft tienen el bit 4 de la versión (position 14) siempre en 0
@@ -215,9 +57,9 @@ function getBanTypeForPlayer(uuid, nick) {
  */
 function staggerReveal(elements, delay = 50) {
     elements.forEach((el, i) => {
-        // Use CSS custom property for animation delay (CSP-compliant)
-        el.style.setProperty('--stagger-delay', `${i * delay}ms`);
-        el.classList.add('reveal', 'opacity-1');
+        el.style.animationDelay = `${i * delay}ms`;
+        el.classList.add('reveal');
+        el.style.opacity = '1';
     });
 }
 
@@ -303,24 +145,27 @@ function initCounterAnimations() {
  */
 function createRipple(e) {
     const button = e.currentTarget;
-
-    // Add ripple container class if not present
-    if (!button.classList.contains('ripple-container')) {
-        button.classList.add('ripple-container');
-    }
-
     const ripple = document.createElement('span');
-    ripple.classList.add('ripple');
     const rect = button.getBoundingClientRect();
     const size = Math.max(rect.width, rect.height);
     const x = e.clientX - rect.left - size / 2;
     const y = e.clientY - rect.top - size / 2;
 
-    // Use CSS custom properties for dynamic values (CSP-compliant)
-    ripple.style.setProperty('--ripple-size', `${size}px`);
-    ripple.style.setProperty('--ripple-x', `${x}px`);
-    ripple.style.setProperty('--ripple-y', `${y}px`);
+    ripple.style.cssText = `
+        position: absolute;
+        width: ${size}px;
+        height: ${size}px;
+        left: ${x}px;
+        top: ${y}px;
+        background: rgba(139, 92, 246, 0.3);
+        border-radius: 50%;
+        transform: scale(0);
+        animation: ripple 0.6s ease-out;
+        pointer-events: none;
+    `;
 
+    button.style.position = 'relative';
+    button.style.overflow = 'hidden';
     button.appendChild(ripple);
 
     setTimeout(() => ripple.remove(), 600);
@@ -371,12 +216,13 @@ function initSectionAnimations() {
             if (activeSection) {
                 const elements = activeSection.querySelectorAll('.stat-card, .card, .table-container');
                 elements.forEach((el, i) => {
-                    // Use CSS classes instead of inline styles (CSP-compliant)
-                    el.classList.add('section-animate-init');
+                    el.style.opacity = '0';
+                    el.style.transform = 'translateY(10px)';
 
                     setTimeout(() => {
-                        el.classList.remove('section-animate-init');
-                        el.classList.add('section-animate-visible');
+                        el.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                        el.style.opacity = '1';
+                        el.style.transform = 'translateY(0)';
                     }, i * 50);
                 });
             }
@@ -478,23 +324,23 @@ function applyRolePermissions() {
     document.querySelectorAll('.nav-item[data-section]').forEach(item => {
         const section = item.dataset.section;
         if (section && !allowed.includes(section)) {
-            hideElement(item);
+            item.style.display = 'none';
         } else {
-            showElement(item);
+            item.style.display = '';
         }
     });
 
     // Hide categories where all children are hidden
     document.querySelectorAll('.nav-category').forEach(cat => {
         const items = cat.querySelectorAll('.nav-item[data-section]');
-        const allHidden = Array.from(items).every(item => item.classList.contains('hidden'));
-        toggleElement(cat, !allHidden);
+        const allHidden = Array.from(items).every(item => item.style.display === 'none');
+        cat.style.display = allHidden ? 'none' : '';
     });
 
     // Show migration card only for Founders
     const migrationCard = document.getElementById('migrationCard');
     if (migrationCard) {
-        toggleElement(migrationCard, role === 'founder');
+        migrationCard.style.display = role === 'founder' ? '' : 'none';
     }
 
     if (!allowed.includes(currentSection)) {
@@ -551,132 +397,6 @@ function initEventListeners() {
     initQuickActions();
     initSettingsListeners();
     initFurrPermsListeners();
-    initGlobalEventDelegation();
-}
-
-/**
- * Global event delegation for CSP-compliant handlers
- * Converts onclick handlers to data-action attributes
- */
-function initGlobalEventDelegation() {
-    document.addEventListener('click', (e) => {
-        const target = e.target.closest('[data-action]');
-        if (!target) return;
-
-        const action = target.dataset.action;
-        const id = target.dataset.id;
-        const type = target.dataset.type;
-        const value = target.dataset.value;
-        const name = target.dataset.name;
-        const message = target.dataset.message;
-        const active = target.dataset.active === 'true';
-
-        switch (action) {
-            // Countries
-            case 'edit-country':
-                editCountryModal(parseInt(id), name, message || '');
-                break;
-            case 'toggle-country':
-                toggleCountry(parseInt(id), active);
-                break;
-            case 'delete-country':
-                deleteCountry(parseInt(id), name);
-                break;
-
-            // Continents
-            case 'edit-continent':
-                editContinentModal(parseInt(id), name, message || '');
-                break;
-            case 'toggle-continent':
-                toggleContinent(parseInt(id), active);
-                break;
-            case 'delete-continent':
-                deleteContinent(parseInt(id), name);
-                break;
-
-            // Players
-            case 'show-player-detail':
-                showPlayerDetail(value);
-                break;
-
-            // Connections
-            case 'show-connection-detail':
-                showConnectionDetail(parseInt(id));
-                break;
-
-            // IPs
-            case 'show-ip-detail':
-                showIPDetail(value);
-                break;
-
-            // Whitelist
-            case 'edit-whitelist':
-                editWhitelistEntry(parseInt(id), type, value, message || '');
-                break;
-            case 'remove-from-whitelist':
-                removeFromWhitelist(parseInt(id), type, value);
-                break;
-            case 'add-whitelist-ip':
-                promptAddIP(parseInt(id));
-                break;
-
-            // Blacklist
-            case 'edit-blacklist':
-                editBlacklistEntry(parseInt(id), type, value, message || '', target.dataset.expires || '');
-                break;
-            case 'toggle-blacklist':
-                toggleBlacklist(parseInt(id), active);
-                break;
-            case 'remove-from-blacklist':
-                removeFromBlacklist(parseInt(id));
-                break;
-            case 'remove-child-blacklist':
-                removeChildBlacklist(parseInt(id), parseInt(target.dataset.parentId));
-                break;
-
-            // Providers
-            case 'toggle-provider':
-                toggleProvider(parseInt(id), active);
-                break;
-
-            // Connection mini items
-            case 'show-connection-player':
-                showPlayerDetail(value);
-                break;
-
-            // Admin users
-            case 'remove-admin-user':
-                removeAdminUser(parseInt(id));
-                break;
-
-            // FurrPerms
-            case 'remove-furrperms-whitelist':
-                removeFurrPermsWhitelist(parseInt(id));
-                break;
-
-            // Modal actions
-            case 'open-whitelist-modal':
-                openWhitelistModal(type, value, target.dataset.prefill === 'true');
-                break;
-            case 'open-blacklist-modal':
-                openBlacklistModal(type, value, target.dataset.prefill === 'true');
-                break;
-            case 'remove-whitelist-by-value':
-                removeFromWhitelistByValue(type, value);
-                break;
-            case 'remove-blacklist-by-value':
-                removeFromBlacklistByValue(type, value);
-                break;
-            case 'close-modal-goto-player':
-                closeModal('playerModal');
-                window.location.href = `player.php?uuid=${encodeURIComponent(value)}`;
-                break;
-            case 'close-modal-goto-player-connection':
-                closeModal('connectionModal');
-                window.location.href = `player.php?uuid=${encodeURIComponent(value)}`;
-                break;
-        }
-    });
 }
 
 function switchSection(section) {
@@ -1041,12 +761,12 @@ function renderCountriesTable(countries) {
             <td><span class="status-badge ${c.active == 1 ? 'active' : 'inactive'}">${c.active == 1 ? 'Activo' : 'Inactivo'}</span></td>
             <td>${formatDate(c.created_at)}</td>
             <td>
-                <button class="action-btn" data-action="edit-country" data-id="${c.id}" data-name="${escapeHtml(c.country_name)}" data-message="${escapeHtml(c.kick_message || '')}">Editar</button>
+                <button class="action-btn" onclick="editCountryModal(${c.id}, '${escapeHtml(c.country_name)}', '${escapeHtml(c.kick_message || '')}')">Editar</button>
                 ${c.active == 1
-                    ? `<button class="action-btn danger" data-action="toggle-country" data-id="${c.id}" data-active="false">Desactivar</button>`
-                    : `<button class="action-btn success" data-action="toggle-country" data-id="${c.id}" data-active="true">Activar</button>`
+                    ? `<button class="action-btn danger" onclick="toggleCountry(${c.id}, false)">Desactivar</button>`
+                    : `<button class="action-btn success" onclick="toggleCountry(${c.id}, true)">Activar</button>`
                 }
-                <button class="action-btn danger" data-action="delete-country" data-id="${c.id}" data-name="${escapeHtml(c.country_name)}">Eliminar</button>
+                <button class="action-btn danger" onclick="deleteCountry(${c.id}, '${escapeHtml(c.country_name)}')">Eliminar</button>
             </td>
         </tr>
     `).join('');
@@ -1130,12 +850,12 @@ function renderContinentsTable(continents) {
             <td><span class="status-badge ${c.active == 1 ? 'active' : 'inactive'}">${c.active == 1 ? 'Activo' : 'Inactivo'}</span></td>
             <td>${formatDate(c.created_at)}</td>
             <td>
-                <button class="action-btn" data-action="edit-continent" data-id="${c.id}" data-name="${escapeHtml(c.continent_name)}" data-message="${escapeHtml(c.kick_message || '')}">Editar</button>
+                <button class="action-btn" onclick="editContinentModal(${c.id}, '${escapeHtml(c.continent_name)}', '${escapeHtml(c.kick_message || '')}')">Editar</button>
                 ${c.active == 1
-                    ? `<button class="action-btn danger" data-action="toggle-continent" data-id="${c.id}" data-active="false">Desactivar</button>`
-                    : `<button class="action-btn success" data-action="toggle-continent" data-id="${c.id}" data-active="true">Activar</button>`
+                    ? `<button class="action-btn danger" onclick="toggleContinent(${c.id}, false)">Desactivar</button>`
+                    : `<button class="action-btn success" onclick="toggleContinent(${c.id}, true)">Activar</button>`
                 }
-                <button class="action-btn danger" data-action="delete-continent" data-id="${c.id}" data-name="${escapeHtml(c.continent_name)}">Eliminar</button>
+                <button class="action-btn danger" onclick="deleteContinent(${c.id}, '${escapeHtml(c.continent_name)}')">Eliminar</button>
             </td>
         </tr>
     `).join('');
@@ -1316,7 +1036,7 @@ function renderPlayersTable(players) {
     }
 
     tbody.innerHTML = players.map(player => `
-        <tr data-action="show-player-detail" data-value="${player.uuid}" style="cursor:pointer">
+        <tr onclick="showPlayerDetail('${player.uuid}')">
             <td>
                 <div class="player-cell">
                     <div class="player-avatar">
@@ -1343,7 +1063,7 @@ function renderPlayersTable(players) {
                 ${player.is_blacklisted ? '<span class="status-badge blacklisted">BL</span>' : ''}
             </td>
             <td>
-                <button class="action-btn" data-action="show-player-detail" data-value="${player.uuid}">Ver</button>
+                <button class="action-btn" onclick="event.stopPropagation(); showPlayerDetail('${player.uuid}')">Ver</button>
             </td>
         </tr>
     `).join('');
@@ -1388,7 +1108,7 @@ function renderConnectionsTable(connections) {
                 ${conn.is_hosting ? '<span class="status-badge hosting">Hosting</span>' : ''}
             </td>
             <td>
-                <button class="action-btn" data-action="show-connection-detail" data-id="${conn.id}">Ver</button>
+                <button class="action-btn" onclick="showConnectionDetail(${conn.id})">Ver</button>
             </td>
         </tr>
     `).join('');
@@ -1403,7 +1123,7 @@ function renderIPsTable(ips) {
     }
 
     tbody.innerHTML = ips.map(ip => `
-        <tr data-action="show-ip-detail" data-value="${ip.ip}" style="cursor:pointer">
+        <tr onclick="showIPDetail('${ip.ip}')">
             <td>
                 <div class="ip-cell">
                     ${ip.country_code ? `<img src="https://flagcdn.com/w20/${ip.country_code.toLowerCase()}.png" class="ip-flag" alt="${ip.country_code}">` : ''}
@@ -1426,7 +1146,7 @@ function renderIPsTable(ips) {
                 ${!ip.is_whitelisted && !ip.is_blacklisted ? '<span class="status-badge">Normal</span>' : ''}
             </td>
             <td>
-                <button class="action-btn" data-action="show-ip-detail" data-value="${ip.ip}">Ver</button>
+                <button class="action-btn" onclick="event.stopPropagation(); showIPDetail('${ip.ip}')">Ver</button>
             </td>
         </tr>
     `).join('');
@@ -1454,8 +1174,8 @@ function renderWhitelistTable(entries) {
             <td>${escapeHtml(entry.added_by)}</td>
             <td>${formatDate(entry.created_at)}</td>
             <td>
-                <button class="action-btn" data-action="edit-whitelist" data-id="${entry.id}" data-type="${entry.type}" data-value="${escapeHtml(entry.value).replace(/"/g, '&quot;')}" data-message="${escapeHtml(entry.reason || '').replace(/"/g, '&quot;')}">Editar</button>
-                <button class="action-btn danger" data-action="remove-from-whitelist" data-id="${entry.id}" data-type="${entry.type}" data-value="${escapeHtml(entry.value).replace(/"/g, '&quot;')}">Eliminar</button>
+                <button class="action-btn" onclick="editWhitelistEntry(${entry.id}, '${entry.type}', '${escapeHtml(entry.value).replace(/'/g, "\\'")}', '${escapeHtml(entry.reason || '').replace(/'/g, "\\'")}')">Editar</button>
+                <button class="action-btn danger" onclick="removeFromWhitelist(${entry.id}, '${entry.type}', '${escapeHtml(entry.value)}')">Eliminar</button>
             </td>
         </tr>
     `;
@@ -2176,7 +1896,7 @@ function initModalListeners() {
 
     document.getElementById('blDuration')?.addEventListener('change', () => {
         const custom = document.getElementById('blDuration').value === 'custom';
-        toggleElement(document.getElementById('blCustomDurationGroup'), custom);
+        document.getElementById('blCustomDurationGroup').style.display = custom ? '' : 'none';
         if (!custom) document.getElementById('blCustomDuration').value = '';
     });
 
@@ -2225,7 +1945,7 @@ function initModalListeners() {
     document.getElementById('confirmBlacklist')?.addEventListener('click', async () => {
         // Check which tab is active
         const tabPlayer = document.getElementById('blTabPlayer');
-        const isPlayerTab = tabPlayer && !tabPlayer.classList.contains('hidden');
+        const isPlayerTab = tabPlayer && tabPlayer.style.display !== 'none';
 
         if (isPlayerTab) {
             // Player tab - use unified system
@@ -2411,7 +2131,7 @@ function initModalListeners() {
 
     document.getElementById('editBlDuration')?.addEventListener('change', () => {
         const custom = document.getElementById('editBlDuration').value === 'custom';
-        toggleElement(document.getElementById('editBlCustomDurationGroup'), custom);
+        document.getElementById('editBlCustomDurationGroup').style.display = custom ? '' : 'none';
         if (!custom) document.getElementById('editBlCustomDuration').value = '';
     });
 
@@ -2560,12 +2280,12 @@ async function openBlacklistModal(prefillType = null, prefillValue = '', readonl
 
         if (tabPlayer && tabOther) {
             tabPlayer.classList.add('active');
-            setTabState(tabPlayer, true);
+            tabPlayer.style.cssText = 'flex:1;padding:10px;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.3);border-radius:8px;color:#fff;cursor:pointer;';
             tabOther.classList.remove('active');
-            setTabState(tabOther, false);
+            tabOther.style.cssText = 'flex:1;padding:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:rgba(255,255,255,0.6);cursor:pointer;';
         }
-        showElement(blTabPlayer);
-        hideElement(blTabOther);
+        if (blTabPlayer) blTabPlayer.style.display = 'block';
+        if (blTabOther) blTabOther.style.display = 'none';
 
         // Pre-llenar el nombre del jugador
         const playerNameInput = document.getElementById('blPlayerName');
@@ -2586,12 +2306,12 @@ async function openBlacklistModal(prefillType = null, prefillValue = '', readonl
 
         if (tabPlayer && tabOther) {
             tabOther.classList.add('active');
-            setTabState(tabOther, true);
+            tabOther.style.cssText = 'flex:1;padding:10px;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.3);border-radius:8px;color:#fff;cursor:pointer;';
             tabPlayer.classList.remove('active');
-            setTabState(tabPlayer, false);
+            tabPlayer.style.cssText = 'flex:1;padding:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:rgba(255,255,255,0.6);cursor:pointer;';
         }
-        hideElement(blTabPlayer);
-        showElement(blTabOther);
+        if (blTabPlayer) blTabPlayer.style.display = 'none';
+        if (blTabOther) blTabOther.style.display = 'block';
 
         document.getElementById('blType').value = prefillType;
         document.getElementById('blValue').value = prefillValue;
@@ -2603,7 +2323,7 @@ async function openBlacklistModal(prefillType = null, prefillValue = '', readonl
 
     document.getElementById('blReason').value = '';
     document.getElementById('blDuration').value = '0';
-    hideElement(document.getElementById('blCustomDurationGroup'));
+    document.getElementById('blCustomDurationGroup').style.display = 'none';
     document.getElementById('blCustomDuration').value = '';
 
     if (readonly) {
@@ -2776,7 +2496,7 @@ function editBlacklistEntry(id, type, value, reason, expiresAt) {
     document.getElementById('editBlValue').value = value;
     document.getElementById('editBlReason').value = reason;
     document.getElementById('editBlDuration').value = '-1';
-    hideElement(document.getElementById('editBlCustomDurationGroup'));
+    document.getElementById('editBlCustomDurationGroup').style.display = 'none';
     document.getElementById('editBlCustomDuration').value = '';
     document.getElementById('editBlacklistModal').classList.add('active');
 }
@@ -3473,33 +3193,61 @@ async function lookupPlayer() {
     try {
         const response = await apiRequest('lookup_player', { player_name: playerName });
 
-        showElement(lookupResult);
+        lookupResult.style.display = 'block';
 
         if (response.success && response.data) {
             const data = response.data;
             lookedUpPlayer = data;
 
-            // Update avatar using helper (CSP-compliant)
+            // Update avatar
             const avatarEl = document.getElementById('blPlayerAvatar');
             if (data.is_premium && data.name) {
-                setAvatar(avatarEl, data.name, 'https://mineskin.eu/avatar/' + encodeURIComponent(data.name) + '/48.png');
+                // Use mineskin.eu (same system used elsewhere in the panel)
+                avatarEl.textContent = '';
+                avatarEl.style.background = 'transparent';
+                const img = document.createElement('img');
+                img.src = 'https://mineskin.eu/avatar/' + encodeURIComponent(data.name) + '/48.png';
+                img.style.cssText = 'width:48px;height:48px;border-radius:8px;display:block;';
+                img.alt = 'Avatar';
+                img.onerror = function() {
+                    // Fallback to first letter if image fails
+                    avatarEl.textContent = data.name.charAt(0).toUpperCase();
+                    avatarEl.style.background = 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)';
+                    avatarEl.style.display = 'flex';
+                    avatarEl.style.alignItems = 'center';
+                    avatarEl.style.justifyContent = 'center';
+                };
+                avatarEl.appendChild(img);
             } else {
-                setAvatar(avatarEl, playerName);
+                avatarEl.textContent = playerName.charAt(0).toUpperCase();
+                avatarEl.style.background = 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)';
+                avatarEl.style.display = 'flex';
+                avatarEl.style.alignItems = 'center';
+                avatarEl.style.justifyContent = 'center';
             }
 
             // Update name display
             document.getElementById('blPlayerNameDisplay').textContent = data.name || playerName;
 
-            // Update premium badge using helper (CSP-compliant)
+            // Update premium badge
             const badgeEl = document.getElementById('blPremiumBadge');
-            setBadge(badgeEl, data.is_premium ? 'premium' : 'offline');
+            badgeEl.style.display = 'inline-block';
+            if (data.is_premium) {
+                badgeEl.textContent = 'Premium';
+                badgeEl.style.cssText = 'background:linear-gradient(135deg,#fbbf24 0%,#f59e0b 100%);color:#1a1a2e;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;text-transform:uppercase;';
+            } else {
+                badgeEl.textContent = 'No Premium';
+                badgeEl.style.cssText = 'background:rgba(107,114,128,0.2);border:1px solid rgba(107,114,128,0.3);color:#9ca3af;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;text-transform:uppercase;';
+            }
 
-            // Update UUID display using helper (CSP-compliant)
+            // Update UUID display
             const uuidEl = document.getElementById('blPlayerUuid');
             if (data.is_premium && data.uuid) {
-                setUuidStyle(uuidEl, 'normal', data.uuid);
+                uuidEl.textContent = data.uuid;
+                uuidEl.style.color = 'rgba(255,255,255,0.7)';
             } else {
-                setUuidStyle(uuidEl, 'muted', 'Jugador offline (sin UUID verificable)');
+                uuidEl.textContent = 'Jugador offline (sin UUID verificable)';
+                uuidEl.style.color = 'rgba(255,255,255,0.4)';
             }
 
             showToast((data.is_premium ? 'Premium' : 'No Premium') + ' detectado', 'success');
@@ -3510,25 +3258,38 @@ async function lookupPlayer() {
                 uuid: null,
                 name: playerName
             };
-            setAvatar(document.getElementById('blPlayerAvatar'), playerName);
+            document.getElementById('blPlayerAvatar').textContent = playerName.charAt(0).toUpperCase();
+            document.getElementById('blPlayerAvatar').style.background = 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)';
+            document.getElementById('blPlayerAvatar').style.display = 'flex';
+            document.getElementById('blPlayerAvatar').style.alignItems = 'center';
+            document.getElementById('blPlayerAvatar').style.justifyContent = 'center';
             document.getElementById('blPlayerNameDisplay').textContent = playerName;
-            setBadge(document.getElementById('blPremiumBadge'), 'unverified');
-            setUuidStyle(document.getElementById('blPlayerUuid'), 'offline', 'Se añadira como no-premium');
+            document.getElementById('blPremiumBadge').style.display = 'inline-block';
+            document.getElementById('blPremiumBadge').textContent = 'No Verificado';
+            document.getElementById('blPremiumBadge').style.cssText = 'background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;text-transform:uppercase;';
+            document.getElementById('blPlayerUuid').textContent = 'Se añadira como no-premium';
+            document.getElementById('blPlayerUuid').style.color = 'rgba(255,200,100,0.7)';
             showToast('No verificado - se añadira como no-premium', 'warning');
         }
     } catch (error) {
         // Network error - treat as non-premium so user can still add
-        const fallbackName = playerNameInput.value.trim();
         lookedUpPlayer = {
             is_premium: false,
             uuid: null,
-            name: fallbackName
+            name: playerNameInput.value.trim()
         };
-        showElement(lookupResult);
-        setAvatar(document.getElementById('blPlayerAvatar'), fallbackName);
-        document.getElementById('blPlayerNameDisplay').textContent = fallbackName;
-        setBadge(document.getElementById('blPremiumBadge'), 'unverified');
-        setUuidStyle(document.getElementById('blPlayerUuid'), 'offline', 'Se añadira como no-premium');
+        lookupResult.style.display = 'block';
+        document.getElementById('blPlayerAvatar').textContent = playerNameInput.value.trim().charAt(0).toUpperCase();
+        document.getElementById('blPlayerAvatar').style.background = 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)';
+        document.getElementById('blPlayerAvatar').style.display = 'flex';
+        document.getElementById('blPlayerAvatar').style.alignItems = 'center';
+        document.getElementById('blPlayerAvatar').style.justifyContent = 'center';
+        document.getElementById('blPlayerNameDisplay').textContent = playerNameInput.value.trim();
+        document.getElementById('blPremiumBadge').style.display = 'inline-block';
+        document.getElementById('blPremiumBadge').textContent = 'Error de red';
+        document.getElementById('blPremiumBadge').style.cssText = 'background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;text-transform:uppercase;';
+        document.getElementById('blPlayerUuid').textContent = 'Se añadira como no-premium';
+        document.getElementById('blPlayerUuid').style.color = 'rgba(255,200,100,0.7)';
         showToast('Error de conexion - se añadira como no-premium', 'warning');
     } finally {
         lookupBtn.disabled = false;
@@ -3609,7 +3370,7 @@ async function migrateBlacklist() {
 
     if (statusEl) {
         statusEl.textContent = 'Iniciando migracion...';
-        showElement(statusEl);
+        statusEl.style.display = 'block';
     }
 
     try {
@@ -3619,8 +3380,7 @@ async function migrateBlacklist() {
             showToast('Migracion completada correctamente', 'success');
             if (statusEl) {
                 statusEl.textContent = 'Migracion completada: ' + (response.data?.migrated || 0) + ' entradas procesadas';
-                statusEl.classList.remove('status-error');
-                statusEl.classList.add('status-success');
+                statusEl.style.color = '#4ade80';
             }
             loadBlacklistData();
             loadBadgeCounts();
@@ -3628,16 +3388,14 @@ async function migrateBlacklist() {
             showToast(response.error || 'Error en la migracion', 'error');
             if (statusEl) {
                 statusEl.textContent = 'Error: ' + response.error;
-                statusEl.classList.remove('status-success');
-                statusEl.classList.add('status-error');
+                statusEl.style.color = '#f87171';
             }
         }
     } catch (error) {
         showToast('Error en la migracion', 'error');
         if (statusEl) {
             statusEl.textContent = 'Error de conexion';
-            statusEl.classList.remove('status-success');
-            statusEl.classList.add('status-error');
+            statusEl.style.color = '#f87171';
         }
     } finally {
         migrateBtn.disabled = false;
@@ -3661,7 +3419,7 @@ async function migratePlayers() {
     migrateBtn.textContent = 'Migrando...';
 
     if (statusEl) {
-        showElement(statusEl);
+        statusEl.style.display = 'block';
         if (statusTextEl) statusTextEl.textContent = 'Iniciando migración de jugadores...';
     }
 
@@ -3676,8 +3434,8 @@ async function migratePlayers() {
                 statusTextEl.textContent = msg;
             }
             if (statusEl) {
-                statusEl.classList.remove('bg-error');
-                statusEl.classList.add('bg-success');
+                statusEl.style.background = 'rgba(34, 197, 94, 0.1)';
+                statusEl.style.borderColor = 'rgba(34, 197, 94, 0.3)';
             }
             loadBadgeCounts();
         } else {
@@ -3686,8 +3444,8 @@ async function migratePlayers() {
                 statusTextEl.textContent = 'Error: ' + response.error;
             }
             if (statusEl) {
-                statusEl.classList.remove('bg-success');
-                statusEl.classList.add('bg-error');
+                statusEl.style.background = 'rgba(239, 68, 68, 0.1)';
+                statusEl.style.borderColor = 'rgba(239, 68, 68, 0.3)';
             }
         }
     } catch (error) {
@@ -3722,15 +3480,19 @@ function initBlacklistModalTabs() {
             // Update active tab
             tabs.forEach(t => {
                 t.classList.remove('active');
-                setTabState(t, false);
+                t.style.background = 'rgba(255,255,255,0.05)';
+                t.style.border = '1px solid rgba(255,255,255,0.1)';
+                t.style.color = 'rgba(255,255,255,0.6)';
             });
             tab.classList.add('active');
-            setTabState(tab, true);
+            tab.style.background = 'rgba(99,102,241,0.2)';
+            tab.style.border = '1px solid rgba(99,102,241,0.3)';
+            tab.style.color = '#fff';
 
             // Show/hide content
             const tabName = tab.dataset.tab;
-            toggleElement(tabPlayer, tabName === 'player');
-            toggleElement(tabOther, tabName === 'other');
+            if (tabPlayer) tabPlayer.style.display = tabName === 'player' ? 'block' : 'none';
+            if (tabOther) tabOther.style.display = tabName === 'other' ? 'block' : 'none';
         });
     });
 
@@ -3775,22 +3537,27 @@ function resetBlacklistModal() {
     if (playerNameInput) playerNameInput.value = '';
 
     const lookupResult = document.getElementById('blLookupResult');
-    hideElement(lookupResult);
+    if (lookupResult) lookupResult.style.display = 'none';
 
     // Reset avatar to default state
     const avatarEl = document.getElementById('blPlayerAvatar');
     if (avatarEl) {
-        setAvatar(avatarEl, null);
+        avatarEl.textContent = '?';
+        avatarEl.style.background = 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)';
+        avatarEl.style.display = 'flex';
+        avatarEl.style.alignItems = 'center';
+        avatarEl.style.justifyContent = 'center';
     }
 
     // Reset premium badge
     const badgeEl = document.getElementById('blPremiumBadge');
-    hideElement(badgeEl);
+    if (badgeEl) badgeEl.style.display = 'none';
 
     // Reset UUID display
     const uuidEl = document.getElementById('blPlayerUuid');
     if (uuidEl) {
-        setUuidStyle(uuidEl, 'placeholder', '-');
+        uuidEl.textContent = '-';
+        uuidEl.style.color = 'rgba(255,255,255,0.5)';
     }
 
     // Reset player name display
@@ -3803,7 +3570,8 @@ function resetBlacklistModal() {
     const durationSelect = document.getElementById('blDuration');
     if (durationSelect) durationSelect.value = '0';
 
-    hideElement(document.getElementById('blCustomDurationGroup'));
+    const customDurationGroup = document.getElementById('blCustomDurationGroup');
+    if (customDurationGroup) customDurationGroup.style.display = 'none';
 
     const customDuration = document.getElementById('blCustomDuration');
     if (customDuration) customDuration.value = '';
@@ -3824,15 +3592,22 @@ function resetBlacklistModal() {
     // Reset tabs to player
     const tabs = document.querySelectorAll('.modal-tab');
     tabs.forEach(tab => {
-        const isPlayerTab = tab.dataset.tab === 'player';
-        tab.classList.toggle('active', isPlayerTab);
-        setTabState(tab, isPlayerTab);
+        tab.classList.remove('active');
+        tab.style.background = 'rgba(255,255,255,0.05)';
+        tab.style.border = '1px solid rgba(255,255,255,0.1)';
+        tab.style.color = 'rgba(255,255,255,0.6)';
+        if (tab.dataset.tab === 'player') {
+            tab.classList.add('active');
+            tab.style.background = 'rgba(99,102,241,0.2)';
+            tab.style.border = '1px solid rgba(99,102,241,0.3)';
+            tab.style.color = '#fff';
+        }
     });
 
     const tabPlayer = document.getElementById('blTabPlayer');
     const tabOther = document.getElementById('blTabOther');
-    showElement(tabPlayer);
-    hideElement(tabOther);
+    if (tabPlayer) tabPlayer.style.display = 'block';
+    if (tabOther) tabOther.style.display = 'none';
 
     updateBlacklistHelpText('ip');
 }
