@@ -20,7 +20,7 @@ function getCspNonce(): string {
 
 /**
  * Apply security headers to all responses.
- * Uses CSP nonces instead of unsafe-inline for scripts and styles.
+ * Uses CSP nonces for inline scripts while allowing external scripts and inline styles.
  */
 function applySecurityHeaders(): void {
     $nonce = getCspNonce();
@@ -31,10 +31,10 @@ function applySecurityHeaders(): void {
     header('Referrer-Policy: strict-origin-when-cross-origin');
     header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
 
-    // CSP with nonces instead of unsafe-inline
-    // Note: For backwards compatibility during migration, we include both nonce and unsafe-inline
-    // After all inline scripts/styles are updated to use nonces, remove unsafe-inline
-    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{$nonce}' 'strict-dynamic' https://unpkg.com; style-src 'self' 'nonce-{$nonce}' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://crafatar.com https://cdn.discordapp.com https://mineskin.eu https://flagcdn.com data:; connect-src 'self' https://unpkg.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none';");
+    // CSP with nonces for inline scripts, external scripts allowed from unpkg.com
+    // Note: 'unsafe-inline' is kept for style-src to support inline style="" attributes set by JS
+    // media-src allows data: URIs for audio/video elements
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{$nonce}' https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://crafatar.com https://cdn.discordapp.com https://mineskin.eu https://flagcdn.com data:; media-src 'self' data:; connect-src 'self' https://unpkg.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none';");
 
     // Prevent caching of sensitive pages
     if (strpos($_SERVER['REQUEST_URI'] ?? '', '/admin/') !== false) {
