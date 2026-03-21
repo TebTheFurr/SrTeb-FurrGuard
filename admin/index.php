@@ -122,7 +122,6 @@ $user = $isAuthenticated ? $_SESSION['furrguard_admin'] : null;
         <link rel="stylesheet" href="assets/css/admin.css?v=<?php echo filemtime(__DIR__ . '/assets/css/admin.css'); ?>">
         <link rel="stylesheet" href="assets/css/animations.css?v=<?php echo filemtime(__DIR__ . '/assets/css/animations.css'); ?>">
         <link rel="stylesheet" href="assets/css/furrperms.css?v=<?php echo filemtime(__DIR__ . '/assets/css/furrperms.css'); ?>">
-        <link rel="stylesheet" href="assets/css/furrsecurity.css?v=<?php echo filemtime(__DIR__ . '/assets/css/furrsecurity.css'); ?>">
         <script src="https://unpkg.com/skinview3d/bundles/skinview3d.bundle.js"></script>
     </head>
     <body>
