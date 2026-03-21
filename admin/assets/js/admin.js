@@ -397,6 +397,132 @@ function initEventListeners() {
     initQuickActions();
     initSettingsListeners();
     initFurrPermsListeners();
+    initGlobalEventDelegation();
+}
+
+/**
+ * Global event delegation for CSP-compliant handlers
+ * Converts onclick handlers to data-action attributes
+ */
+function initGlobalEventDelegation() {
+    document.addEventListener('click', (e) => {
+        const target = e.target.closest('[data-action]');
+        if (!target) return;
+
+        const action = target.dataset.action;
+        const id = target.dataset.id;
+        const type = target.dataset.type;
+        const value = target.dataset.value;
+        const name = target.dataset.name;
+        const message = target.dataset.message;
+        const active = target.dataset.active === 'true';
+
+        switch (action) {
+            // Countries
+            case 'edit-country':
+                editCountryModal(parseInt(id), name, message || '');
+                break;
+            case 'toggle-country':
+                toggleCountry(parseInt(id), active);
+                break;
+            case 'delete-country':
+                deleteCountry(parseInt(id), name);
+                break;
+
+            // Continents
+            case 'edit-continent':
+                editContinentModal(parseInt(id), name, message || '');
+                break;
+            case 'toggle-continent':
+                toggleContinent(parseInt(id), active);
+                break;
+            case 'delete-continent':
+                deleteContinent(parseInt(id), name);
+                break;
+
+            // Players
+            case 'show-player-detail':
+                showPlayerDetail(value);
+                break;
+
+            // Connections
+            case 'show-connection-detail':
+                showConnectionDetail(parseInt(id));
+                break;
+
+            // IPs
+            case 'show-ip-detail':
+                showIPDetail(value);
+                break;
+
+            // Whitelist
+            case 'edit-whitelist':
+                editWhitelistEntry(parseInt(id), type, value, message || '');
+                break;
+            case 'remove-from-whitelist':
+                removeFromWhitelist(parseInt(id), type, value);
+                break;
+            case 'add-whitelist-ip':
+                promptAddIP(parseInt(id));
+                break;
+
+            // Blacklist
+            case 'edit-blacklist':
+                editBlacklistEntry(parseInt(id), type, value, message || '', target.dataset.expires || '');
+                break;
+            case 'toggle-blacklist':
+                toggleBlacklist(parseInt(id), active);
+                break;
+            case 'remove-from-blacklist':
+                removeFromBlacklist(parseInt(id));
+                break;
+            case 'remove-child-blacklist':
+                removeChildBlacklist(parseInt(id), parseInt(target.dataset.parentId));
+                break;
+
+            // Providers
+            case 'toggle-provider':
+                toggleProvider(parseInt(id), active);
+                break;
+
+            // Connection mini items
+            case 'show-connection-player':
+                showPlayerDetail(value);
+                break;
+
+            // Admin users
+            case 'remove-admin-user':
+                removeAdminUser(parseInt(id));
+                break;
+
+            // FurrPerms
+            case 'remove-furrperms-whitelist':
+                removeFurrPermsWhitelist(parseInt(id));
+                break;
+
+            // Modal actions
+            case 'open-whitelist-modal':
+                openWhitelistModal(type, value, target.dataset.prefill === 'true');
+                break;
+            case 'open-blacklist-modal':
+                openBlacklistModal(type, value, target.dataset.prefill === 'true');
+                break;
+            case 'remove-whitelist-by-value':
+                removeFromWhitelistByValue(type, value);
+                break;
+            case 'remove-blacklist-by-value':
+                removeFromBlacklistByValue(type, value);
+                break;
+            case 'close-modal-goto-player':
+                closeModal('playerModal');
+                window.location.href = `player.php?uuid=${encodeURIComponent(value)}`;
+                break;
+            case 'close-modal-goto-player-connection':
+                closeModal('connectionModal');
+                window.location.href = `player.php?uuid=${encodeURIComponent(value)}`;
+                break;
+        }
+    });
 }
 
 function switchSection(section) {
@@ -761,12 +887,12 @@ function renderCountriesTable(countries) {
             <td><span class="status-badge ${c.active == 1 ? 'active' : 'inactive'}">${c.active == 1 ? 'Activo' : 'Inactivo'}</span></td>
             <td>${formatDate(c.created_at)}</td>
             <td>
-                <button class="action-btn" onclick="editCountryModal(${c.id}, '${escapeHtml(c.country_name)}', '${escapeHtml(c.kick_message || '')}')">Editar</button>
+                <button class="action-btn" data-action="edit-country" data-id="${c.id}" data-name="${escapeHtml(c.country_name)}" data-message="${escapeHtml(c.kick_message || '')}">Editar</button>
                 ${c.active == 1
-                    ? `<button class="action-btn danger" onclick="toggleCountry(${c.id}, false)">Desactivar</button>`
-                    : `<button class="action-btn success" onclick="toggleCountry(${c.id}, true)">Activar</button>`
+                    ? `<button class="action-btn danger" data-action="toggle-country" data-id="${c.id}" data-active="false">Desactivar</button>`
+                    : `<button class="action-btn success" data-action="toggle-country" data-id="${c.id}" data-active="true">Activar</button>`
                 }
-                <button class="action-btn danger" onclick="deleteCountry(${c.id}, '${escapeHtml(c.country_name)}')">Eliminar</button>
+                <button class="action-btn danger" data-action="delete-country" data-id="${c.id}" data-name="${escapeHtml(c.country_name)}">Eliminar</button>
             </td>
         </tr>
     `).join('');
@@ -850,12 +976,12 @@ function renderContinentsTable(continents) {
             <td><span class="status-badge ${c.active == 1 ? 'active' : 'inactive'}">${c.active == 1 ? 'Activo' : 'Inactivo'}</span></td>
             <td>${formatDate(c.created_at)}</td>
             <td>
-                <button class="action-btn" onclick="editContinentModal(${c.id}, '${escapeHtml(c.continent_name)}', '${escapeHtml(c.kick_message || '')}')">Editar</button>
+                <button class="action-btn" data-action="edit-continent" data-id="${c.id}" data-name="${escapeHtml(c.continent_name)}" data-message="${escapeHtml(c.kick_message || '')}">Editar</button>
                 ${c.active == 1
-                    ? `<button class="action-btn danger" onclick="toggleContinent(${c.id}, false)">Desactivar</button>`
-                    : `<button class="action-btn success" onclick="toggleContinent(${c.id}, true)">Activar</button>`
+                    ? `<button class="action-btn danger" data-action="toggle-continent" data-id="${c.id}" data-active="false">Desactivar</button>`
+                    : `<button class="action-btn success" data-action="toggle-continent" data-id="${c.id}" data-active="true">Activar</button>`
                 }
-                <button class="action-btn danger" onclick="deleteContinent(${c.id}, '${escapeHtml(c.continent_name)}')">Eliminar</button>
+                <button class="action-btn danger" data-action="delete-continent" data-id="${c.id}" data-name="${escapeHtml(c.continent_name)}">Eliminar</button>
             </td>
         </tr>
     `).join('');
@@ -1036,7 +1162,7 @@ function renderPlayersTable(players) {
     }
 
     tbody.innerHTML = players.map(player => `
-        <tr onclick="showPlayerDetail('${player.uuid}')">
+        <tr data-action="show-player-detail" data-value="${player.uuid}" style="cursor:pointer">
             <td>
                 <div class="player-cell">
                     <div class="player-avatar">
@@ -1063,7 +1189,7 @@ function renderPlayersTable(players) {
                 ${player.is_blacklisted ? '<span class="status-badge blacklisted">BL</span>' : ''}
             </td>
             <td>
-                <button class="action-btn" onclick="event.stopPropagation(); showPlayerDetail('${player.uuid}')">Ver</button>
+                <button class="action-btn" data-action="show-player-detail" data-value="${player.uuid}">Ver</button>
             </td>
         </tr>
     `).join('');
@@ -1108,7 +1234,7 @@ function renderConnectionsTable(connections) {
                 ${conn.is_hosting ? '<span class="status-badge hosting">Hosting</span>' : ''}
             </td>
             <td>
-                <button class="action-btn" onclick="showConnectionDetail(${conn.id})">Ver</button>
+                <button class="action-btn" data-action="show-connection-detail" data-id="${conn.id}">Ver</button>
             </td>
         </tr>
     `).join('');
@@ -1123,7 +1249,7 @@ function renderIPsTable(ips) {
     }
 
     tbody.innerHTML = ips.map(ip => `
-        <tr onclick="showIPDetail('${ip.ip}')">
+        <tr data-action="show-ip-detail" data-value="${ip.ip}" style="cursor:pointer">
             <td>
                 <div class="ip-cell">
                     ${ip.country_code ? `<img src="https://flagcdn.com/w20/${ip.country_code.toLowerCase()}.png" class="ip-flag" alt="${ip.country_code}">` : ''}
@@ -1146,7 +1272,7 @@ function renderIPsTable(ips) {
                 ${!ip.is_whitelisted && !ip.is_blacklisted ? '<span class="status-badge">Normal</span>' : ''}
             </td>
             <td>
-                <button class="action-btn" onclick="event.stopPropagation(); showIPDetail('${ip.ip}')">Ver</button>
+                <button class="action-btn" data-action="show-ip-detail" data-value="${ip.ip}">Ver</button>
             </td>
         </tr>
     `).join('');
@@ -1174,8 +1300,8 @@ function renderWhitelistTable(entries) {
             <td>${escapeHtml(entry.added_by)}</td>
             <td>${formatDate(entry.created_at)}</td>
             <td>
-                <button class="action-btn" onclick="editWhitelistEntry(${entry.id}, '${entry.type}', '${escapeHtml(entry.value).replace(/'/g, "\\'")}', '${escapeHtml(entry.reason || '').replace(/'/g, "\\'")}')">Editar</button>
-                <button class="action-btn danger" onclick="removeFromWhitelist(${entry.id}, '${entry.type}', '${escapeHtml(entry.value)}')">Eliminar</button>
+                <button class="action-btn" data-action="edit-whitelist" data-id="${entry.id}" data-type="${entry.type}" data-value="${escapeHtml(entry.value).replace(/"/g, '&quot;')}" data-message="${escapeHtml(entry.reason || '').replace(/"/g, '&quot;')}">Editar</button>
+                <button class="action-btn danger" data-action="remove-from-whitelist" data-id="${entry.id}" data-type="${entry.type}" data-value="${escapeHtml(entry.value).replace(/"/g, '&quot;')}">Eliminar</button>
             </td>
         </tr>
     `;

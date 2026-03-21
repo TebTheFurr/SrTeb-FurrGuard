@@ -682,7 +682,7 @@ $user = $_SESSION['furrguard_admin'];
     <div id="connectionModalContainer">
         <div class="modal-header">
             <h3 class="modal-title" style="font-size:1.125rem;font-weight:600;color:var(--text-primary);">Detalle de Conexion</h3>
-            <button class="modal-close" onclick="closeConnectionModal()">
+            <button class="modal-close" data-action="close-connection-modal">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
                     <path d="M18 6L6 18M6 6l12 12"/>
                 </svg>
@@ -694,11 +694,11 @@ $user = $_SESSION['furrguard_admin'];
 
     <!-- Whitelist Modal -->
     <div id="whitelistModal" class="modal">
-        <div class="modal-overlay" onclick="closeModal('whitelistModal')"></div>
+        <div class="modal-overlay" data-action="close-modal" data-modal="whitelistModal"></div>
         <div class="modal-content">
             <div class="modal-header">
                 <h2>Anadir a Whitelist</h2>
-                <button class="modal-close" onclick="closeModal('whitelistModal')">&times;</button>
+                <button class="modal-close" data-action="close-modal" data-modal="whitelistModal">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
@@ -722,19 +722,19 @@ $user = $_SESSION['furrguard_admin'];
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-ghost" onclick="closeModal('whitelistModal')">Cancelar</button>
-                <button class="btn btn-success" onclick="confirmWhitelist()">Anadir</button>
+                <button class="btn btn-ghost" data-action="close-modal" data-modal="whitelistModal">Cancelar</button>
+                <button class="btn btn-success" data-action="confirm-whitelist">Anadir</button>
             </div>
         </div>
     </div>
 
     <!-- Blacklist Modal -->
     <div id="blacklistModal" class="modal">
-        <div class="modal-overlay" onclick="closeModal('blacklistModal')"></div>
+        <div class="modal-overlay" data-action="close-modal" data-modal="blacklistModal"></div>
         <div class="modal-content">
             <div class="modal-header">
                 <h2>Anadir a Blacklist</h2>
-                <button class="modal-close" onclick="closeModal('blacklistModal')">&times;</button>
+                <button class="modal-close" data-action="close-modal" data-modal="blacklistModal">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="modal-tabs">
@@ -825,8 +825,8 @@ $user = $_SESSION['furrguard_admin'];
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-ghost" onclick="closeModal('blacklistModal')">Cancelar</button>
-                <button class="btn btn-danger" onclick="confirmBlacklist()">Bloquear</button>
+                <button class="btn btn-ghost" data-action="close-modal" data-modal="blacklistModal">Cancelar</button>
+                <button class="btn btn-danger" data-action="confirm-blacklist">Bloquear</button>
             </div>
         </div>
     </div>
@@ -867,7 +867,78 @@ $user = $_SESSION['furrguard_admin'];
         document.addEventListener('DOMContentLoaded', () => {
             loadPlayerData();
             initBlacklistModalTabs();
+            initEventDelegation();
         });
+
+        // Event delegation for CSP-compliant handlers
+        function initEventDelegation() {
+            document.addEventListener('click', (e) => {
+                const target = e.target.closest('[data-action]');
+                if (!target) return;
+
+                const action = target.dataset.action;
+                switch (action) {
+                    case 'close-connection-modal':
+                        closeConnectionModal();
+                        break;
+                    case 'close-modal':
+                        closeModal(target.dataset.modal);
+                        break;
+                    case 'confirm-whitelist':
+                        confirmWhitelist();
+                        break;
+                    case 'confirm-blacklist':
+                        confirmBlacklist();
+                        break;
+                    case 'show-connection-detail':
+                        showConnectionDetail(parseInt(target.dataset.id));
+                        break;
+                    case 'open-whitelist':
+                        openWhitelist(target.dataset.type, target.dataset.value);
+                        break;
+                    case 'remove-from-whitelist':
+                        removeFromWhitelist(target.dataset.type, target.dataset.value);
+                        break;
+                    case 'open-blacklist':
+                        openBlacklist(target.dataset.value);
+                        break;
+                    case 'remove-from-blacklist':
+                        removeFromBlacklist(target.dataset.type, target.dataset.value);
+                        break;
+                }
+            });
+        }
+
+        // Helper functions for whitelist/blacklist actions
+        async function removeFromWhitelist(type, value) {
+            if (!confirm('¿Eliminar esta entrada de la whitelist?')) return;
+            try {
+                const response = await apiRequest('remove_whitelist', { type, value });
+                if (response.success) {
+                    showToast('Eliminado de whitelist', 'success');
+                    loadPlayerData();
+                } else {
+                    showToast(response.error || 'Error al eliminar', 'error');
+                }
+            } catch (error) {
+                showToast('Error de conexion', 'error');
+            }
+        }
+
+        async function removeFromBlacklist(type, value) {
+            if (!confirm('¿Eliminar esta entrada de la blacklist?')) return;
+            try {
+                const response = await apiRequest('remove_blacklist', { type, value });
+                if (response.success) {
+                    showToast('Eliminado de blacklist', 'success');
+                    loadPlayerData();
+                } else {
+                    showToast(response.error || 'Error al eliminar', 'error');
+                }
+            } catch (error) {
+                showToast('Error de conexion', 'error');
+            }
+        }
 
         async function apiRequest(action, data = {}) {
             const response = await fetch(API_URL, {
@@ -1117,7 +1188,7 @@ $user = $_SESSION['furrguard_admin'];
                 document.getElementById('connectionsContent').innerHTML = '<div class="empty-state">Sin conexiones recientes</div>';
                 return;
             }
-            let tbodyHtml = playerConns.map(c => '<tr><td>' + formatDate(c.created_at) + '</td><td>' + escapeHtml(c.ip) + '</td><td>' + (c.country ? '<span class="country-flag"><img src="https://flagcdn.com/16x12/' + (c.country_code?.toLowerCase() || 'xx') + '.png" alt="">' + c.country + '</span>' : 'N/A') + '</td><td><span class="' + (c.blocked ? 'status-blocked' : 'status-allowed') + '">' + (c.blocked ? 'Bloqueado' : 'Permitido') + '</span></td><td><button class="view-connection-btn" onclick="showConnectionDetail(' + c.id + ')">Ver</button></td></tr>').join('');
+            let tbodyHtml = playerConns.map(c => '<tr><td>' + formatDate(c.created_at) + '</td><td>' + escapeHtml(c.ip) + '</td><td>' + (c.country ? '<span class="country-flag"><img src="https://flagcdn.com/16x12/' + (c.country_code?.toLowerCase() || 'xx') + '.png" alt="">' + c.country + '</span>' : 'N/A') + '</td><td><span class="' + (c.blocked ? 'status-blocked' : 'status-allowed') + '">' + (c.blocked ? 'Bloqueado' : 'Permitido') + '</span></td><td><button class="view-connection-btn" data-action="show-connection-detail" data-id="' + c.id + '">Ver</button></td></tr>').join('');
             document.getElementById('connectionsContent').innerHTML = '<table class="connections-table"><thead><tr><th>Fecha</th><th>IP</th><th>Pais</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>' + tbodyHtml + '</tbody></table>';
         }
 
@@ -1135,7 +1206,7 @@ $user = $_SESSION['furrguard_admin'];
                 if (response.success) {
                     const c = response.data.connection;
                     body.innerHTML = '<div class="connection-detail-grid"><div class="connection-detail-item"><span class="connection-detail-label">Nick</span><span class="connection-detail-value">' + escapeHtml(c.nick) + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">UUID</span><span class="connection-detail-value" style="font-family:var(--font-mono);font-size:0.75rem">' + (c.uuid || 'N/A') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">IP</span><span class="connection-detail-value">' + escapeHtml(c.ip) + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">Pais</span><span class="connection-detail-value">' + (c.country ? '<span class="country-flag"><img src="https://flagcdn.com/16x12/' + (c.country_code?.toLowerCase() || 'xx') + '.png" alt="">' + c.country + '</span>' : 'N/A') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">ISP</span><span class="connection-detail-value">' + (c.isp || 'N/A') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">ASN</span><span class="connection-detail-value">' + (c.asn || 'N/A') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">Proxy</span><span class="connection-detail-value ' + (c.is_proxy ? 'status-blocked' : 'status-allowed') + '">' + (c.is_proxy ? 'Si' : 'No') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">VPN</span><span class="connection-detail-value ' + (c.is_vpn ? 'status-blocked' : 'status-allowed') + '">' + (c.is_vpn ? 'Si' : 'No') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">Hosting</span><span class="connection-detail-value ' + (c.is_hosting ? 'status-blocked' : 'status-allowed') + '">' + (c.is_hosting ? 'Si' : 'No') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">Estado</span><span class="connection-detail-value ' + (c.blocked ? 'status-blocked' : 'status-allowed') + '">' + (c.blocked ? 'Bloqueado' : 'Permitido') + '</span></div><div class="connection-detail-item"><span class="connection-detail-label">Fecha</span><span class="connection-detail-value">' + formatDate(c.created_at) + '</span></div></div>';
-                    footer.innerHTML = '<button class="btn btn-ghost" onclick="closeConnectionModal()">Cerrar</button>';
+                    footer.innerHTML = '<button class="btn btn-ghost" data-action="close-connection-modal">Cerrar</button>';
                 }
             } catch (error) {
                 console.error('Error loading connection:', error);
@@ -1155,14 +1226,14 @@ $user = $_SESSION['furrguard_admin'];
             const value = banInfo.value;
             let buttonsHtml = '';
             if (!player.is_whitelisted) {
-                buttonsHtml += '<button class="btn btn-success" onclick="openWhitelist(\'' + escapeHtml(type) + '\', \'' + escapeHtml(value) + '\')">Anadir a Whitelist</button>';
+                buttonsHtml += '<button class="btn btn-success" data-action="open-whitelist" data-type="' + escapeHtml(type) + '" data-value="' + escapeHtml(value) + '">Anadir a Whitelist</button>';
             } else {
-                buttonsHtml += '<button class="btn btn-ghost" onclick="removeFromWhitelist(\'' + escapeHtml(type) + '\', \'' + escapeHtml(value) + '\')">Quitar de Whitelist</button>';
+                buttonsHtml += '<button class="btn btn-ghost" data-action="remove-from-whitelist" data-type="' + escapeHtml(type) + '" data-value="' + escapeHtml(value) + '">Quitar de Whitelist</button>';
             }
             if (!player.is_blacklisted) {
-                buttonsHtml += '<button class="btn btn-danger" onclick="openBlacklist(\'' + escapeHtml(player.last_nick) + '\')">Anadir a Blacklist</button>';
+                buttonsHtml += '<button class="btn btn-danger" data-action="open-blacklist" data-value="' + escapeHtml(player.last_nick) + '">Anadir a Blacklist</button>';
             } else {
-                buttonsHtml += '<button class="btn btn-ghost" onclick="removeFromBlacklist(\'' + escapeHtml(type) + '\', \'' + escapeHtml(value) + '\')">Quitar de Blacklist</button>';
+                buttonsHtml += '<button class="btn btn-ghost" data-action="remove-from-blacklist" data-type="' + escapeHtml(type) + '" data-value="' + escapeHtml(value) + '">Quitar de Blacklist</button>';
             }
             document.getElementById('playerActions').innerHTML = buttonsHtml;
         }
