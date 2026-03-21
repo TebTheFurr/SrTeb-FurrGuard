@@ -1,18 +1,31 @@
 <?php
-header('Content-Type: application/json');
+// Start output buffering to prevent accidental output before JSON
+ob_start();
+
+// Set JSON header first
+header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: ' . (getenv('CORS_ALLOWED_ORIGIN') ?: 'https://furrguard.srteb.eu'));
 header('Access-Control-Allow-Methods: POST, GET');
 header('Access-Control-Allow-Headers: Content-Type, X-API-Key');
 
 // Handle CORS preflight
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    ob_end_clean();
     http_response_code(204);
     exit;
 }
 
+// Disable error display to prevent HTML in JSON response
+ini_set('display_errors', '0');
+ini_set('display_startup_errors', '0');
+error_reporting(E_ALL);
+
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/ip_api_improvements.php';
+
+// Clean any accidental output from includes (whitespace, warnings, etc.)
+ob_clean();
 
 // Check database connection early
 $db = db();
@@ -105,6 +118,7 @@ try {
     }
 } catch (PDOException $e) {
     error_log("API PDO Error: " . $e->getMessage());
+    ob_clean();
     http_response_code(503); // Service Unavailable
     header('Retry-After: 60'); // Suggest retry after 60 seconds
     echo json_encode([
@@ -115,13 +129,26 @@ try {
     ]);
 } catch (Exception $e) {
     error_log("API Error: " . $e->getMessage());
+    ob_clean();
     http_response_code(500);
     echo json_encode([
         'error' => 'internal_error',
         'message' => 'Internal server error',
         'fallback' => 'deny' // Tell plugin to deny connections on internal errors
     ]);
+} catch (Throwable $e) {
+    error_log("API Fatal Error: " . $e->getMessage());
+    ob_clean();
+    http_response_code(500);
+    echo json_encode([
+        'error' => 'fatal_error',
+        'message' => 'Fatal server error',
+        'fallback' => 'deny'
+    ]);
 }
+
+// Flush output buffer and send response
+ob_end_flush();
 
 function handleCheckPlayer(PDO $db): void {
     $uuid = trim($_POST['uuid'] ?? '');

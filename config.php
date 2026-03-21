@@ -180,4 +180,3 @@ function getDiscordLoginUrl(): string {
     ]);
     return 'https://discord.com/api/oauth2/authorize?' . $params;
 }
-?>
