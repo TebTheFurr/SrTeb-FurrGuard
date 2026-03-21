@@ -23,6 +23,11 @@ function getCspNonce(): string {
  * Uses CSP nonces instead of unsafe-inline for scripts and styles.
  */
 function applySecurityHeaders(): void {
+    // Clear OPcache to ensure latest CSP changes are applied
+    if (function_exists('opcache_reset')) {
+        opcache_invalidate(__FILE__, true);
+    }
+
     $nonce = getCspNonce();
 
     header('X-Content-Type-Options: nosniff');
