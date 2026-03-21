@@ -76,7 +76,7 @@ $user = $_SESSION['furrguard_admin'];
     <link rel="stylesheet" href="assets/css/admin.css?v=<?php echo filemtime(__DIR__ . '/assets/css/admin.css'); ?>">
     <link rel="stylesheet" href="assets/css/animations.css?v=<?php echo filemtime(__DIR__ . '/assets/css/animations.css'); ?>">
     <script src="https://unpkg.com/skinview3d/bundles/skinview3d.bundle.js"></script>
-    <style>
+    <style nonce="<?php echo getCspNonce(); ?>">
         .player-page {
             min-height: 100vh;
             padding: 24px;
@@ -854,7 +854,7 @@ $user = $_SESSION['furrguard_admin'];
         </div>
     </footer>
 
-    <script>
+    <script nonce="<?php echo getCspNonce(); ?>">
         const API_URL = 'api.php';
         let skinViewer = null;
         let currentPlayerUuid = <?php echo json_encode($uuid); ?>;

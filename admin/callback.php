@@ -23,7 +23,7 @@ if ($db === null) {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>FurrGuard - Error</title>
-        <style>
+        <style nonce="<?php echo getCspNonce(); ?>">
             body { font-family: sans-serif; text-align: center; padding: 50px; background: #1a1a2e; color: #fff; }
             a { color: #667eea; }
         </style>
@@ -78,6 +78,7 @@ $expiresAt = date('Y-m-d H:i:s', strtotime('+24 hours'));
 try {
     $db = db();
 
+    // Delete all previous sessions for this user (DB sessions)
     $stmt = $db->prepare("DELETE FROM admin_sessions WHERE discord_id = ?");
     $stmt->execute([$userData['id']]);
 
@@ -100,7 +101,27 @@ try {
     error_log('FurrGuard DB Error: ' . $e->getMessage());
 }
 
-// Regenerate session ID to prevent session fixation
+// Completely destroy old session before creating new one (prevents session fixation)
+$oldSessionData = $_SESSION;
+$_SESSION = [];
+
+// Delete the session cookie
+if (ini_get("session.use_cookies")) {
+    $params = session_get_cookie_params();
+    setcookie(session_name(), '', time() - 42000,
+        $params["path"], $params["domain"],
+        $params["secure"], $params["httponly"]
+    );
+}
+
+// Destroy the session file
+session_destroy();
+
+// Start a fresh session with new ID
+configureSecureSession();
+session_start();
+
+// Regenerate ID again for extra security
 session_regenerate_id(true);
 
 $_SESSION['furrguard_admin'] = [

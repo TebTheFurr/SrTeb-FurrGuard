@@ -21,7 +21,7 @@ if ($db === null) {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>FurrGuard - Error de Conexión</title>
-        <style>
+        <style nonce="<?php echo getCspNonce(); ?>">
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -2256,7 +2256,7 @@ $user = $isAuthenticated ? $_SESSION['furrguard_admin'] : null;
 
     <script src="assets/js/admin.js?v=<?php echo FURRGUARD_VERSION . '.' . time(); ?>"></script>
     <?php if ($isAuthenticated): ?>
-        <script>
+        <script nonce="<?php echo getCspNonce(); ?>">
             localStorage.setItem('furrguard_session', JSON.stringify(<?php echo json_encode($user); ?>));
             window.ROLE_PERMISSIONS = <?php echo json_encode(ROLE_PERMISSIONS); ?>;
         </script>

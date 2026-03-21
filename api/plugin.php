@@ -31,12 +31,9 @@ if ($db === null) {
 $clientIp = getClientIp();
 enforceRateLimit($clientIp, 120, 60, 'plugin_api');
 
-// Solo requerir API key para acciones que no sean de FurrPerms
+// TODAS las acciones requieren API key (fix: autenticación obligatoria)
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
-$furrPermsActions = ['check_furr_perms_whitelist', 'log_furr_perms_command', 'get_messages'];
-if (!in_array($action, $furrPermsActions, true)) {
-    requireApiKey();
-}
+requireApiKey();
 
 // Validate action is a known action
 $validActions = ['check_player', 'lookup_player', 'player_join', 'player_quit', 'get_messages', 'add_whitelist', 'remove_whitelist', 'add_blacklist', 'remove_blacklist', 'get_settings', 'poll_changes', 'check_furr_perms_whitelist', 'log_furr_perms_command'];
@@ -621,17 +618,97 @@ function handleGetMessages(PDO $db): void {
     echo json_encode($messages);
 }
 
+/**
+ * Validate whitelist/blacklist value based on type.
+ * Returns validated value or null if invalid.
+ */
+function validateListValue(string $type, string $value): ?string {
+    $value = trim($value);
+
+    switch ($type) {
+        case 'uuid':
+            // Validate UUID format (with or without dashes)
+            if (preg_match('/^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i', $value)) {
+                // Normalize to dashed format
+                return preg_replace('/^([0-9a-f]{8})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{12})$/i', '$1-$2-$3-$4-$5', str_replace('-', '', $value));
+            }
+            return null;
+
+        case 'nick':
+            // Validate Minecraft username format
+            if (preg_match('/^[a-zA-Z0-9_]{1,16}$/', $value)) {
+                return $value;
+            }
+            return null;
+
+        case 'ip':
+            // Validate IP address (IPv4 or IPv6)
+            if (filter_var($value, FILTER_VALIDATE_IP)) {
+                return $value;
+            }
+            return null;
+
+        case 'ip_range':
+            // Validate CIDR notation (IPv4 or IPv6)
+            if (preg_match('/^([0-9a-f.:]+)\/(\d+)$/i', $value, $matches)) {
+                $ip = $matches[1];
+                $prefix = (int)$matches[2];
+                if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                    $isIPv6 = filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6);
+                    $maxPrefix = $isIPv6 ? 128 : 32;
+                    if ($prefix >= 0 && $prefix <= $maxPrefix) {
+                        return $value;
+                    }
+                }
+            }
+            return null;
+
+        case 'as':
+            // Validate ASN format (AS12345 or just 12345)
+            if (preg_match('/^AS\d+$/i', $value)) {
+                return strtoupper($value);
+            }
+            if (preg_match('/^\d+$/', $value)) {
+                return 'AS' . $value;
+            }
+            return null;
+
+        default:
+            return null;
+    }
+}
+
 function handleAddWhitelist(PDO $db): void {
     $type = $_POST['type'] ?? '';
     $value = $_POST['value'] ?? '';
     $reason = $_POST['reason'] ?? '';
     $addedBy = $_POST['added_by'] ?? 'Plugin';
 
-    if (!in_array($type, ['uuid', 'nick', 'ip', 'as', 'ip_range']) || !$value) {
+    if (!in_array($type, ['uuid', 'nick', 'ip', 'as', 'ip_range'])) {
         http_response_code(400);
-        echo json_encode(['error' => 'Invalid type or value']);
+        echo json_encode(['error' => 'Invalid type']);
         return;
     }
+
+    if (empty($value)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Missing value']);
+        return;
+    }
+
+    // Validate value format based on type
+    $validatedValue = validateListValue($type, $value);
+    if ($validatedValue === null) {
+        http_response_code(400);
+        echo json_encode(['error' => "Invalid value format for type '{$type}'"]);
+        return;
+    }
+
+    // Sanitize reason
+    $reason = substr(trim($reason), 0, 255);
+
+    // Sanitize added_by
+    $addedBy = substr(trim($addedBy), 0, 50);
 
     $stmt = $db->prepare("
         INSERT INTO whitelist (type, value, reason, added_by)
@@ -640,14 +717,14 @@ function handleAddWhitelist(PDO $db): void {
     ");
     $stmt->execute([
         'type' => $type,
-        'value' => $value,
+        'value' => $validatedValue,
         'reason' => $reason,
         'added_by' => $addedBy,
         'reason_upd' => $reason,
         'added_by_upd' => $addedBy
     ]);
 
-    logActivity($db, 'whitelist', 'add', "{$type}: {$value}");
+    logActivity($db, 'whitelist', 'add', "{$type}: {$validatedValue}");
     incrementCacheVersion($db);
 
     echo json_encode(['success' => true]);
@@ -674,11 +751,31 @@ function handleAddBlacklist(PDO $db): void {
     $duration = isset($_POST['duration']) ? (int)$_POST['duration'] : 0;
     $stainIp = isset($_POST['stain_ip']) ? (int)$_POST['stain_ip'] : 1;
 
-    if (!in_array($type, ['uuid', 'nick', 'ip', 'as', 'ip_range']) || !$value) {
+    if (!in_array($type, ['uuid', 'nick', 'ip', 'as', 'ip_range'])) {
         http_response_code(400);
-        echo json_encode(['error' => 'Invalid type or value']);
+        echo json_encode(['error' => 'Invalid type']);
         return;
     }
+
+    if (empty($value)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Missing value']);
+        return;
+    }
+
+    // Validate value format based on type
+    $validatedValue = validateListValue($type, $value);
+    if ($validatedValue === null) {
+        http_response_code(400);
+        echo json_encode(['error' => "Invalid value format for type '{$type}'"]);
+        return;
+    }
+
+    // Sanitize reason
+    $reason = substr(trim($reason), 0, 255);
+
+    // Sanitize added_by
+    $addedBy = substr(trim($addedBy), 0, 50);
 
     $expiresAt = null;
     if ($duration > 0) {
@@ -689,7 +786,7 @@ function handleAddBlacklist(PDO $db): void {
 
     // Check if entry already exists (ON DUPLICATE KEY won't need new ban_id)
     $existing = $db->prepare("SELECT id, ban_id FROM blacklist WHERE type = :type AND value = :value");
-    $existing->execute(['type' => $type, 'value' => $value]);
+    $existing->execute(['type' => $type, 'value' => $validatedValue]);
     $existingEntry = $existing->fetch();
 
     $parentId = null;
@@ -702,7 +799,7 @@ function handleAddBlacklist(PDO $db): void {
         ");
         $stmt->execute([
             'type' => $type,
-            'value' => $value,
+            'value' => $validatedValue,
             'reason' => $reason,
             'added_by' => $addedBy,
             'expires_at' => $expiresAt
@@ -715,7 +812,7 @@ function handleAddBlacklist(PDO $db): void {
         $stmt->execute([
             'ban_id' => $banId,
             'type' => $type,
-            'value' => $value,
+            'value' => $validatedValue,
             'reason' => $reason,
             'added_by' => $addedBy,
             'expires_at' => $expiresAt
@@ -730,13 +827,13 @@ function handleAddBlacklist(PDO $db): void {
         if ($type === 'uuid') {
             // Buscar IPs asociadas a este UUID
             $stmt = $db->prepare("SELECT DISTINCT ip FROM player_ips WHERE player_id = (SELECT id FROM players WHERE uuid = :uuid LIMIT 1)");
-            $stmt->execute(['uuid' => $value]);
+            $stmt->execute(['uuid' => $validatedValue]);
             $ips = $stmt->fetchAll(PDO::FETCH_COLUMN);
             $ipsToAdd = $ips ?: [];
         } elseif ($type === 'nick') {
             // Buscar IPs asociadas a este nick
             $stmt = $db->prepare("SELECT DISTINCT ip FROM player_connections WHERE nick = :nick");
-            $stmt->execute(['nick' => $value]);
+            $stmt->execute(['nick' => $validatedValue]);
             $ips = $stmt->fetchAll(PDO::FETCH_COLUMN);
             $ipsToAdd = $ips ?: [];
         }
@@ -763,7 +860,7 @@ function handleAddBlacklist(PDO $db): void {
         }
     }
 
-    logActivity($db, 'blacklist', 'add', "{$type}: {$value}");
+    logActivity($db, 'blacklist', 'add', "{$type}: {$validatedValue}");
     incrementCacheVersion($db);
 
     echo json_encode(['success' => true]);
@@ -882,6 +979,40 @@ function handleLogFurrPermsCommand(PDO $db): void {
         return;
     }
 
+    // Validar formato de nick
+    if (!preg_match('/^[a-zA-Z0-9_]{1,16}$/', $playerNick)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid nickname format']);
+        return;
+    }
+
+    // Validar formato de UUID si se proporciona
+    if ($playerUuid && !preg_match('/^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i', $playerUuid)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid UUID format']);
+        return;
+    }
+
+    // Validar formato de IP si se proporciona
+    if ($ipAddress && !filter_var($ipAddress, FILTER_VALIDATE_IP)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid IP address format']);
+        return;
+    }
+
+    // Sanitizar comando: solo permitir caracteres seguros (alfanuméricos, espacios, guiones, puntos, dos puntos, barra)
+    // Previene inyección de caracteres maliciosos en logs
+    $command = preg_replace('/[^\p{L}\p{N}\s\-_.:\/\\\\]/u', '', $command);
+    $command = substr($command, 0, 255);
+
+    // Sanitizar server_name: solo alfanuméricos, guiones y guiones bajos
+    $serverName = preg_replace('/[^a-zA-Z0-9_\-]/', '', $serverName);
+    $serverName = substr($serverName, 0, 100);
+
+    // Sanitizar reason: remover caracteres de control y limitar longitud
+    $reason = preg_replace('/[\x00-\x1F\x7F]/', '', $reason);
+    $reason = substr($reason, 0, 500);
+
     // Verificar si se debe registrar según configuración
     $logAllowed = getSetting($db, 'fur_perms_log_allowed', '1') === '1';
     $logBlocked = getSetting($db, 'fur_perms_log_blocked', '1') === '1';
@@ -903,8 +1034,8 @@ function handleLogFurrPermsCommand(PDO $db): void {
     $stmt->execute([
         'uuid' => $playerUuid ?: null,
         'nick' => $playerNick,
-        'command' => substr($command, 0, 255),
-        'server' => substr($serverName, 0, 100),
+        'command' => $command,
+        'server' => $serverName ?: 'unknown',
         'allowed' => $allowed,
         'reason' => $reason ?: null,
         'ip' => $ipAddress ?: null
