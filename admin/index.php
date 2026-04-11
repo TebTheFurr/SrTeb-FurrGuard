@@ -21,6 +21,7 @@ if (isset($_GET['logout'])) {
 try {
     $db = db();
 } catch (Exception $e) {
+    http_response_code(503);
     echo '<!DOCTYPE html><html><body style="background:#0a0a0f;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,sans-serif"><div><h1>Error de Base de Datos</h1><p>No se puede conectar a la base de datos.</p></div></body></html>';
     exit;
 }
@@ -31,18 +32,44 @@ $user = null;
 $rolePermissions = [];
 
 if (isset($_SESSION['furrguard_admin'])) {
-    validateSessionIntegrity();
+    // HIGH 1: Destroy session if IP binding fails
+    if (!validateSessionIntegrity()) {
+        session_destroy();
+        header('Location: index.php?error=session_expired');
+        exit;
+    }
+
     $admin = $_SESSION['furrguard_admin'];
     if (!empty($admin['discord_id']) && !empty($admin['expires_at'])) {
         if (strtotime($admin['expires_at']) > time()) {
+            // HIGH 2: Validate role from database
+            $role = getUserRole($admin['discord_id']);
+            if ($role === null) {
+                // Role revoked or user removed — destroy session
+                session_destroy();
+                header('Location: index.php?error=access_revoked');
+                exit;
+            }
+
             $isAuthenticated = true;
-            $user = $admin;
+            $admin['role'] = $role;
+            $_SESSION['furrguard_admin']['role'] = $role;
+
+            // CRITICAL 3: Only expose non-sensitive fields to client JS
+            $user = [
+                'discord_id' => $admin['discord_id'] ?? null,
+                'username'   => $admin['username'] ?? null,
+                'avatar'     => $admin['avatar'] ?? null,
+                'role'       => $role,
+                'expires_at' => $admin['expires_at'] ?? null,
+            ];
             $rolePermissions = defined('ROLE_PERMISSIONS') ? ROLE_PERMISSIONS : [];
         }
     }
 }
 
-$nonce = base64_encode(random_bytes(16));
+// CRITICAL 1: Use the CSP nonce from security.php, not an independent one
+$nonce = getCspNonce();
 ?>
 <!DOCTYPE html>
 <html lang="es">

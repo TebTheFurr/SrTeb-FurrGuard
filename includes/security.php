@@ -10,13 +10,42 @@
 /**
  * Apply security headers to all responses.
  */
+function getCspNonce(): string {
+    static $nonce = null;
+    if ($nonce === null) {
+        $nonce = bin2hex(random_bytes(16));
+    }
+    return $nonce;
+}
+
 function applySecurityHeaders(): void {
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || ($_SERVER['SERVER_PORT'] ?? 0) == 443
+        || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+
     header('X-Content-Type-Options: nosniff');
     header('X-Frame-Options: DENY');
     header('X-XSS-Protection: 1; mode=block');
     header('Referrer-Policy: strict-origin-when-cross-origin');
     header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
-    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://crafatar.com https://cdn.discordapp.com https://mineskin.eu https://flagcdn.com data:; connect-src 'self' https://unpkg.com");
+
+    if ($isHttps) {
+        header('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload');
+    }
+
+    $nonce = getCspNonce();
+
+    // Detect development mode (Vite dev server or localhost)
+    $host = $_SERVER['HTTP_HOST'] ?? '';
+    $isDevMode = (strpos($host, 'localhost') !== false)
+        || (strpos($host, '127.0.0.1') !== false)
+        || ($_SERVER['SERVER_PORT'] ?? 0) == 5173;
+
+    if ($isDevMode) {
+        header("Content-Security-Policy: default-src 'self' localhost:* 127.0.0.1:*; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'nonce-{$nonce}' localhost:* 127.0.0.1:* https://unpkg.com https://fonts.googleapis.com; script-src-attr 'unsafe-inline'; style-src 'self' 'unsafe-inline' localhost:* 127.0.0.1:* https://fonts.googleapis.com; font-src 'self' localhost:* 127.0.0.1:* https://fonts.gstatic.com; img-src 'self' https://crafatar.com https://cdn.discordapp.com https://mineskin.eu https://flagcdn.com data: localhost:* 127.0.0.1:*; connect-src 'self' localhost:* 127.0.0.1:* ws://localhost:* ws://127.0.0.1:* https://unpkg.com");
+    } else {
+        header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{$nonce}' https://unpkg.com https://fonts.googleapis.com; script-src-attr 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://crafatar.com https://cdn.discordapp.com https://mineskin.eu https://flagcdn.com data:; connect-src 'self' https://unpkg.com");
+    }
 
     // Prevent caching of sensitive pages
     if (strpos($_SERVER['REQUEST_URI'] ?? '', '/admin/') !== false) {
