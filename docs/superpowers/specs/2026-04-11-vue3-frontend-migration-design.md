@@ -40,6 +40,7 @@ Migrate the FurrGuard admin panel from a vanilla JS SPA (1 HTML file, 1 JS file,
 | Animations | GSAP | 3.x |
 | HTTP | Axios | 1.x |
 | Icons | Lucide Vue Next | latest |
+| 3D Viewer | skinview3d | 3.x (npm) |
 | Fonts | Inter, Space Grotesk, JetBrains Mono | Google Fonts |
 
 ---
@@ -51,7 +52,7 @@ admin/
 ├── package.json
 ├── vite.config.ts
 ├── tsconfig.json
-├── index.html                      # Vite entry point
+├── index.php                       # Vite entry point (PHP for session injection)
 ├── src/
 │   ├── main.ts                     # App bootstrap, plugins
 │   ├── App.vue                     # Root (router-view + toast container)
@@ -110,11 +111,11 @@ admin/
 │   │   │   ├── ConfirmModal.vue    # Yes/No confirmation
 │   │   │   ├── PromptModal.vue     # Text input prompt
 │   │   │   ├── AlertModal.vue      # Info alert
-│   │   │   ├── WhitelistModal.vue  # Add/edit whitelist entry
-│   │   │   ├── BlacklistModal.vue  # Add/edit blacklist entry
+│   │   │   ├── WhitelistModal.vue  # Add OR edit whitelist entry (mode prop)
+│   │   │   ├── BlacklistModal.vue  # Add OR edit blacklist entry (mode prop, unified/IP variants)
 │   │   │   ├── ProviderModal.vue   # Add provider
-│   │   │   ├── CountryModal.vue    # Add/edit country block
-│   │   │   ├── ContinentModal.vue  # Add/edit continent block
+│   │   │   ├── CountryModal.vue    # Add OR edit country block (mode prop)
+│   │   │   ├── ContinentModal.vue  # Add OR edit continent block (mode prop)
 │   │   │   ├── PlayerModal.vue     # Player detail quick view
 │   │   │   ├── IPModal.vue         # IP detail quick view
 │   │   │   ├── ConnectionModal.vue # Connection detail
@@ -143,7 +144,7 @@ admin/
 │   │   ├── useToast.ts             # Toast notification helper
 │   │   ├── usePagination.ts        # Pagination state helper
 │   │   ├── useAnimations.ts        # GSAP animation helpers
-│   │   └── usePermissions.ts       # Role-based permission checks
+│   │   └── usePermissions.ts       # Role checks: can(section), minRole(role), isFounder()
 │   │
 │   ├── lib/
 │   │   ├── api.ts                  # Axios instance + interceptors
@@ -190,8 +191,9 @@ Vue Router in **hash mode** (required because PHP serves the app from `/admin/`)
 ### Navigation Guards
 
 - `beforeEach`: Check `authStore.isAuthenticated`. Redirect to `/login` if not.
-- After login (callback.php redirect), Vue reads user data from `localStorage('furrguard_session')` and populates `authStore`.
+- `index.php` (PHP entry point) injects user session and role permissions into a `<script>` tag on every page load, identical to the current pattern. Vue reads `window.__FURRGUARD_USER__` and `window.__ROLE_PERMISSIONS__` on boot.
 - Role-based: Sidebar nav items filtered by `ROLE_PERMISSIONS`. Routes accessible but content hidden based on role.
+- The `modules` permission in `ROLE_PERMISSIONS` is an umbrella that grants access to both `/furrperms` and `/furrsecurity`. Individual `furrperms`/`furrsecurity` permissions also exist for granular control. The sidebar shows "Modulos" category when either individual or umbrella permission is present.
 
 ### Lazy Loading
 
@@ -213,20 +215,20 @@ All view components loaded via `() => import('./views/...')` for code splitting.
 | Store | State | Actions |
 |-------|-------|---------|
 | `authStore` | user, role, permissions, isAuthenticated | login(), logout(), checkAuth() |
-| `overviewStore` | stats, recentConnections, recentBlocks | fetchOverview() |
-| `playersStore` | players, pagination, filters, currentPlayer | fetchPlayers(), fetchPlayer(uuid), lookupPlayer() |
+| `overviewStore` | stats, recentConnections, recentBlocks, badgeCounts | fetchOverview(), fetchCounts() |
+| `playersStore` | players, pagination, filters, currentPlayer, lookedUpPlayer, nameHistory | fetchPlayers(), fetchPlayer(uuid), lookupPlayer(), getNameHistory(uuid) |
 | `connectionsStore` | connections, pagination, filters | fetchConnections(), fetchConnection(id) |
 | `ipsStore` | ips, pagination, currentIp | fetchIPs(), fetchIP(id) |
-| `whitelistStore` | entries, filters | fetch(), add(), edit(), remove() |
-| `blacklistStore` | entries, filters, sanctions | fetch(), add(), edit(), remove(), toggle() |
+| `whitelistStore` | entries, filters | fetch(), add(), edit(), remove(), removeByValue() |
+| `blacklistStore` | entries, filters, sanctions | fetch(), add(), addUnified(), addIP(), edit(), remove(), removeByValue(), toggle() |
 | `providersStore` | providers | fetch(), add(), toggle() |
 | `countriesStore` | countries | fetch(), add(), edit(), toggle(), remove() |
 | `continentsStore` | continents | fetch(), add(), edit(), toggle(), remove() |
-| `furrpermsStore` | whitelist, logs | fetchWhitelist(), addToWhitelist(), removeFromWhitelist(), fetchLogs(), clearLogs() |
-| `furrsecurityStore` | staff, sessions, logs, stats | fetchStaff(), addStaff(), removeStaff(), fetchSessions(), fetchLogs(), revokeSession(), fetchStats() |
+| `furrpermsStore` | whitelist, logs, stats (allowed/blocked counts) | fetchWhitelist(), addToWhitelist(), removeFromWhitelist(), fetchLogs(), clearLogs(), fetchStats() |
+| `furrsecurityStore` | staff, staffSearch, sessions, sessionsSearch, logs, logsSearch, stats | fetchStaff(), addStaff(), removeStaff(), fetchSessions(), fetchLogs(), revokeSession(), fetchStats() |
 | `messagesStore` | messages | fetch(), save() |
 | `logsStore` | logs, filters, pagination | fetch() |
-| `settingsStore` | settings | fetch(), save(), regenerateApiKey() |
+| `settingsStore` | settings | fetch(), save(), regenerateApiKey(), exportData(), migrateBlacklist(), migratePlayers() |
 | `usersStore` | users | fetch(), add(), remove() |
 | `uiStore` | toasts[], activeModal, sidebarCollapsed, globalLoading | showToast(), hideToast(), openModal(), closeModal() |
 
@@ -234,7 +236,7 @@ All view components loaded via `() => import('./views/...')` for code splitting.
 
 ## 6. Authentication Flow
 
-### Unchanged Server-Side
+### Server-Side (Unchanged)
 
 PHP handles all Discord OAuth2 logic:
 1. Login button links to Discord authorize URL (built by PHP)
@@ -242,27 +244,60 @@ PHP handles all Discord OAuth2 logic:
 3. `callback.php` exchanges code, validates state, creates session
 4. Sets `$_SESSION` and redirects to `index.php`
 
-### Vue Integration
+### Vue Integration — PHP-Injected Entry Point
 
-**Current flow (PHP injects):**
+The entry point remains `index.php` (not `index.html`). This preserves the current PHP session injection pattern without creating new PHP files.
+
+**`admin/index.php`** (replaces current SPA HTML):
 ```php
-<script nonce>
-  localStorage.setItem('furrguard_session', JSON.stringify($user));
-  window.ROLE_PERMISSIONS = <?php echo json_encode(ROLE_PERMISSIONS); ?>;
-</script>
+<?php
+require_once '../config.php';
+require_once '../includes/security.php';
+
+startSecureSession();
+$user = null;
+$rolePermissions = [];
+$isAuthenticated = false;
+
+if (isset($_SESSION['furrguard_admin'])) {
+    $isAuthenticated = true;
+    $user = $_SESSION['furrguard_admin'];
+    $rolePermissions = defined('ROLE_PERMISSIONS') ? ROLE_PERMISSIONS : [];
+}
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FurrGuard Admin</title>
+</head>
+<body>
+    <div id="app"></div>
+    <script type="module" src="/admin/src/main.ts"></script>
+    <?php if ($isAuthenticated): ?>
+    <script nonce="<?php echo $nonce ?? ''; ?>">
+        window.__FURRGUARD_USER__ = <?php echo json_encode($user); ?>;
+        window.__ROLE_PERMISSIONS__ = <?php echo json_encode($rolePermissions); ?>;
+    </script>
+    <?php endif; ?>
+</body>
+</html>
 ```
 
-**New flow:**
-- `callback.php` sets `localStorage` then redirects to the Vue app
-- Vue `authStore` reads `localStorage('furrguard_session')` on mount
-- API requests include session cookie (PHP session) — no additional auth headers needed for admin API
-- `ROLE_PERMISSIONS` stored in `localStorage('furrguard_role_permissions')` by `callback.php`
+**How it works:**
+- PHP validates the session on every page load (same as current)
+- If authenticated, injects `window.__FURRGUARD_USER__` and `window.__ROLE_PERMISSIONS__`
+- Vue `authStore` reads these globals on boot — zero API calls needed for initial auth
+- API requests include PHP session cookie via `withCredentials: true` — no additional auth headers
+- No new PHP files needed. `callback.php` is completely unchanged.
 
 ### Session Validation
 
 - PHP session cookie (`PHPSESSID`) continues to authenticate API calls
 - `api.php` validates session server-side on every request (unchanged)
 - Vue detects 401 responses via Axios interceptor → clears auth state → redirects to login
+- Initial load shows a loading splash while `index.php` renders; no flash of login screen
 
 ---
 
@@ -428,10 +463,16 @@ GSAP `fadeIn` + slight `translateY` on route change.
 
 **PlayerDetailView.vue (replaces player.php):**
 - Back button to `/players`
-- Player header: avatar, name, UUID, status
-- 5-tab interface: Connections, IPs, Whitelist, Blacklist, Actions
-- skinview3d integration for 3D Minecraft skin viewer
-- Blacklist/whitelist quick-add buttons
+- Two-column layout: sticky sidebar (skinview3d 3D skin viewer + player info) + main content
+- Player header: avatar, name, UUID, account status (premium/offline detection via `isOfflineUUID()`)
+- Stacked vertical sections (not tabs), matching current player.php UX:
+  - Account Status card (online/offline, whitelisted/blacklisted badges)
+  - General Info card (country, ISP, ASN, first/last seen)
+  - Name History card (from `get_name_history` Mojang API, premium players only)
+  - IP History card (all IPs associated with player)
+  - Recent Connections card (last connections with detail modal)
+- Inline whitelist/blacklist add modals (unified blacklist with Mojang lookup)
+- skinview3d loaded as npm dependency, initialized via `ref` + `onMounted`
 
 **SettingsView.vue:**
 - Toggle switches for proxy/VPN/hosting blocking
@@ -455,6 +496,12 @@ GSAP `fadeIn` + slight `translateY` on route change.
 - Click overlay to close
 - Escape key to close
 - Slot: default (body content)
+
+### Modal Dual-Mode Pattern
+
+WhitelistModal, BlacklistModal, CountryModal, and ContinentModal each handle both **add** and **edit** modes via a `mode` prop (`'add' | 'edit'`) and an optional `entry` prop for pre-populating fields. This matches the current app which has separate add/edit modals per entity but consolidates them into single components.
+
+**BlacklistModal** additionally supports a `variant` prop (`'player' | 'ip' | 'unified'`) to match the current tabbed add modal (player vs IP/AS/CIDR).
 
 ---
 
@@ -566,8 +613,8 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/admin/api.php': '../admin/api.php',
-      '/admin/callback.php': '../admin/callback.php',
+      '/admin/api.php': 'http://localhost:80',
+      '/admin/callback.php': 'http://localhost:80',
     },
   },
   build: {
@@ -577,45 +624,113 @@ export default defineConfig({
 })
 ```
 
+> **Note:** In dev mode, Vite proxies PHP requests to a local PHP server (e.g., `php -S localhost:80`). In production, the web server (Nginx/Apache) routes `.php` requests to PHP-FPM and serves Vite's built assets for everything else.
+
 ---
 
 ## 13. Migration Strategy
 
 ### What Changes
-- `admin/index.php` → `admin/index.html` (Vite entry, empty `<div id="app">`)
-- `admin/player.php` → Merged into `PlayerDetailView.vue`
-- `admin/assets/js/admin.js` → Deleted (logic distributed across Vue components/stores)
-- `admin/assets/css/*.css` → Deleted (replaced by Tailwind theme)
-- `admin/assets/js/admin.js.backup|tmp|new` → Deleted
+- `admin/index.php` — Replaced with new PHP file that loads the Vue app (keeps `.php` extension for session injection, see Section 6)
+- `admin/player.php` — Merged into `PlayerDetailView.vue` (file deleted)
+- `admin/assets/js/admin.js` — Deleted (logic distributed across Vue components/stores)
+- `admin/assets/css/*.css` — Deleted (replaced by Tailwind theme)
+- `admin/assets/js/admin.js.backup|tmp|new` — Deleted
 
 ### What Stays Unchanged
 - `admin/api.php` — All 45+ API actions untouched
-- `admin/callback.php` — Discord OAuth callback untouched (with minor addition: set localStorage)
+- `admin/callback.php` — Discord OAuth callback completely untouched
 - `config.php`, `config/database.php`, `includes/` — Untouched
 - `api/plugin.php` — Plugin-facing API untouched
 - `install.sql` — Untouched
 - `modulos/` — Java module untouched
 - `FurrGuard-plugin/` — Velocity plugin untouched
 
-### Callback.php Minor Change
-
-`callback.php` needs a small addition before redirecting: write user session and role permissions to `localStorage` so Vue can read them. This can be done by redirecting to an intermediate PHP page that injects the data and then redirects to the Vue app.
-
-Alternatively: `callback.php` sets `$_SESSION` (already does) and redirects to `index.html`. Vue checks for PHP session cookie and makes an initial API call to validate the session.
-
-**Chosen approach:** Keep callback.php unchanged. Instead, create a small `admin/auth.php` endpoint that returns the current user session data. Vue calls this on mount. If the PHP session is valid, it returns user data; if not, Vue shows login.
+### New Files Added
+- `admin/package.json`, `admin/vite.config.ts`, `admin/tsconfig.json`
+- `admin/src/` — Entire Vue application source tree
+- No new PHP files needed
 
 ---
 
-## 14. Success Criteria
+## 14. Deployment
+
+### Production Build
+
+```bash
+cd admin && npm run build
+```
+
+Outputs static assets to `admin/dist/`. The `index.php` remains at `admin/index.php` and loads from `dist/`.
+
+### Nginx Configuration
+
+```nginx
+location /admin/ {
+    # PHP files → PHP-FPM
+    location ~ \.php$ {
+        fastcgi_pass unix:/run/php/php-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    # Vue built assets
+    location /admin/dist/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # SPA fallback: all other /admin/* routes serve index.php
+    try_files $uri $uri/ /admin/index.php?$query_string;
+}
+```
+
+### Apache (.htaccess)
+
+```apache
+# admin/.htaccess
+RewriteEngine On
+
+# PHP files pass through normally
+RewriteRule ^(api|callback)\.php$ - [L]
+
+# Built assets
+RewriteRule ^dist/ - [L]
+
+# Everything else → index.php (Vue SPA entry)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^(.*)$ index.php [QSA,L]
+```
+
+---
+
+## 15. Composables API
+
+### `usePermissions.ts`
+
+```typescript
+// Returns reactive permission helpers based on authStore
+export function usePermissions() {
+  const auth = useAuthStore()
+  return {
+    can(section: string): boolean      // Check if user can access a section
+    isFounder(): boolean               // Check if user is founder
+    minRole(role: Role): boolean       // Check if user's role >= specified role
+  }
+}
+```
+
+---
+
+## 16. Success Criteria
 
 1. All 16 sections functional with identical behavior to current SPA
-2. All 17 modals functional
+2. All 17 modals functional (including dual add/edit mode)
 3. All ~45 API endpoints working with zero PHP changes
 4. Visual design identical (dark purple glassmorphism theme)
 5. GSAP animations matching current CSS animations
 6. Discord OAuth login/logout flow working
-7. Role-based access control enforced
-8. Player detail page (player.php) merged into Vue route
+7. Role-based access control enforced (including `modules` umbrella permission)
+8. Player detail page (player.php) merged into Vue route with skinview3d
 9. Responsive design maintained (mobile, tablet, desktop)
 10. TypeScript throughout with proper typing
