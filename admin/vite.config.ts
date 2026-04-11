@@ -15,6 +15,9 @@ export default defineConfig({
       '/admin/callback.php': 'http://localhost:80',
     },
   },
+  define: {
+    __APP_VERSION__: JSON.stringify('1.5.0'),
+  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,
