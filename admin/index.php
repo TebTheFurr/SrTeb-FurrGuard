@@ -84,11 +84,12 @@ $nonce = getCspNonce();
 <body class="bg-dark-900 text-white font-body antialiased">
     <div id="app"></div>
     <script type="module" src="/admin/src/main.ts"></script>
-    <?php if ($isAuthenticated && $user): ?>
     <script nonce="<?php echo $nonce; ?>">
+        <?php if ($isAuthenticated && $user): ?>
         window.__FURRGUARD_USER__ = <?php echo json_encode($user); ?>;
         window.__ROLE_PERMISSIONS__ = <?php echo json_encode($rolePermissions); ?>;
+        <?php endif; ?>
+        window.__DISCORD_LOGIN_URL__ = <?php echo json_encode(getDiscordLoginUrl()); ?>;
     </script>
-    <?php endif; ?>
 </body>
 </html>

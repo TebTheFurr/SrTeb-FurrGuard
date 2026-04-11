@@ -18,4 +18,5 @@ interface Window {
     expires_at: string
   }
   __ROLE_PERMISSIONS__?: Record<string, string[]>
+  __DISCORD_LOGIN_URL__?: string
 }
