@@ -53,7 +53,7 @@ function onPageChange(page: number) {
 function onRowClick(row: Record<string, unknown>) {
   const player = row as Record<string, unknown>
   if (player.uuid) {
-    router.push({ name: 'player-detail', params: { uuid: player.uuid } })
+    router.push({ name: 'player-detail', params: { uuid: String(player.uuid) } })
   }
 }
 
