@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Search, RefreshCw, LogOut, Shield } from 'lucide-vue-next'
+import { Search, RefreshCw, LogOut, Shield, Menu } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { useUIStore } from '@/stores/ui'
 
@@ -30,13 +30,27 @@ function handleRefresh() {
 function handleLogout() {
   auth.logout()
 }
+
+function toggleMobileMenu() {
+  ui.toggleMobileMenu()
+}
 </script>
 
 <template>
-  <header class="h-16 glass-sidebar flex items-center justify-between px-6 border-b border-glass-border-subtle z-20">
-    <!-- Left: Global Search -->
-    <div class="flex items-center gap-3 flex-1 max-w-md">
-      <div class="relative w-full">
+  <header class="h-16 glass-sidebar flex items-center justify-between px-4 md:px-6 border-b border-glass-border-subtle z-20">
+    <!-- Left: Hamburger (mobile) + Global Search -->
+    <div class="flex items-center gap-3 flex-1 min-w-0">
+      <!-- Hamburger menu button (mobile only) -->
+      <button
+        class="md:hidden p-2 rounded-lg text-text-muted hover:text-text-secondary hover:bg-hover transition-colors shrink-0"
+        title="Menu"
+        @click="toggleMobileMenu"
+      >
+        <Menu :size="20" />
+      </button>
+
+      <!-- Search bar: hidden on small mobile, visible on md+ -->
+      <div class="relative w-full hidden sm:block max-w-md">
         <Search :size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
         <input
           type="text"
@@ -47,7 +61,7 @@ function handleLogout() {
     </div>
 
     <!-- Right: Actions + User -->
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-2 md:gap-4 shrink-0">
       <!-- Refresh -->
       <button
         class="p-2 rounded-lg text-text-muted hover:text-text-secondary hover:bg-hover transition-colors"
@@ -58,7 +72,7 @@ function handleLogout() {
       </button>
 
       <!-- User info -->
-      <div class="flex items-center gap-3 pl-4 border-l border-glass-border-subtle">
+      <div class="flex items-center gap-2 md:gap-3 pl-2 md:pl-4 border-l border-glass-border-subtle">
         <!-- Avatar -->
         <div v-if="avatarUrl" class="w-8 h-8 rounded-full overflow-hidden ring-2 ring-purple-500/30">
           <img :src="avatarUrl" alt="Avatar" class="w-full h-full object-cover" />
@@ -67,8 +81,8 @@ function handleLogout() {
           <Shield :size="16" class="text-purple-400" />
         </div>
 
-        <!-- Name + Role -->
-        <div class="hidden sm:block">
+        <!-- Name + Role (hidden on mobile) -->
+        <div class="hidden lg:block">
           <div class="text-sm font-medium text-text-primary leading-tight">
             {{ user?.username ?? 'Admin' }}
           </div>
@@ -83,7 +97,7 @@ function handleLogout() {
 
         <!-- Logout -->
         <button
-          class="p-2 rounded-lg text-text-muted hover:text-error hover:bg-error-dim transition-colors ml-1"
+          class="p-2 rounded-lg text-text-muted hover:text-error hover:bg-error-dim transition-colors"
           title="Cerrar sesion"
           @click="handleLogout"
         >

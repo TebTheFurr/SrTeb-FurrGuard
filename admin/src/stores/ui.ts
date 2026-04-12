@@ -27,6 +27,7 @@ export const useUIStore = defineStore('ui', () => {
   const activeModal = ref<string | null>(null)
   const modalData = ref<unknown>(null)
   const sidebarCollapsed = ref(false)
+  const mobileMenuOpen = ref(false)
   const globalLoading = ref(false)
 
   // ---- Getters ----
@@ -67,6 +68,14 @@ export const useUIStore = defineStore('ui', () => {
     sidebarCollapsed.value = !sidebarCollapsed.value
   }
 
+  function toggleMobileMenu(): void {
+    mobileMenuOpen.value = !mobileMenuOpen.value
+  }
+
+  function closeMobileMenu(): void {
+    mobileMenuOpen.value = false
+  }
+
   function setGlobalLoading(value: boolean): void {
     globalLoading.value = value
   }
@@ -77,6 +86,7 @@ export const useUIStore = defineStore('ui', () => {
     activeModal,
     modalData,
     sidebarCollapsed,
+    mobileMenuOpen,
     globalLoading,
     // Getters
     isModalOpen,
@@ -86,6 +96,8 @@ export const useUIStore = defineStore('ui', () => {
     openModal,
     closeModal,
     toggleSidebar,
+    toggleMobileMenu,
+    closeMobileMenu,
     setGlobalLoading,
   }
 })

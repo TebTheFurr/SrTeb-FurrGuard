@@ -309,3 +309,27 @@ body {
   left: 40%;
   animation: float-shape-3 11s ease-in-out infinite;
 }
+
+/* ============================================
+   Responsive Utilities
+   ============================================ */
+
+/* Tables: horizontal scroll wrapper on small screens */
+@utility table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hide columns on mobile that are less important */
+@media (max-width: 767px) {
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+/* Stack grid cards on small screens */
+@media (max-width: 639px) {
+  .stack-mobile {
+    grid-template-columns: 1fr !important;
+  }
+}

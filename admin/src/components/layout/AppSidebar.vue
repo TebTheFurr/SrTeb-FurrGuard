@@ -32,6 +32,7 @@ const ui = useUIStore()
 const { can } = usePermissions()
 
 const collapsed = computed(() => ui.sidebarCollapsed)
+const mobileOpen = computed(() => ui.mobileMenuOpen)
 
 // Track which categories are expanded
 const expandedCategories = ref<Record<string, boolean>>({
@@ -107,6 +108,8 @@ function navigate(id: string) {
   if (routeName) {
     router.push({ name: routeName })
   }
+  // Close mobile menu after navigation
+  ui.closeMobileMenu()
 }
 
 function getBadgeCount(id: string): number | null {
@@ -130,9 +133,13 @@ function hasVisibleItems(items: ReadonlyArray<{ id: string; label: string; icon:
 </script>
 
 <template>
+  <!-- Mobile: fixed overlay sidebar -->
   <aside
-    class="glass-sidebar flex flex-col h-screen sticky top-0 z-30 transition-all duration-300"
-    :class="collapsed ? 'w-[var(--spacing-sidebar-collapsed)]' : 'w-[var(--spacing-sidebar)]'"
+    class="glass-sidebar flex flex-col h-screen fixed top-0 left-0 z-50 transition-transform duration-300 md:relative md:z-30 md:translate-x-0"
+    :class="[
+      collapsed ? 'w-[var(--spacing-sidebar-collapsed)]' : 'w-[var(--spacing-sidebar)]',
+      mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+    ]"
   >
     <!-- Logo / Brand -->
     <div class="flex items-center gap-3 px-4 h-16 border-b border-glass-border-subtle">
@@ -230,8 +237,8 @@ function hasVisibleItems(items: ReadonlyArray<{ id: string; label: string; icon:
       </template>
     </nav>
 
-    <!-- Collapse toggle -->
-    <div class="border-t border-glass-border-subtle p-2">
+    <!-- Collapse toggle (hidden on mobile) -->
+    <div class="hidden md:block border-t border-glass-border-subtle p-2">
       <button
         class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-text-muted hover:text-text-secondary hover:bg-hover transition-colors text-sm"
         @click="ui.toggleSidebar()"
