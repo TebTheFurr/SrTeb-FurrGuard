@@ -59,7 +59,7 @@ function formatDate(dateStr: string | null): string {
   })
 }
 
-function getSanctionStatus(entry: Record<string, unknown>): { label: string; variant: string } {
+function getSanctionStatus(entry: Record<string, unknown>): { label: string; variant: 'success' | 'warning' | 'danger' | 'info' | 'neutral' } {
   const active = entry.active as number
   const expiresAt = entry.expires_at as string | null
 
@@ -67,7 +67,7 @@ function getSanctionStatus(entry: Record<string, unknown>): { label: string; var
   if (!expiresAt) return { label: 'Permanente', variant: 'warning' }
 
   const expired = new Date(expiresAt).getTime() < Date.now()
-  if (expired) return { label: 'Expirada', variant: 'muted' }
+  if (expired) return { label: 'Expirada', variant: 'neutral' }
   return { label: 'Activa', variant: 'success' }
 }
 
@@ -106,12 +106,12 @@ function typeLabel(type: string): string {
 
     <!-- Stats cards -->
     <div v-if="store.stats" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-      <StatCard label="Total" :value="store.stats.total" icon="Gavel" />
-      <StatCard label="Activas" :value="store.stats.active" icon="CheckCircle" color="green" />
-      <StatCard label="Permanentes" :value="store.stats.permanent" icon="Infinity" color="amber" />
-      <StatCard label="Temporales" :value="store.stats.temporary" icon="Clock" color="blue" />
-      <StatCard label="Expiradas" :value="store.stats.expired" icon="TimerOff" color="muted" />
-      <StatCard label="Inactivas" :value="store.stats.inactive" icon="XCircle" color="red" />
+      <StatCard title="Total" :value="store.stats.total" icon="Gavel" />
+      <StatCard title="Activas" :value="store.stats.active" icon="CheckCircle" color="green" />
+      <StatCard title="Permanentes" :value="store.stats.permanent" icon="Infinity" color="amber" />
+      <StatCard title="Temporales" :value="store.stats.temporary" icon="Clock" color="blue" />
+      <StatCard title="Expiradas" :value="store.stats.expired" icon="TimerOff" color="muted" />
+      <StatCard title="Inactivas" :value="store.stats.inactive" icon="XCircle" color="red" />
     </div>
 
     <!-- Filters and search -->

@@ -98,9 +98,9 @@ function formatDate(dateStr: string): string {
 
     <!-- Stats cards -->
     <div v-if="store.stats" class="grid grid-cols-3 gap-3">
-      <StatCard label="Total bloqueados" :value="store.stats.total" icon="Globe2" color="purple" />
-      <StatCard label="Activos" :value="store.stats.active" icon="CheckCircle" color="green" />
-      <StatCard label="Bloqueos totales" :value="store.stats.total_blocks" icon="ShieldAlert" color="red" />
+      <StatCard title="Total bloqueados" :value="store.stats.total" icon="Globe2" color="purple" />
+      <StatCard title="Activos" :value="store.stats.active" icon="CheckCircle" color="green" />
+      <StatCard title="Bloqueos totales" :value="store.stats.total_blocks" icon="ShieldAlert" color="red" />
     </div>
 
     <!-- Search -->

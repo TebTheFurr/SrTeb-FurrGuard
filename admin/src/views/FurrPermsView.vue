@@ -141,9 +141,9 @@ const statsBlocked = computed(() => store.logStats?.blocked ?? 0)
 
     <!-- Stats bar -->
     <div v-if="activeTab === 'logs' && store.logStats" class="grid grid-cols-3 gap-3">
-      <StatCard label="Total logs" :value="store.logStats.total" icon="FileText" color="purple" />
-      <StatCard label="Permitidos" :value="statsAllowed" icon="CheckCircle" color="green" />
-      <StatCard label="Bloqueados" :value="statsBlocked" icon="XCircle" color="red" />
+      <StatCard title="Total logs" :value="store.logStats.total" icon="FileText" color="purple" />
+      <StatCard title="Permitidos" :value="statsAllowed" icon="CheckCircle" color="green" />
+      <StatCard title="Bloqueados" :value="statsBlocked" icon="XCircle" color="red" />
     </div>
 
     <!-- Tab navigation -->

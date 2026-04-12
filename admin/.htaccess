@@ -1,0 +1,11 @@
+RewriteEngine On
+
+# PHP files pass through normally
+RewriteRule ^(api|callback)\.php$ - [L]
+
+# Built assets
+RewriteRule ^dist/ - [L]
+
+# Everything else -> index.php (Vue SPA entry)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^(.*)$ index.php [QSA,L]

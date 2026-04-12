@@ -21,5 +21,16 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vue: ['vue', 'vue-router', 'pinia'],
+          gsap: ['gsap'],
+          axios: ['axios'],
+          icons: ['lucide-vue-next'],
+        },
+      },
+    },
   },
 })

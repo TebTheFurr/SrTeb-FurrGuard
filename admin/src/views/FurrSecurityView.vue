@@ -16,6 +16,9 @@ const activeTab = ref<'staff' | 'sessions' | 'logs'>('staff')
 
 let currentLogPage = 1
 let currentLogFilter = 'all'
+const staffSearch = ref('')
+const sessionSearch = ref('')
+const logSearch = ref('')
 
 const showModal = ref(false)
 
@@ -182,10 +185,10 @@ function actionLabel(action: string): string {
 
     <!-- Stats bar -->
     <div v-if="store.stats" class="grid grid-cols-4 gap-3">
-      <StatCard label="Staff" :value="store.stats.total_staff" icon="Users" color="purple" />
-      <StatCard label="Sesiones activas" :value="store.stats.active_sessions" icon="ShieldCheck" color="green" />
-      <StatCard label="Pendientes" :value="store.stats.pending_verifications" icon="Clock" color="amber" />
-      <StatCard label="Verificados hoy" :value="store.stats.verified_today" icon="CheckCircle" color="blue" />
+      <StatCard title="Staff" :value="store.stats.total_staff" icon="Users" color="purple" />
+      <StatCard title="Sesiones activas" :value="store.stats.active_sessions" icon="ShieldCheck" color="green" />
+      <StatCard title="Pendientes" :value="store.stats.pending_verifications" icon="Clock" color="amber" />
+      <StatCard title="Verificados hoy" :value="store.stats.verified_today" icon="CheckCircle" color="blue" />
     </div>
 
     <!-- Tab navigation -->
@@ -217,6 +220,7 @@ function actionLabel(action: string): string {
     <template v-if="activeTab === 'staff'">
       <div class="w-full sm:w-72">
         <SearchInput
+          v-model="staffSearch"
           placeholder="Buscar staff..."
           @update:model-value="onStaffSearch"
         />
@@ -261,6 +265,7 @@ function actionLabel(action: string): string {
     <template v-if="activeTab === 'sessions'">
       <div class="w-full sm:w-72">
         <SearchInput
+          v-model="sessionSearch"
           placeholder="Buscar sesion..."
           @update:model-value="onSessionSearch"
         />
@@ -321,6 +326,7 @@ function actionLabel(action: string): string {
         />
         <div class="w-full sm:w-72">
           <SearchInput
+            v-model="logSearch"
             placeholder="Buscar en logs..."
             @update:model-value="onLogSearch"
           />

@@ -116,9 +116,9 @@ function typeLabel(type: string): string {
 
     <!-- Stats cards -->
     <div v-if="store.stats" class="grid grid-cols-3 gap-3">
-      <StatCard label="Hosting" :value="store.stats.hosting" icon="Server" color="pink" />
-      <StatCard label="VPN" :value="store.stats.vpn" icon="ShieldAlert" color="red" />
-      <StatCard label="Proxy" :value="store.stats.proxy" icon="ShieldOff" color="amber" />
+      <StatCard title="Hosting" :value="store.stats.hosting" icon="Server" color="pink" />
+      <StatCard title="VPN" :value="store.stats.vpn" icon="ShieldAlert" color="red" />
+      <StatCard title="Proxy" :value="store.stats.proxy" icon="ShieldOff" color="amber" />
     </div>
 
     <!-- Filters and search -->
