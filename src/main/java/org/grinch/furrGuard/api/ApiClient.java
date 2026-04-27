@@ -492,7 +492,7 @@ public class ApiClient {
                 }
 
                 String responseStr = response.toString();
-                if (plugin.getConfig().isDebug() || "poll_changes".equals(action)) {
+                if (plugin.getConfig().isDebug()) {
                     plugin.getLogger().info("[DEBUG] API Response [" + action + "]: " + responseStr.substring(0, Math.min(500, responseStr.length())));
                 }
 

@@ -36,7 +36,7 @@ public class LicenseManager {
      * Versión del plugin HARDCODEADA
      * ¡ACTUALIZAR ESTE VALOR CON CADA NUEVA VERSIÓN!
      */
-    private static final String PLUGIN_VERSION = "1.0.4";
+    private static final String PLUGIN_VERSION = "1.0.5";
 
     /**
      * URL de la API HARCODEADA
