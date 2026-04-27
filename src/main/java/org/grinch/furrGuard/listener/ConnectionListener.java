@@ -219,6 +219,7 @@ public class ConnectionListener {
                 case "proxy_detected" -> plugin.getMessageUtil().getMessage("kick_proxy").replace("{id}", id);
                 case "vpn_detected" -> plugin.getMessageUtil().getMessage("kick_vpn").replace("{id}", id);
                 case "hosting_detected" -> plugin.getMessageUtil().getMessage("kick_hosting").replace("{id}", id);
+                case "mobile_detected" -> plugin.getMessageUtil().getMessage("kick_mobile").replace("{id}", id);
                 case "blocked_provider" -> plugin.getMessageUtil().getMessage("kick_blocked_provider")
                         .replace("{isp}", response.getIsp() != null ? response.getIsp() : "Desconocido")
                         .replace("{id}", id);

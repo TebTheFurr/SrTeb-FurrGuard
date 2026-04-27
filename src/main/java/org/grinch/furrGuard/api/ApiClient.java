@@ -254,6 +254,7 @@ public class ApiClient {
                                 case "proxy_detected" -> "Proxy";
                                 case "vpn_detected" -> "VPN";
                                 case "hosting_detected" -> "Hosting";
+                                case "mobile_detected" -> "Red movil";
                                 case "blocked_provider" -> "Proveedor bloqueado";
                                 default -> reason;
                             };
@@ -490,11 +491,12 @@ public class ApiClient {
                     }
                 }
 
-                if (plugin.getConfig().isDebug()) {
-                    plugin.getLogger().info("[DEBUG] API Response: " + response.toString().substring(0, Math.min(200, response.length())));
+                String responseStr = response.toString();
+                if (plugin.getConfig().isDebug() || "poll_changes".equals(action)) {
+                    plugin.getLogger().info("[DEBUG] API Response [" + action + "]: " + responseStr.substring(0, Math.min(500, responseStr.length())));
                 }
 
-                return JsonParser.parseString(response.toString()).getAsJsonObject();
+                return JsonParser.parseString(responseStr).getAsJsonObject();
             }
 
         } catch (java.net.SocketTimeoutException e) {

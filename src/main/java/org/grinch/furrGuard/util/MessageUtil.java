@@ -76,6 +76,22 @@ public class MessageUtil {
             "&8║   &8ID: &7{id}&8                       ║\n" +
             "&8╚════════════════════════════════════╝");
 
+        messages.put("kick_mobile",
+            "&8╔════════════════════════════════════╗\n" +
+            "&8║  &6&l{server_name}&8                    ║\n" +
+            "&8║                                    ║\n" +
+            "&8║     &c&l✘ CONEXIÓN DENEGADA ✘&8        ║\n" +
+            "&8║                                    ║\n" +
+            "&8║   &7Tu conexión proviene de una     ║\n" +
+            "&8║   &c&lRed Móvil&7.                    ║\n" +
+            "&8║                                    ║\n" +
+            "&8║   &7Solo conexiones residenciales   ║\n" +
+            "&8║   &7están permitidas.               ║\n" +
+            "&8║                                    ║\n" +
+            "&8║   &8Discord: &b{discord}&8\n" +
+            "&8║   &8ID: &7{id}&8                       ║\n" +
+            "&8╚════════════════════════════════════╝");
+
         messages.put("kick_blacklisted",
             "&8╔════════════════════════════════════╗\n" +
             "&8║  &6&l{server_name}&8                    ║\n" +
