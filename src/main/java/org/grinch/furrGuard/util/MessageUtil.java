@@ -184,6 +184,86 @@ public class MessageUtil {
             "&8║   &8ID: &7{id}&8                       ║\n" +
             "&8╚════════════════════════════════════╝");
 
+        messages.put("kick_interrupted",
+            "&8╔════════════════════════════════════╗\n" +
+            "&8║     &c&l✘ ERROR DE VERIFICACIÓN ✘&8   ║\n" +
+            "&8║                                    ║\n" +
+            "&8║   &7La verificación fue             ║\n" +
+            "&8║   &7interrumpida.                   ║\n" +
+            "&8║                                    ║\n" +
+            "&8║   &7Por favor, inténtalo de nuevo.  ║\n" +
+            "&8║                                    ║\n" +
+            "&8║   &8ID: &7{id}&8                       ║\n" +
+            "&8╚════════════════════════════════════╝");
+
+        messages.put("kick_execution_error",
+            "&8╔════════════════════════════════════╗\n" +
+            "&8║     &c&l✘ ERROR DE VERIFICACIÓN ✘&8   ║\n" +
+            "&8║                                    ║\n" +
+            "&8║   &7Error interno al verificar      ║\n" +
+            "&8║   &7tu conexión.                    ║\n" +
+            "&8║                                    ║\n" +
+            "&8║   &7Por favor, inténtalo de nuevo.  ║\n" +
+            "&8║                                    ║\n" +
+            "&8║   &8ID: &7{id}&8                       ║\n" +
+            "&8╚════════════════════════════════════╝");
+
+        messages.put("kick_completion_error",
+            "&8╔════════════════════════════════════╗\n" +
+            "&8║     &c&l✘ ERROR DE VERIFICACIÓN ✘&8   ║\n" +
+            "&8║                                    ║\n" +
+            "&8║   &7Error al completar la           ║\n" +
+            "&8║   &7verificación de conexión.       ║\n" +
+            "&8║                                    ║\n" +
+            "&8║   &7Por favor, inténtalo de nuevo.  ║\n" +
+            "&8║                                    ║\n" +
+            "&8║   &8ID: &7{id}&8                       ║\n" +
+            "&8╚════════════════════════════════════╝");
+
+        messages.put("kick_unknown_error",
+            "&8╔════════════════════════════════════╗\n" +
+            "&8║     &c&l✘ ERROR DE VERIFICACIÓN ✘&8   ║\n" +
+            "&8║                                    ║\n" +
+            "&8║   &7Error inesperado al verificar   ║\n" +
+            "&8║   &7tu conexión.                    ║\n" +
+            "&8║                                    ║\n" +
+            "&8║   &7Por favor, inténtalo de nuevo.  ║\n" +
+            "&8║                                    ║\n" +
+            "&8║   &8ID: &7{id}&8                       ║\n" +
+            "&8╚════════════════════════════════════╝");
+
+        messages.put("kick_compromised_account",
+            "&8╔════════════════════════════════════╗\n" +
+            "&8║  &6&l{server_name}&8                    ║\n" +
+            "&8║                                    ║\n" +
+            "&8║     &c&l✘ CUENTA COMPROMETIDA ✘&8      ║\n" +
+            "&8║                                    ║\n" +
+            "&8║   &7Tu cuenta ha sido marcada como  ║\n" +
+            "&8║   &c&lcomprometida&7 por seguridad.    ║\n" +
+            "&8║                                    ║\n" +
+            "&8║   &7Contacta con la administración  ║\n" +
+            "&8║   &7para resolver este problema.    ║\n" +
+            "&8║                                    ║\n" +
+            "&8║   &8Discord: &b{discord}&8\n" +
+            "&8║   &8ID: &7{id}&8                       ║\n" +
+            "&8╚════════════════════════════════════╝");
+
+        messages.put("kick_blocked_continent",
+            "&8╔════════════════════════════════════╗\n" +
+            "&8║  &6&l{server_name}&8                    ║\n" +
+            "&8║                                    ║\n" +
+            "&8║     &c&l✘ CONEXIÓN DENEGADA ✘&8        ║\n" +
+            "&8║                                    ║\n" +
+            "&8║   &7Tu continente está &c&lbloqueado&7. ║\n" +
+            "&8║                                    ║\n" +
+            "&8║   &eContinente:&f {continent}&8\n" +
+            "&8║                                    ║\n" +
+            "&8║   &7Disculpa las molestias.        ║\n" +
+            "&8║                                    ║\n" +
+            "&8║   &8Discord: &b{discord}&8\n" +
+            "&8║   &8ID: &7{id}&8                       ║\n" +
+            "&8╚════════════════════════════════════╝");
+
         // Admin notifications - styled with colors
         messages.put("whitelist_added", "&x&0&0&F&F&A&A&l+ &7Whitelist añadida: &f{type} &8= &f{value}");
         messages.put("whitelist_removed", "&c&l- &7Whitelist eliminada: &f{type} &8= &f{value}");
@@ -194,6 +274,9 @@ public class MessageUtil {
         messages.put("no_permission", "&c&l✘ &7No tienes permiso para usar este comando.");
         messages.put("reload_success", "&x&0&0&F&F&A&A&l✔ &7Configuración recargada correctamente.");
         messages.put("player_not_found", "&c&l✘ &7Jugador no encontrado.");
+        messages.put("player_allowed", "&x&0&0&F&F&A&A&l✔ &7Jugador &f{player} &7permitido.");
+        messages.put("player_blocked", "&c&l✘ &7Jugador &f{player} &7bloqueado.");
+        messages.put("command_usage", "&x&0&0&F&F&A&A&l? &7Uso: &f/fg <check|status|cache|reload|stats|help>");
         messages.put("invalid_type", "&c&l✘ &7Tipo inválido. Usa: &fuuid, nick, ip, asn, cidr");
 
         // Admin notifications - Blocking alerts
@@ -203,6 +286,8 @@ public class MessageUtil {
         messages.put("notify_provider_blocked", "&c&l🛡 &c{player} &7bloqueado &8• &f{ip} &8• &cProveedor: &f{isp}");
         messages.put("notify_country_blocked", "&c&l🛡 &c{player} &7bloqueado &8• &f{ip} &8• &cPaís: &f{country}");
         messages.put("notify_blacklisted", "&c&l🛡 &c{player} &7bloqueado &8• &f{ip} &8• &cBlacklist &8[#{ban_id}]");
+        messages.put("notify_continent_blocked", "&c&l🛡 &c{player} &7bloqueado &8• &f{ip} &8• &cContinente: &f{continent}");
+        messages.put("notify_compromised_account", "&c&l🛡 &c{player} &7bloqueado &8• &f{ip} &8• &cCuenta comprometida");
 
         // Admin notifications - Allow alerts
         messages.put("notify_whitelisted", "&x&0&0&F&F&A&A&l✓ &a{player} &7permitido &8• &f{ip} &8• &aWhitelist");

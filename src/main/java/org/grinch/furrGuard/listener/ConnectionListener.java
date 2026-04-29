@@ -226,6 +226,10 @@ public class ConnectionListener {
                 case "blocked_country" -> plugin.getMessageUtil().getMessage("kick_country_blocked")
                         .replace("{country}", response.getCountry() != null ? response.getCountry() : "Desconocido")
                         .replace("{id}", id);
+                case "blocked_continent" -> plugin.getMessageUtil().getMessage("kick_blocked_continent")
+                        .replace("{continent}", response.getContinent() != null ? response.getContinent() : "Desconocido")
+                        .replace("{id}", id);
+                case "compromised_account" -> plugin.getMessageUtil().getMessage("kick_compromised_account").replace("{id}", id);
                 default -> plugin.getMessageUtil().getMessage("kick_default").replace("{id}", id);
             };
         }
@@ -277,6 +281,8 @@ public class ConnectionListener {
             case "hosting_detected" -> "notify_hosting_blocked";
             case "blocked_provider" -> "notify_provider_blocked";
             case "blocked_country" -> "notify_country_blocked";
+            case "blocked_continent" -> "notify_continent_blocked";
+            case "compromised_account" -> "notify_compromised_account";
             default -> "notify_proxy_blocked";
         };
 
@@ -287,6 +293,7 @@ public class ConnectionListener {
                 .replace("{isp}", response.getIsp() != null ? response.getIsp() : "Desconocido")
                 .replace("{country}", response.getCountry() != null ? response.getCountry() : "Desconocido")
                 .replace("{country_code}", response.getCountryCode() != null ? response.getCountryCode() : "")
+                .replace("{continent}", response.getContinent() != null ? response.getContinent() : "Desconocido")
                 .replace("{ban_id}", response.getBanId() != null ? response.getBanId() : "");
 
         return message;

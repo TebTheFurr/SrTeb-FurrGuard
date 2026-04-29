@@ -19,6 +19,7 @@ public class CheckPlayerResponse {
     private String expiresAt;
     private String banId;
     private String blockedName;
+    private String continent;
 
     public CheckPlayerResponse() {
         this.success = true;
@@ -183,5 +184,13 @@ public class CheckPlayerResponse {
 
     public void setBlockedName(String blockedName) {
         this.blockedName = blockedName;
+    }
+
+    public String getContinent() {
+        return continent;
+    }
+
+    public void setContinent(String continent) {
+        this.continent = continent;
     }
 }
