@@ -13,18 +13,23 @@ function handleBackdropClick() {
 </script>
 
 <template>
-  <div class="flex min-h-screen bg-dark-900">
-    <!-- Background gradient effects -->
+  <div class="flex h-screen bg-dark-950 overflow-hidden">
+    <!-- Background gradient effects (enhanced) -->
     <div class="bg-effects">
       <div class="bg-shape-1"></div>
       <div class="bg-shape-2"></div>
       <div class="bg-shape-3"></div>
+      <div class="bg-shape-4"></div>
+      <div class="bg-shape-5"></div>
     </div>
+
+    <!-- Noise texture overlay for premium feel -->
+    <div class="noise-overlay"></div>
 
     <!-- Mobile sidebar backdrop overlay -->
     <Transition
-      enter-active-class="transition-opacity duration-300"
-      leave-active-class="transition-opacity duration-300"
+      enter-active-class="transition-all duration-300"
+      leave-active-class="transition-all duration-300"
       enter-from-class="opacity-0"
       enter-to-class="opacity-100"
       leave-from-class="opacity-100"
@@ -32,7 +37,7 @@ function handleBackdropClick() {
     >
       <div
         v-if="ui.mobileMenuOpen"
-        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+        class="fixed inset-0 bg-black/70 backdrop-blur-md z-40 md:hidden"
         @click="handleBackdropClick"
       />
     </Transition>
@@ -47,11 +52,12 @@ function handleBackdropClick() {
       <AppHeader />
 
       <!-- Page content (scrollable) -->
-      <main class="flex-1 overflow-y-auto p-4 md:p-6">
-        <RouterView />
+      <main class="flex-1 overflow-y-auto flex flex-col">
+        <div class="page-container flex-1">
+          <RouterView />
+        </div>
+        <AppFooter />
       </main>
-
-      <AppFooter />
     </div>
   </div>
 </template>

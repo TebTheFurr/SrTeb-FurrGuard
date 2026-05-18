@@ -54,6 +54,7 @@ public class Config {
     private void setDefaults() {
         config.putIfAbsent("enabled", true);
         config.putIfAbsent("debug", false);
+        config.putIfAbsent("api-key", "YOUR_FURRGUARD_API_KEY_HERE");
 
         Map<String, Object> commands = new LinkedHashMap<>();
         commands.put("protected", "op,lp,lpv,perms,luckperms,lp user,lp group,lp permission,lp verbose,perm,permissions,minecraft:op,minecraft:deop");
@@ -104,6 +105,10 @@ public class Config {
 
     public boolean notifyAllowed() {
         return getBoolean("notifications.allowed", true);
+    }
+
+    public String getApiKey() {
+        return getString("api-key", "");
     }
 
     @SuppressWarnings("unchecked")

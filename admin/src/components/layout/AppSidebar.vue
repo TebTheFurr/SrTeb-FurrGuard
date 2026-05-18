@@ -36,9 +36,9 @@ const mobileOpen = computed(() => ui.mobileMenuOpen)
 
 // Track which categories are expanded
 const expandedCategories = ref<Record<string, boolean>>({
-  Gestion: true,
-  Seguridad: true,
-  Geolocalizacion: false,
+  Jugadores: true,
+  Proteccion: true,
+  Filtrado: false,
   Modulos: false,
   Sistema: false,
 })
@@ -135,15 +135,15 @@ function hasVisibleItems(items: ReadonlyArray<{ id: string; label: string; icon:
 <template>
   <!-- Mobile: fixed overlay sidebar -->
   <aside
-    class="glass-sidebar flex flex-col h-screen fixed top-0 left-0 z-50 transition-transform duration-300 md:relative md:z-30 md:translate-x-0"
+    class="glass-sidebar flex flex-col h-screen fixed top-0 left-0 z-50 transition-all duration-300 md:relative md:z-30 md:translate-x-0"
     :class="[
       collapsed ? 'w-[var(--spacing-sidebar-collapsed)]' : 'w-[var(--spacing-sidebar)]',
       mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
     ]"
   >
     <!-- Logo / Brand -->
-    <div class="flex items-center gap-3 px-4 h-16 border-b border-glass-border-subtle">
-      <div class="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shrink-0">
+    <div class="flex items-center gap-3 px-4 h-16 border-b border-glass-border-subtle shrink-0">
+      <div class="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center shrink-0 shadow-button">
         <ShieldCheck :size="18" class="text-white" />
       </div>
       <transition name="fade">
@@ -154,15 +154,15 @@ function hasVisibleItems(items: ReadonlyArray<{ id: string; label: string; icon:
     </div>
 
     <!-- Navigation -->
-    <nav class="flex-1 overflow-y-auto py-4 px-2 space-y-1">
+    <nav class="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
       <template v-for="section in SIDEBAR_SECTIONS" :key="'category' in section ? section.category : section.id">
         <!-- Standalone item (Dashboard) -->
         <button
           v-if="!('category' in section)"
-          class="sidebar-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-sm font-medium"
+          class="sidebar-item group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-sm font-medium"
           :class="[
             isActive(section.id)
-              ? 'bg-active text-purple-400'
+              ? 'sidebar-active'
               : 'text-text-secondary hover:bg-hover hover:text-text-primary',
             collapsed ? 'justify-center' : '',
           ]"
@@ -172,7 +172,7 @@ function hasVisibleItems(items: ReadonlyArray<{ id: string; label: string; icon:
           <component
             :is="iconMap[section.icon]"
             :size="20"
-            class="shrink-0"
+            class="shrink-0 transition-transform duration-200 group-hover:scale-110"
           />
           <transition name="fade">
             <span v-if="!collapsed">{{ section.label }}</span>
@@ -183,21 +183,23 @@ function hasVisibleItems(items: ReadonlyArray<{ id: string; label: string; icon:
         <template v-else>
           <template v-if="hasVisibleItems(section.items)">
             <!-- Category header -->
-            <button
-              v-if="!collapsed"
-              class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted hover:text-text-secondary transition-colors"
-              @click="toggleCategory(section.category)"
-            >
-              <span>{{ section.category }}</span>
-              <ChevronDown
-                :size="14"
-                class="transition-transform duration-200"
-                :class="expandedCategories[section.category] ? 'rotate-180' : ''"
-              />
-            </button>
+            <div v-if="!collapsed" class="mt-4 mb-1 px-3">
+              <button
+                class="w-full flex items-center justify-between py-1.5 text-[11px] font-semibold uppercase tracking-widest text-text-muted hover:text-text-secondary transition-colors"
+                @click="toggleCategory(section.category)"
+              >
+                <span>{{ section.category }}</span>
+                <ChevronDown
+                  :size="12"
+                  class="transition-transform duration-200"
+                  :class="expandedCategories[section.category] ? 'rotate-180' : ''"
+                />
+              </button>
+              <div class="mt-1.5 h-px gradient-line opacity-40"></div>
+            </div>
 
             <!-- Collapsed: just a divider -->
-            <div v-else class="my-2 mx-3 h-px bg-glass-border-subtle"></div>
+            <div v-else class="my-3 mx-3 h-px bg-glass-border-subtle"></div>
 
             <!-- Category items -->
             <div v-show="collapsed || expandedCategories[section.category]" class="space-y-0.5">
@@ -205,10 +207,10 @@ function hasVisibleItems(items: ReadonlyArray<{ id: string; label: string; icon:
                 v-for="item in section.items"
                 :key="item.id"
                 v-show="isItemVisible(item.id)"
-                class="sidebar-item w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 text-sm"
+                class="sidebar-item group w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 text-sm"
                 :class="[
                   isActive(item.id)
-                    ? 'bg-active text-purple-400 font-medium'
+                    ? 'sidebar-active'
                     : 'text-text-secondary hover:bg-hover hover:text-text-primary',
                   collapsed ? 'justify-center' : '',
                 ]"
@@ -218,7 +220,7 @@ function hasVisibleItems(items: ReadonlyArray<{ id: string; label: string; icon:
                 <component
                   :is="iconMap[item.icon]"
                   :size="18"
-                  class="shrink-0"
+                  class="shrink-0 transition-transform duration-200 group-hover:scale-110"
                 />
                 <transition name="fade">
                   <span v-if="!collapsed" class="truncate">{{ item.label }}</span>
@@ -226,7 +228,7 @@ function hasVisibleItems(items: ReadonlyArray<{ id: string; label: string; icon:
                 <!-- Badge count -->
                 <span
                   v-if="!collapsed && badgeSections.has(item.id) && getBadgeCount(item.id) !== null"
-                  class="ml-auto text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full"
+                  class="ml-auto text-[11px] bg-purple-500/15 text-purple-400 px-2 py-0.5 rounded-full font-medium tabular-nums"
                 >
                   {{ getBadgeCount(item.id) }}
                 </span>
@@ -240,10 +242,10 @@ function hasVisibleItems(items: ReadonlyArray<{ id: string; label: string; icon:
     <!-- Collapse toggle (hidden on mobile) -->
     <div class="hidden md:block border-t border-glass-border-subtle p-2">
       <button
-        class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-text-muted hover:text-text-secondary hover:bg-hover transition-colors text-sm"
+        class="group w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-text-muted hover:text-text-secondary hover:bg-hover transition-colors text-sm"
         @click="ui.toggleSidebar()"
       >
-        <component :is="collapsed ? ChevronRight : ChevronLeft" :size="18" />
+        <component :is="collapsed ? ChevronRight : ChevronLeft" :size="18" class="transition-transform duration-200 group-hover:scale-110" />
         <transition name="fade">
           <span v-if="!collapsed">Colapsar</span>
         </transition>
@@ -257,7 +259,13 @@ function hasVisibleItems(items: ReadonlyArray<{ id: string; label: string; icon:
   position: relative;
 }
 
-.sidebar-item.router-link-active::before {
+.sidebar-active {
+  background: linear-gradient(90deg, rgba(139, 92, 246, 0.12) 0%, rgba(139, 92, 246, 0.04) 100%);
+  color: var(--color-purple-400);
+  font-weight: 500;
+}
+
+.sidebar-active::before {
   content: '';
   position: absolute;
   left: 0;
@@ -267,6 +275,7 @@ function hasVisibleItems(items: ReadonlyArray<{ id: string; label: string; icon:
   height: 60%;
   background: linear-gradient(180deg, var(--color-purple-500), var(--color-magenta-500));
   border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
 }
 
 .fade-enter-active,

@@ -10,6 +10,7 @@ import PlayerCell from '@/components/shared/PlayerCell.vue'
 import IPCell from '@/components/shared/IPCell.vue'
 import StatusBadge from '@/components/shared/StatusBadge.vue'
 import ConnectionModal from '@/components/modals/ConnectionModal.vue'
+import { Activity } from 'lucide-vue-next'
 
 const store = useConnectionsStore()
 
@@ -74,91 +75,102 @@ function formatDate(dateStr: string): string {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="page-container">
     <!-- Page header -->
-    <div>
-      <h1 class="text-2xl font-display font-bold gradient-text">Conexiones</h1>
-      <p class="text-sm text-text-muted mt-1">Historial de conexiones al servidor</p>
+    <div class="section-header">
+      <div class="flex items-center gap-3">
+        <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20">
+          <Activity :size="20" class="text-purple-400" />
+        </div>
+        <div>
+          <h1 class="text-2xl font-display font-bold gradient-text">Conexiones</h1>
+          <p class="text-sm text-text-muted mt-0.5">Historial de conexiones al servidor</p>
+        </div>
+      </div>
     </div>
 
     <!-- Filters and search -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-      <FilterTabs
-        :filters="CONNECTION_FILTERS"
-        :model-value="currentFilter"
-        @update:model-value="onFilterChange"
-      />
-      <div class="w-full sm:w-72">
-        <SearchInput
-          :model-value="currentSearch"
-          placeholder="Buscar jugador, UUID, IP..."
-          @update:model-value="onSearchChange"
+    <div class="glass-card p-4">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <FilterTabs
+          :filters="CONNECTION_FILTERS"
+          :model-value="currentFilter"
+          @update:model-value="onFilterChange"
         />
+        <div class="w-full sm:w-72 sm:ml-auto">
+          <SearchInput
+            :model-value="currentSearch"
+            placeholder="Buscar jugador, UUID, IP..."
+            @update:model-value="onSearchChange"
+          />
+        </div>
       </div>
     </div>
 
     <!-- Connections table -->
-    <DataTable
-      :columns="columns"
-      :rows="store.connections as unknown as Record<string, unknown>[]"
-      :loading="store.loading"
-      empty-message="No se encontraron conexiones"
-      @row-click="onRowClick"
-    >
-      <template #cell-nick="{ row }">
-        <PlayerCell :uuid="(row as any).uuid" :nick="(row as any).nick" />
-      </template>
+    <div class="glass-card overflow-hidden">
+      <DataTable
+        :columns="columns"
+        :rows="store.connections as unknown as Record<string, unknown>[]"
+        :loading="store.loading"
+        empty-message="No se encontraron conexiones"
+        @row-click="onRowClick"
+      >
+        <template #cell-nick="{ row }">
+          <PlayerCell :uuid="(row as any).uuid" :nick="(row as any).nick" />
+        </template>
 
-      <template #cell-ip="{ row }">
-        <IPCell
-          :ip="(row as any).ip"
-          :country-code="(row as any).country_code"
-          :isp="(row as any).isp"
-        />
-      </template>
+        <template #cell-ip="{ row }">
+          <IPCell
+            :ip="(row as any).ip"
+            :country-code="(row as any).country_code"
+            :isp="(row as any).isp"
+          />
+        </template>
 
-      <template #cell-status="{ row }">
-        <StatusBadge
-          :status="(row as any).blocked ? 'Bloqueado' : 'Permitido'"
-          :variant="(row as any).blocked ? 'danger' : 'success'"
-        />
-      </template>
+        <template #cell-status="{ row }">
+          <StatusBadge
+            :status="(row as any).blocked ? 'Bloqueado' : 'Permitido'"
+            :variant="(row as any).blocked ? 'danger' : 'success'"
+          />
+        </template>
 
-      <template #cell-flags="{ row }">
-        <div class="flex items-center gap-1">
-          <span
-            v-if="(row as any).is_proxy"
-            class="inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-400"
-          >
-            PROXY
-          </span>
-          <span
-            v-if="(row as any).is_vpn"
-            class="inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-500/15 text-red-400"
-          >
-            VPN
-          </span>
-          <span
-            v-if="(row as any).is_hosting"
-            class="inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold bg-pink-500/15 text-pink-400"
-          >
-            HOSTING
-          </span>
-          <span
-            v-if="!(row as any).is_proxy && !(row as any).is_vpn && !(row as any).is_hosting"
-            class="text-text-muted text-xs"
-          >
-            -
-          </span>
-        </div>
-      </template>
+        <template #cell-flags="{ row }">
+          <div class="flex items-center gap-1.5">
+            <span
+              v-if="(row as any).is_proxy"
+              class="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/20"
+            >
+              Proxy
+            </span>
+            <span
+              v-if="(row as any).is_vpn"
+              class="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-red-500/15 text-red-400 border border-red-500/20"
+            >
+              VPN
+            </span>
+            <span
+              v-if="(row as any).is_hosting"
+              class="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-pink-500/15 text-pink-400 border border-pink-500/20"
+            >
+              Hosting
+            </span>
+            <span
+              v-if="!(row as any).is_proxy && !(row as any).is_vpn && !(row as any).is_hosting"
+              class="text-text-tertiary text-xs"
+            >
+              -
+            </span>
+          </div>
+        </template>
 
-      <template #cell-created_at="{ row }">
-        <span class="text-xs text-text-muted font-mono">
-          {{ formatDate((row as any).created_at) }}
-        </span>
-      </template>
-    </DataTable>
+        <template #cell-created_at="{ row }">
+          <span class="text-xs text-text-muted font-mono">
+            {{ formatDate((row as any).created_at) }}
+          </span>
+        </template>
+      </DataTable>
+    </div>
 
     <!-- Pagination -->
     <PaginationBar

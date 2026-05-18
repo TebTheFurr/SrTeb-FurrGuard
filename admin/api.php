@@ -51,6 +51,12 @@ if (isset($_SESSION['furrguard_admin']['expires_at'])) {
     }
 }
 
+// Refresh session expiry on activity (extends session while user is active)
+if (isset($_SESSION['furrguard_admin']['expires_at'])) {
+    $newExpiry = date('Y-m-d H:i:s', strtotime('+8 hours'));
+    $_SESSION['furrguard_admin']['expires_at'] = $newExpiry;
+}
+
 $currentRole = $_SESSION['furrguard_admin']['role'] ?? null;
 if (!$currentRole) {
     $discordId = $_SESSION['furrguard_admin']['discord_id'] ?? '';
@@ -1257,6 +1263,8 @@ function getProviders($db, $input) {
         ORDER BY block_count DESC, name ASC
         LIMIT ? OFFSET ?
     ");
+    $params[] = $perPage;
+    $params[] = $offset;
     $stmt->execute($params);
 
     return [
@@ -1624,7 +1632,7 @@ function getSettings($db) {
 }
 
 function saveSettings($db, $settings) {
-    $allowedKeys = ['block_proxy', 'block_vpn', 'block_hosting', 'webhook_url', 'notify_connections', 'notify_hispanic', 'notify_blocks', 'server_name', 'discord_url', 'country_change_detection_enabled', 'country_change_min_connections', 'country_change_min_percentage', 'country_change_continent_only'];
+    $allowedKeys = ['block_proxy', 'block_vpn', 'block_hosting', 'block_mobile', 'webhook_url', 'notify_connections', 'notify_hispanic', 'notify_blocks', 'server_name', 'discord_url', 'country_change_detection_enabled', 'country_change_min_connections', 'country_change_min_percentage', 'country_change_continent_only'];
 
     // Filter allowed keys
     $filtered = array_intersect_key($settings, array_flip($allowedKeys));
@@ -1816,7 +1824,7 @@ function exportData($db) {
 }
 
 function getAdminUsers($db) {
-    $stmt = $db->query("SELECT id, discord_id, role, created_by, created_at FROM admin_users ORDER BY FIELD(role, 'founder','owner','manager','sradmin','admin'), created_at ASC");
+    $stmt = $db->query("SELECT au.id, au.discord_id, au.role, au.created_by, au.created_at, (SELECT s.discord_username FROM admin_sessions s WHERE s.discord_id = au.discord_id ORDER BY s.created_at DESC LIMIT 1) AS discord_username FROM admin_users au ORDER BY FIELD(au.role, 'founder','owner','manager','sradmin','admin'), au.created_at ASC");
     return [
         'success' => true,
         'data' => ['users' => $stmt->fetchAll(PDO::FETCH_ASSOC)]

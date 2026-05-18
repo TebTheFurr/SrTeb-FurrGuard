@@ -40,10 +40,12 @@ const FORMAT_CODES = [
 
 // Variables available for message keys
 const VARIABLES: Record<string, string[]> = {
-  kick: ['{server_name}', '{discord}', '{id}', '{player}', '{ip}', '{reason}', '{country}', '{country_code}', '{isp}', '{time_remaining}', '{ban_id}'],
-  notify: ['{player}', '{ip}', '{country}', '{country_code}', '{isp}', '{ban_id}', '{command}'],
-  command: ['{usage}', '{type}', '{value}'],
+  kick: ['{server_name}', '{discord}', '{id}', '{player}', '{ip}', '{reason}', '{country}', '{country_code}', '{isp}', '{continent}', '{time_remaining}', '{ban_id}'],
+  notify: ['{player}', '{ip}', '{country}', '{country_code}', '{isp}', '{continent}', '{ban_id}', '{command}', '{details}', '{reason}'],
+  command: ['{usage}', '{type}', '{value}', '{player}'],
   other: ['{player}', '{type}', '{value}', '{country}', '{country_code}', '{current_country}', '{historical_country}', '{continent}', '{verify_url}'],
+  fur_perms: ['{player}', '{command}'],
+  furr_security: ['{player}', '{url}', '{time}', '{key}', '{value}'],
 }
 
 // Message categories with labels and key prefixes
@@ -72,6 +74,18 @@ const MESSAGE_CATEGORIES = [
     icon: 'FileText',
     description: 'Prefijo y otros mensajes',
   },
+  {
+    id: 'fur_perms',
+    label: 'FurrPerms',
+    icon: 'Lock',
+    description: 'Mensajes del modulo FurrPerms (bloqueo de comandos)',
+  },
+  {
+    id: 'furr_security',
+    label: 'FurrSecurity',
+    icon: 'ShieldCheck',
+    description: 'Mensajes del modulo FurrSecurity (verificacion de staff)',
+  },
 ]
 
 const expandedCategories = ref<Set<string>>(new Set())
@@ -82,10 +96,16 @@ const groupedMessages = computed(() => {
     notify: [],
     command: [],
     other: [],
+    fur_perms: [],
+    furr_security: [],
   }
 
   for (const [key, value] of Object.entries(editingMessages.value)) {
-    if (key.startsWith('kick_')) {
+    if (key.startsWith('fur_perms_')) {
+      groups.fur_perms.push({ key, value })
+    } else if (key.startsWith('furr_security_')) {
+      groups.furr_security.push({ key, value })
+    } else if (key.startsWith('kick_')) {
       groups.kick.push({ key, value })
     } else if (key.startsWith('notify_')) {
       groups.notify.push({ key, value })
@@ -128,11 +148,19 @@ function messageLabel(key: string): string {
     kick_proxy: 'Kick - Proxy',
     kick_vpn: 'Kick - VPN',
     kick_hosting: 'Kick - Hosting',
+    kick_mobile: 'Kick - Red Movil',
     kick_blacklisted: 'Kick - Blacklist',
     kick_blocked_provider: 'Kick - Proveedor Bloqueado',
     kick_blocked_country: 'Kick - Pais Bloqueado',
     kick_blocked_continent: 'Kick - Continente Bloqueado',
     kick_compromised_account: 'Kick - Cuenta Comprometida',
+    kick_default: 'Kick - Default (Sin razon especifica)',
+    kick_api_error: 'Kick - Error de API',
+    kick_timeout: 'Kick - Timeout',
+    kick_interrupted: 'Kick - Interrumpido',
+    kick_execution_error: 'Kick - Error de Ejecucion',
+    kick_completion_error: 'Kick - Error de Completitud',
+    kick_unknown_error: 'Kick - Error Desconocido',
     whitelist_added: 'Whitelist Anadida',
     whitelist_removed: 'Whitelist Eliminada',
     blacklist_added: 'Blacklist Anadida',
@@ -149,10 +177,48 @@ function messageLabel(key: string): string {
     notify_hosting_blocked: 'Hosting Bloqueado',
     notify_provider_blocked: 'Proveedor Bloqueado',
     notify_country_blocked: 'Pais Bloqueado',
+    notify_continent_blocked: 'Continente Bloqueado',
+    notify_compromised_account: 'Cuenta Comprometida',
     notify_blacklisted: 'Blacklist',
     notify_whitelisted: 'Whitelist',
     notify_player_join: 'Jugador Conecto (Hispano)',
     notify_non_hispanic_join: 'Jugador Conecto (No Hispano)',
+    notify_player_disconnect: 'Jugador Desconecto',
+    notify_settings_updated: 'Config Actualizada',
+    notify_providers_updated: 'Proveedores Actualizados',
+    notify_player_kicked: 'Jugador Expulsado',
+    // FurrPerms
+    fur_perms_no_permission: 'Sin Permisos (FurrPerms)',
+    fur_perms_command_blocked: 'Comando Bloqueado',
+    fur_perms_logged: 'Intento Registrado',
+    fur_perms_notify_blocked: 'Notificar - Comando Bloqueado',
+    fur_perms_notify_allowed: 'Notificar - Comando Permitido',
+    // FurrSecurity
+    furr_security_prefix: 'Prefijo del Plugin',
+    furr_security_verification_required: 'Verificacion Requerida',
+    furr_security_verification_link: 'Link de Verificacion',
+    furr_security_verification_proxy_mode: 'Verificacion en Proxy',
+    furr_security_verification_success: 'Verificacion Exitosa',
+    furr_security_verification_failed: 'Verificacion Fallida',
+    furr_security_session_expired: 'Sesion Expirada',
+    furr_security_session_expiring: 'Sesion Expirando',
+    furr_security_not_staff: 'No es Staff',
+    furr_security_already_verified: 'Ya Verificado',
+    furr_security_locked_movement: 'Bloqueado - Movimiento',
+    furr_security_locked_command: 'Bloqueado - Comandos',
+    furr_security_locked_inventory: 'Bloqueado - Inventario',
+    furr_security_locked_chat: 'Bloqueado - Chat',
+    furr_security_locked_server_switch: 'Bloqueado - Cambio de Servidor',
+    furr_security_admin_notification: 'Notificacion Admin',
+    furr_security_reload_success: 'Recarga Exitosa',
+    furr_security_no_permission: 'Sin Permisos',
+    furr_security_player_not_found: 'Jugador No Encontrado',
+    furr_security_stats_header: 'Header Estadisticas',
+    furr_security_stats_line: 'Linea Estadisticas',
+    furr_security_kick_unverified: 'Kick - No Verificado',
+    furr_security_kick_blacklisted: 'Kick - Blacklist Seguridad',
+    furr_security_verification_timeout: 'Link Expirado',
+    furr_security_auto_blacklisted: 'Auto-Blacklist (3 intentos)',
   }
   return labels[key] ?? key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
@@ -184,6 +250,49 @@ function insertVariable(key: string, variable: string) {
   insertCode(key, variable)
 }
 
+function previewMessage(raw: string): string {
+  const mcColorMap: Record<string, string> = {
+    '\u00A70': '#000000',
+    '\u00A71': '#0000AA',
+    '\u00A72': '#00AA00',
+    '\u00A73': '#00AAAA',
+    '\u00A74': '#AA0000',
+    '\u00A75': '#AA00AA',
+    '\u00A76': '#FFAA00',
+    '\u00A77': '#AAAAAA',
+    '\u00A78': '#555555',
+    '\u00A79': '#5555FF',
+    '\u00A7a': '#55FF55',
+    '\u00A7b': '#55FFFF',
+    '\u00A7c': '#FF5555',
+    '\u00A7d': '#FF55FF',
+    '\u00A7e': '#FFFF55',
+    '\u00A7f': '#FFFFFF',
+  }
+
+  let html = raw
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+
+  // Reset
+  html = html.replace(/\u00A7r/g, '</span>')
+
+  // Format codes
+  html = html.replace(/\u00A7l([^]*?)(?=\u00A7|$)/g, '<strong>$1</strong>')
+  html = html.replace(/\u00A7n([^]*?)(?=\u00A7|$)/g, '<u>$1</u>')
+  html = html.replace(/\u00A7m([^]*?)(?=\u00A7|$)/g, '<del>$1</del>')
+  html = html.replace(/\u00A7o([^]*?)(?=\u00A7|$)/g, '<em>$1</em>')
+
+  // Color codes
+  for (const [code, color] of Object.entries(mcColorMap)) {
+    const escaped = code.replace(/\u00A7/g, '\u00A7')
+    html = html.split(escaped).join(`<span style="color:${color}">`)
+  }
+
+  return html
+}
+
 async function handleSave() {
   const success = await store.save(editingMessages.value)
   if (success) {
@@ -202,15 +311,15 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="page-container">
     <!-- Page header -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div class="section-header">
       <div>
         <h1 class="text-2xl font-display font-bold gradient-text">Mensajes</h1>
         <p class="text-sm text-text-muted mt-1">Configura los mensajes del plugin en Minecraft</p>
       </div>
       <button
-        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium transition-colors disabled:opacity-50"
+        class="glass-button inline-flex items-center gap-2 px-5 py-2.5 text-sm disabled:opacity-40 hover:shadow-[0_8px_30px_rgba(139,92,246,0.5)]"
         :disabled="!store.dirty || store.loading"
         @click="handleSave"
       >
@@ -223,7 +332,7 @@ onMounted(async () => {
     <LoadingSkeleton v-if="store.loading && Object.keys(editingMessages).length === 0" :rows="6" />
 
     <!-- Message categories -->
-    <div v-else class="space-y-4">
+    <div v-else class="space-y-4 stagger-children">
       <div
         v-for="category in MESSAGE_CATEGORIES"
         :key="category.id"
@@ -231,15 +340,20 @@ onMounted(async () => {
       >
         <!-- Category header -->
         <button
-          class="w-full flex items-center justify-between px-4 py-3 hover:bg-hover transition-colors"
+          class="w-full flex items-center justify-between px-5 py-4 hover:bg-hover transition-colors"
           @click="toggleCategory(category.id)"
         >
           <div class="flex items-center gap-3">
-            <span class="text-sm font-semibold text-text-primary">{{ category.label }}</span>
-            <span class="text-xs text-text-muted">({{ groupedMessages[category.id]?.length ?? 0 }})</span>
+            <div class="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center opacity-80">
+              <span class="text-white text-xs font-bold">{{ category.label.charAt(0) }}</span>
+            </div>
+            <div class="text-left">
+              <span class="text-sm font-semibold text-text-primary">{{ category.label }}</span>
+              <span class="ml-2 text-xs text-text-muted">({{ groupedMessages[category.id]?.length ?? 0 }} mensajes)</span>
+            </div>
           </div>
           <svg
-            class="w-4 h-4 text-text-muted transition-transform"
+            class="w-4 h-4 text-text-muted transition-transform duration-300"
             :class="{ 'rotate-180': expandedCategories.has(category.id) }"
             fill="none" stroke="currentColor" viewBox="0 0 24 24"
           >
@@ -249,19 +363,24 @@ onMounted(async () => {
 
         <!-- Category body -->
         <div v-if="expandedCategories.has(category.id)" class="border-t border-glass-border-subtle">
-          <p class="px-4 pt-3 pb-1 text-xs text-text-muted">{{ category.description }}</p>
+          <div class="px-5 pt-4 pb-2">
+            <p class="text-xs text-text-muted mb-3">{{ category.description }}</p>
 
-          <!-- Variable buttons -->
-          <div class="px-4 pb-2 flex flex-wrap gap-1.5">
-            <span class="text-xs text-text-muted flex items-center gap-1 mr-1"><Variable :size="12" /> Variables:</span>
-            <button
-              v-for="v in getVariablesForCategory(category.id)"
-              :key="v"
-              class="px-2 py-0.5 rounded text-xs font-mono bg-dark-600 text-cyan-400 hover:bg-dark-500 transition-colors"
-              @click="insertVariable(groupedMessages[category.id]?.[0]?.key ?? '', v)"
-            >
-              {{ v }}
-            </button>
+            <!-- Variable buttons -->
+            <div class="flex flex-wrap items-center gap-1.5 mb-4">
+              <div class="flex items-center gap-1 text-xs text-text-tertiary mr-1">
+                <Variable :size="12" />
+                <span>Variables:</span>
+              </div>
+              <button
+                v-for="v in getVariablesForCategory(category.id)"
+                :key="v"
+                class="px-2 py-0.5 rounded-md text-xs font-mono bg-dark-800/80 text-cyan-400 border border-glass-border-subtle hover:bg-dark-700 hover:border-cyan-500/30 transition-all duration-200"
+                @click="insertVariable(groupedMessages[category.id]?.[0]?.key ?? '', v)"
+              >
+                {{ v }}
+              </button>
+            </div>
           </div>
 
           <!-- Messages list -->
@@ -269,22 +388,24 @@ onMounted(async () => {
             <div
               v-for="msg in groupedMessages[category.id]"
               :key="msg.key"
-              class="px-4 py-3"
+              class="px-5 py-4 hover:bg-hover/50 transition-colors"
             >
-              <div class="flex items-start justify-between gap-3 mb-2">
+              <div class="flex items-start justify-between gap-3 mb-3">
                 <div>
                   <span class="text-sm font-medium text-text-primary">{{ messageLabel(msg.key) }}</span>
-                  <span class="ml-2 text-xs text-text-muted font-mono">{{ msg.key }}</span>
+                  <span class="ml-2 text-xs text-text-tertiary font-mono bg-dark-800/60 px-1.5 py-0.5 rounded">{{ msg.key }}</span>
                 </div>
               </div>
 
               <!-- Color code toolbar -->
-              <div class="flex items-center gap-1 mb-2 flex-wrap">
-                <span class="text-xs text-text-muted flex items-center gap-1 mr-1"><Palette :size="12" /></span>
+              <div class="flex items-center gap-1 mb-3 flex-wrap">
+                <span class="text-xs text-text-tertiary flex items-center gap-1 mr-1">
+                  <Palette :size="12" />
+                </span>
                 <button
                   v-for="color in COLOR_CODES"
                   :key="color.code"
-                  class="w-6 h-6 rounded text-xs font-bold flex items-center justify-center border border-glass-border-subtle hover:scale-110 transition-transform"
+                  class="w-6 h-6 rounded-md text-xs font-bold flex items-center justify-center border border-glass-border-subtle hover:scale-110 hover:border-glass-border-strong transition-all duration-200"
                   :title="color.title"
                   @click="insertCode(msg.key, color.code)"
                 >
@@ -294,7 +415,7 @@ onMounted(async () => {
                 <button
                   v-for="fmt in FORMAT_CODES"
                   :key="fmt.code"
-                  class="w-6 h-6 rounded text-xs font-bold flex items-center justify-center bg-dark-600 text-text-secondary border border-glass-border-subtle hover:bg-dark-500 transition-colors"
+                  class="w-6 h-6 rounded-md text-xs font-bold flex items-center justify-center bg-dark-800/80 text-text-secondary border border-glass-border-subtle hover:bg-dark-700 hover:border-glass-border-strong transition-all duration-200"
                   :title="fmt.title"
                   @click="insertCode(msg.key, fmt.code)"
                 >
@@ -302,14 +423,26 @@ onMounted(async () => {
                 </button>
               </div>
 
-              <!-- Textarea -->
-              <textarea
-                :data-key="msg.key"
-                :value="editingMessages[msg.key] ?? ''"
-                rows="3"
-                class="w-full px-3 py-2 rounded-lg bg-dark-800 border border-glass-border-subtle text-text-primary text-sm font-mono focus:outline-none focus:border-purple-500 resize-y"
-                @input="onMessageInput(msg.key, ($event.target as HTMLTextAreaElement).value)"
-              />
+              <!-- Editor + Preview side by side on larger screens -->
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <!-- Textarea -->
+                <textarea
+                  :data-key="msg.key"
+                  :value="editingMessages[msg.key] ?? ''"
+                  rows="3"
+                  class="w-full px-3 py-2.5 rounded-xl bg-dark-800/60 border border-glass-border-subtle text-text-primary text-sm font-mono focus:outline-none focus:border-purple-500/50 focus:shadow-[0_0_12px_rgba(139,92,246,0.1)] resize-y transition-all duration-200 placeholder:text-text-tertiary"
+                  @input="onMessageInput(msg.key, ($event.target as HTMLTextAreaElement).value)"
+                />
+
+                <!-- Preview panel -->
+                <div class="rounded-xl bg-dark-950/60 border border-glass-border-subtle p-3 min-h-[4.5rem]">
+                  <div class="text-[10px] text-text-tertiary uppercase tracking-wider mb-1.5 font-semibold">Vista previa</div>
+                  <div
+                    class="text-sm font-mono leading-relaxed whitespace-pre-wrap break-words"
+                    v-html="previewMessage(editingMessages[msg.key] ?? '')"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -317,7 +450,7 @@ onMounted(async () => {
     </div>
 
     <!-- Error display -->
-    <p v-if="store.error && !store.loading" class="text-red-400 text-sm text-center">
+    <p v-if="store.error && !store.loading" class="text-red-400 text-sm text-center py-2">
       {{ store.error }}
     </p>
   </div>

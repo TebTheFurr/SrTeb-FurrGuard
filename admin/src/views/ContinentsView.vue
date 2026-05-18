@@ -3,7 +3,6 @@ import { ref, onMounted } from 'vue'
 import { useContinentsStore } from '@/stores/continents'
 import SearchInput from '@/components/shared/SearchInput.vue'
 import DataTable from '@/components/shared/DataTable.vue'
-import StatCard from '@/components/shared/StatCard.vue'
 import ContinentModal from '@/components/modals/ContinentModal.vue'
 import { Plus, ToggleLeft, ToggleRight, Pencil, Trash2 } from 'lucide-vue-next'
 import type { Continent } from '@/types'
@@ -81,14 +80,14 @@ function formatDate(dateStr: string): string {
 
 <template>
   <div class="space-y-6">
-    <!-- Page header -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <!-- Section header -->
+    <div class="section-header">
       <div>
         <h1 class="text-2xl font-display font-bold gradient-text">Continentes bloqueados</h1>
         <p class="text-sm text-text-muted mt-1">Gestion de continentes bloqueados por geolocalizacion</p>
       </div>
       <button
-        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium transition-colors"
+        class="glass-button inline-flex items-center gap-2 px-4 py-2.5 text-sm"
         @click="openAddModal"
       >
         <Plus :size="16" />
@@ -96,15 +95,41 @@ function formatDate(dateStr: string): string {
       </button>
     </div>
 
-    <!-- Stats cards -->
-    <div v-if="store.stats" class="grid grid-cols-3 gap-3">
-      <StatCard title="Total bloqueados" :value="store.stats.total" icon="Globe2" color="purple" />
-      <StatCard title="Activos" :value="store.stats.active" icon="CheckCircle" color="green" />
-      <StatCard title="Bloqueos totales" :value="store.stats.total_blocks" icon="ShieldAlert" color="red" />
+    <!-- Compact stats bar -->
+    <div v-if="store.stats" class="glass-card p-3 flex items-center gap-6 overflow-x-auto">
+      <div class="flex items-center gap-2.5 shrink-0">
+        <div class="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" :width="16" :height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-purple-400"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+        </div>
+        <div>
+          <div class="text-xs text-text-muted">Total bloqueados</div>
+          <div class="text-lg font-display font-bold text-text-primary leading-tight">{{ store.stats.total }}</div>
+        </div>
+      </div>
+      <div class="w-px h-8 bg-glass-border-subtle shrink-0"></div>
+      <div class="flex items-center gap-2.5 shrink-0">
+        <div class="w-8 h-8 rounded-lg bg-success-dim flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" :width="16" :height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-400"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+        </div>
+        <div>
+          <div class="text-xs text-text-muted">Activos</div>
+          <div class="text-lg font-display font-bold text-text-primary leading-tight">{{ store.stats.active }}</div>
+        </div>
+      </div>
+      <div class="w-px h-8 bg-glass-border-subtle shrink-0"></div>
+      <div class="flex items-center gap-2.5 shrink-0">
+        <div class="w-8 h-8 rounded-lg bg-error-dim flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" :width="16" :height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-400"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>
+        </div>
+        <div>
+          <div class="text-xs text-text-muted">Bloqueos totales</div>
+          <div class="text-lg font-display font-bold text-text-primary leading-tight">{{ store.stats.total_blocks }}</div>
+        </div>
+      </div>
     </div>
 
-    <!-- Search -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+    <!-- Search bar -->
+    <div class="glass-card p-3 flex items-center gap-3">
       <div class="w-full sm:w-72">
         <SearchInput
           :model-value="currentSearch"
@@ -160,18 +185,18 @@ function formatDate(dateStr: string): string {
       </template>
 
       <template #cell-actions="{ row }">
-        <div class="flex items-center gap-1">
+        <div class="flex items-center gap-1" @click.stop>
           <button
-            class="p-1.5 rounded-lg text-text-muted hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+            class="p-1.5 rounded-lg hover:bg-hover text-text-muted hover:text-blue-400 transition-colors"
             title="Editar"
-            @click.stop="openEditModal(row as unknown as Continent)"
+            @click="openEditModal(row as unknown as Continent)"
           >
             <Pencil :size="14" />
           </button>
           <button
-            class="p-1.5 rounded-lg text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
+            class="p-1.5 rounded-lg hover:bg-hover text-text-muted hover:text-red-400 transition-colors"
             title="Desbloquear"
-            @click.stop="deleteContinent((row as any).id)"
+            @click="deleteContinent((row as any).id)"
           >
             <Trash2 :size="14" />
           </button>

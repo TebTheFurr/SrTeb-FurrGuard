@@ -70,26 +70,34 @@ if (isset($_SESSION['furrguard_admin'])) {
 
 // CRITICAL 1: Use the CSP nonce from security.php, not an independent one
 $nonce = getCspNonce();
-?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FurrGuard Admin</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-</head>
-<body class="bg-dark-900 text-white font-body antialiased">
-    <div id="app"></div>
-    <script type="module" src="/admin/src/main.ts"></script>
-    <script nonce="<?php echo $nonce; ?>">
-        <?php if ($isAuthenticated && $user): ?>
-        window.__FURRGUARD_USER__ = <?php echo json_encode($user); ?>;
-        window.__ROLE_PERMISSIONS__ = <?php echo json_encode($rolePermissions); ?>;
-        <?php endif; ?>
-        window.__DISCORD_LOGIN_URL__ = <?php echo json_encode(getDiscordLoginUrl()); ?>;
-    </script>
-</body>
-</html>
+
+// Serve built Vue app from dist/, inject PHP session data
+$distHtml = @file_get_contents(__DIR__ . '/dist/index.html');
+if ($distHtml === false) {
+    http_response_code(503);
+    echo '<!DOCTYPE html><html><body style="background:#0a0a0f;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,sans-serif"><div><h1>Build Not Found</h1><p>Run <code>npm run build</code> in the admin directory.</p></div></body></html>';
+    exit;
+}
+
+// Inject font preloads and session data into <head>
+$fontLinks = <<<'HTML'
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+HTML;
+
+$sessionScript = '<script nonce="' . $nonce . '">' . "\n";
+if ($isAuthenticated && $user) {
+    $sessionScript .= 'window.__FURRGUARD_USER__ = ' . json_encode($user) . ";\n";
+    $sessionScript .= 'window.__ROLE_PERMISSIONS__ = ' . json_encode($rolePermissions) . ";\n";
+}
+$sessionScript .= 'window.__DISCORD_LOGIN_URL__ = ' . json_encode(getDiscordLoginUrl()) . ";\n";
+$sessionScript .= '</script>';
+
+// Insert fonts + session script before closing </head>
+$distHtml = str_replace('</head>', $fontLinks . "\n" . $sessionScript . "\n</head>", $distHtml);
+
+// Add nonce to all script tags
+$distHtml = preg_replace('/<script(?![^>]*nonce=)/', '<script nonce="' . $nonce . '"', $distHtml);
+
+echo $distHtml;

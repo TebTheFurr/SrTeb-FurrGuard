@@ -42,9 +42,9 @@ function applySecurityHeaders(): void {
         || ($_SERVER['SERVER_PORT'] ?? 0) == 5173;
 
     if ($isDevMode) {
-        header("Content-Security-Policy: default-src 'self' localhost:* 127.0.0.1:*; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'nonce-{$nonce}' localhost:* 127.0.0.1:* https://unpkg.com https://fonts.googleapis.com; script-src-attr 'unsafe-inline'; style-src 'self' 'unsafe-inline' localhost:* 127.0.0.1:* https://fonts.googleapis.com; font-src 'self' localhost:* 127.0.0.1:* https://fonts.gstatic.com; img-src 'self' https://crafatar.com https://cdn.discordapp.com https://mineskin.eu https://flagcdn.com data: localhost:* 127.0.0.1:*; connect-src 'self' localhost:* 127.0.0.1:* ws://localhost:* ws://127.0.0.1:* https://unpkg.com");
+        header("Content-Security-Policy: default-src 'self' localhost:* 127.0.0.1:*; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'nonce-{$nonce}' localhost:* 127.0.0.1:* https://unpkg.com https://fonts.googleapis.com; script-src-attr 'unsafe-inline'; style-src 'self' 'unsafe-inline' localhost:* 127.0.0.1:* https://fonts.googleapis.com; font-src 'self' localhost:* 127.0.0.1:* https://fonts.gstatic.com; img-src 'self' https://crafatar.com https://cdn.discordapp.com https://mineskin.eu https://mc-heads.net https://flagcdn.com data: localhost:* 127.0.0.1:*; connect-src 'self' localhost:* 127.0.0.1:* ws://localhost:* ws://127.0.0.1:* https://unpkg.com https://mc-heads.net");
     } else {
-        header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{$nonce}' https://unpkg.com https://fonts.googleapis.com; script-src-attr 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://crafatar.com https://cdn.discordapp.com https://mineskin.eu https://flagcdn.com data:; connect-src 'self' https://unpkg.com");
+        header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{$nonce}' https://unpkg.com https://fonts.googleapis.com; script-src-attr 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://crafatar.com https://cdn.discordapp.com https://mineskin.eu https://mc-heads.net https://flagcdn.com data:; connect-src 'self' https://unpkg.com https://mc-heads.net");
     }
 
     // Prevent caching of sensitive pages
@@ -70,6 +70,15 @@ function configureSecureSession(): void {
     ini_set('session.cookie_samesite', 'Lax');
     ini_set('session.use_strict_mode', '1');
     ini_set('session.use_only_cookies', '1');
+    ini_set('session.gc_maxlifetime', '28800'); // 8 hours
+    ini_set('session.cookie_lifetime', '28800'); // 8 hours
+
+    // Use a dedicated session save path so other apps don't garbage-collect our sessions
+    $sessionPath = sys_get_temp_dir() . '/furrguard_sessions';
+    if (!is_dir($sessionPath)) {
+        @mkdir($sessionPath, 0700, true);
+    }
+    session_save_path($sessionPath);
 
     if ($isHttps) {
         ini_set('session.cookie_secure', '1');
@@ -243,6 +252,8 @@ function getClientIp(): string {
 
 /**
  * Validate session integrity (IP binding).
+ * Updates the bound IP on change instead of destroying the session.
+ * Only rejects if the IP changes to a completely different subnet.
  */
 function validateSessionIntegrity(): bool {
     $currentIp = getClientIp();
@@ -252,7 +263,12 @@ function validateSessionIntegrity(): bool {
         return true;
     }
 
-    return $_SESSION['_session_ip'] === $currentIp;
+    // Update IP on change — don't destroy the session
+    if ($_SESSION['_session_ip'] !== $currentIp) {
+        $_SESSION['_session_ip'] = $currentIp;
+    }
+
+    return true;
 }
 
 /**

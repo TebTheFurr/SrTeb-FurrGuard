@@ -6,7 +6,6 @@ import SearchInput from '@/components/shared/SearchInput.vue'
 import FilterTabs from '@/components/shared/FilterTabs.vue'
 import DataTable from '@/components/shared/DataTable.vue'
 import PaginationBar from '@/components/shared/PaginationBar.vue'
-import StatCard from '@/components/shared/StatCard.vue'
 import FurrSecurityModal from '@/components/modals/FurrSecurityModal.vue'
 import { Plus, Trash2, Ban } from 'lucide-vue-next'
 
@@ -167,15 +166,15 @@ function actionLabel(action: string): string {
 
 <template>
   <div class="space-y-6">
-    <!-- Page header -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <!-- Section header -->
+    <div class="section-header">
       <div>
         <h1 class="text-2xl font-display font-bold gradient-text">FurrSecurity</h1>
         <p class="text-sm text-text-muted mt-1">Verificacion de identidad de staff</p>
       </div>
       <button
         v-if="activeTab === 'staff'"
-        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium transition-colors"
+        class="glass-button inline-flex items-center gap-2 px-4 py-2.5 text-sm"
         @click="openAddModal"
       >
         <Plus :size="16" />
@@ -183,33 +182,74 @@ function actionLabel(action: string): string {
       </button>
     </div>
 
-    <!-- Stats bar -->
-    <div v-if="store.stats" class="grid grid-cols-4 gap-3">
-      <StatCard title="Staff" :value="store.stats.total_staff" icon="Users" color="purple" />
-      <StatCard title="Sesiones activas" :value="store.stats.active_sessions" icon="ShieldCheck" color="green" />
-      <StatCard title="Pendientes" :value="store.stats.pending_verifications" icon="Clock" color="amber" />
-      <StatCard title="Verificados hoy" :value="store.stats.verified_today" icon="CheckCircle" color="blue" />
+    <!-- Compact stats bar -->
+    <div v-if="store.stats" class="glass-card p-3 flex items-center gap-6 overflow-x-auto">
+      <div class="flex items-center gap-2.5 shrink-0">
+        <div class="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" :width="16" :height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-purple-400"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div>
+          <div class="text-xs text-text-muted">Staff</div>
+          <div class="text-lg font-display font-bold text-text-primary leading-tight">{{ store.stats.total_staff }}</div>
+        </div>
+      </div>
+      <div class="w-px h-8 bg-glass-border-subtle shrink-0"></div>
+      <div class="flex items-center gap-2.5 shrink-0">
+        <div class="w-8 h-8 rounded-lg bg-success-dim flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" :width="16" :height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-400"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+        </div>
+        <div>
+          <div class="text-xs text-text-muted">Sesiones activas</div>
+          <div class="text-lg font-display font-bold text-text-primary leading-tight">{{ store.stats.active_sessions }}</div>
+        </div>
+      </div>
+      <div class="w-px h-8 bg-glass-border-subtle shrink-0"></div>
+      <div class="flex items-center gap-2.5 shrink-0">
+        <div class="w-8 h-8 rounded-lg bg-warning-dim flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" :width="16" :height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-400"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div>
+          <div class="text-xs text-text-muted">Pendientes</div>
+          <div class="text-lg font-display font-bold text-text-primary leading-tight">{{ store.stats.pending_verifications }}</div>
+        </div>
+      </div>
+      <div class="w-px h-8 bg-glass-border-subtle shrink-0"></div>
+      <div class="flex items-center gap-2.5 shrink-0">
+        <div class="w-8 h-8 rounded-lg bg-info-dim flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" :width="16" :height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-400"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+        </div>
+        <div>
+          <div class="text-xs text-text-muted">Verificados hoy</div>
+          <div class="text-lg font-display font-bold text-text-primary leading-tight">{{ store.stats.verified_today }}</div>
+        </div>
+      </div>
     </div>
 
-    <!-- Tab navigation -->
-    <div class="flex items-center gap-1 p-1 bg-dark-800/50 rounded-lg w-fit">
+    <!-- Tab navigation (glassmorphism pill style) -->
+    <div class="glass-card p-1 flex items-center gap-1 w-fit">
       <button
-        class="px-4 py-2 rounded-md text-sm font-medium transition-colors"
-        :class="activeTab === 'staff' ? 'bg-purple-500 text-white' : 'text-text-muted hover:text-text-primary'"
+        class="px-5 py-2 rounded-[var(--radius-md)] text-sm font-medium transition-all duration-300"
+        :class="activeTab === 'staff'
+          ? 'gradient-primary text-white shadow-[0_0_16px_rgba(139,92,246,0.25)]'
+          : 'text-text-muted hover:text-text-primary hover:bg-hover'"
         @click="switchTab('staff')"
       >
         Staff
       </button>
       <button
-        class="px-4 py-2 rounded-md text-sm font-medium transition-colors"
-        :class="activeTab === 'sessions' ? 'bg-purple-500 text-white' : 'text-text-muted hover:text-text-primary'"
+        class="px-5 py-2 rounded-[var(--radius-md)] text-sm font-medium transition-all duration-300"
+        :class="activeTab === 'sessions'
+          ? 'gradient-primary text-white shadow-[0_0_16px_rgba(139,92,246,0.25)]'
+          : 'text-text-muted hover:text-text-primary hover:bg-hover'"
         @click="switchTab('sessions')"
       >
         Sesiones
       </button>
       <button
-        class="px-4 py-2 rounded-md text-sm font-medium transition-colors"
-        :class="activeTab === 'logs' ? 'bg-purple-500 text-white' : 'text-text-muted hover:text-text-primary'"
+        class="px-5 py-2 rounded-[var(--radius-md)] text-sm font-medium transition-all duration-300"
+        :class="activeTab === 'logs'
+          ? 'gradient-primary text-white shadow-[0_0_16px_rgba(139,92,246,0.25)]'
+          : 'text-text-muted hover:text-text-primary hover:bg-hover'"
         @click="switchTab('logs')"
       >
         Logs
@@ -218,12 +258,14 @@ function actionLabel(action: string): string {
 
     <!-- Staff tab -->
     <template v-if="activeTab === 'staff'">
-      <div class="w-full sm:w-72">
-        <SearchInput
-          v-model="staffSearch"
-          placeholder="Buscar staff..."
-          @update:model-value="onStaffSearch"
-        />
+      <div class="glass-card p-3 flex items-center gap-3">
+        <div class="w-full sm:w-72">
+          <SearchInput
+            v-model="staffSearch"
+            placeholder="Buscar staff..."
+            @update:model-value="onStaffSearch"
+          />
+        </div>
       </div>
 
       <DataTable
@@ -251,7 +293,7 @@ function actionLabel(action: string): string {
 
         <template #cell-actions="{ row }">
           <button
-            class="p-1.5 rounded-lg text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
+            class="p-1.5 rounded-lg hover:bg-hover text-text-muted hover:text-red-400 transition-colors"
             title="Eliminar"
             @click.stop="removeStaff((row as any).id)"
           >
@@ -263,12 +305,14 @@ function actionLabel(action: string): string {
 
     <!-- Sessions tab -->
     <template v-if="activeTab === 'sessions'">
-      <div class="w-full sm:w-72">
-        <SearchInput
-          v-model="sessionSearch"
-          placeholder="Buscar sesion..."
-          @update:model-value="onSessionSearch"
-        />
+      <div class="glass-card p-3 flex items-center gap-3">
+        <div class="w-full sm:w-72">
+          <SearchInput
+            v-model="sessionSearch"
+            placeholder="Buscar sesion..."
+            @update:model-value="onSessionSearch"
+          />
+        </div>
       </div>
 
       <DataTable
@@ -306,7 +350,7 @@ function actionLabel(action: string): string {
         <template #cell-actions="{ row }">
           <button
             v-if="(row as any).status === 'verified' || (row as any).status === 'pending'"
-            class="p-1.5 rounded-lg text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
+            class="p-1.5 rounded-lg hover:bg-hover text-text-muted hover:text-red-400 transition-colors"
             title="Revocar sesion"
             @click.stop="revokeSession((row as any).id)"
           >
@@ -318,13 +362,13 @@ function actionLabel(action: string): string {
 
     <!-- Logs tab -->
     <template v-if="activeTab === 'logs'">
-      <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+      <div class="glass-card p-3 flex flex-col sm:flex-row items-start sm:items-center gap-3">
         <FilterTabs
           :filters="FURRSECURITY_LOG_FILTERS"
           :model-value="currentLogFilter"
           @update:model-value="onLogFilterChange"
         />
-        <div class="w-full sm:w-72">
+        <div class="w-full sm:w-72 sm:ml-auto">
           <SearchInput
             v-model="logSearch"
             placeholder="Buscar en logs..."

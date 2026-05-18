@@ -50,6 +50,13 @@ if (!isset($_GET['code']) || !is_string($_GET['code']) || strlen($_GET['code']) 
     exit;
 }
 
+// Validate OAuth state parameter (CSRF protection)
+if (empty($_GET['state']) || empty($_SESSION['oauth_state']) || !hash_equals($_SESSION['oauth_state'], $_GET['state'])) {
+    header('Location: index.php?error=invalid_state');
+    exit;
+}
+unset($_SESSION['oauth_state']);
+
 $code = $_GET['code'];
 
 $tokenData = exchangeCodeForToken($code);
@@ -73,7 +80,7 @@ if ($userRole === null) {
 }
 
 $sessionToken = bin2hex(random_bytes(32));
-$expiresAt = date('Y-m-d H:i:s', strtotime('+24 hours'));
+$expiresAt = date('Y-m-d H:i:s', strtotime('+8 hours'));
 
 try {
     $db = db();

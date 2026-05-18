@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { usePlayersStore } from '@/stores/players'
 import { PLAYER_FILTERS } from '@/lib/constants'
 import FilterTabs from '@/components/shared/FilterTabs.vue'
@@ -11,13 +11,15 @@ import PlayerCell from '@/components/shared/PlayerCell.vue'
 import IPCell from '@/components/shared/IPCell.vue'
 import StatusBadge from '@/components/shared/StatusBadge.vue'
 import CountryFlag from '@/components/shared/CountryFlag.vue'
+import { Eye, Users } from 'lucide-vue-next'
 
 const router = useRouter()
+const route = useRoute()
 const store = usePlayersStore()
 
 let currentPage = 1
 let currentFilter = 'all'
-let currentSearch = ''
+let currentSearch = (route.query.search as string) || ''
 
 const columns = [
   { key: 'nick', label: 'Jugador' },
@@ -25,6 +27,7 @@ const columns = [
   { key: 'country', label: 'Pais' },
   { key: 'status', label: 'Estado' },
   { key: 'last_seen', label: 'Ultima vez' },
+  { key: 'actions', label: '' },
 ]
 
 function fetchData() {
@@ -70,21 +73,38 @@ function formatDate(dateStr: string): string {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Page header -->
-    <div>
-      <h1 class="text-2xl font-display font-bold gradient-text">Jugadores</h1>
-      <p class="text-sm text-text-muted mt-1">Gestion y busqueda de jugadores</p>
+  <div class="page-container animate-fade-in-up">
+    <!-- Section header with player count -->
+    <div class="section-header">
+      <div class="flex items-center gap-3">
+        <div class="flex items-center justify-center w-10 h-10 rounded-xl gradient-primary shadow-glow">
+          <Users :size="20" class="text-white" />
+        </div>
+        <div>
+          <h1 class="text-2xl font-display font-bold gradient-text">Jugadores</h1>
+          <p class="text-sm text-text-muted mt-0.5">Gestion y busqueda de jugadores</p>
+        </div>
+      </div>
+      <div
+        v-if="store.pagination"
+        class="glass-card px-4 py-2 flex items-center gap-2"
+      >
+        <Users :size="16" class="text-purple-400" />
+        <span class="text-sm text-text-secondary">Total</span>
+        <span class="text-lg font-display font-bold gradient-text tabular-nums">
+          {{ store.pagination.total }}
+        </span>
+      </div>
     </div>
 
-    <!-- Filters and search -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+    <!-- Unified filter/search bar -->
+    <div class="glass-card p-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
       <FilterTabs
         :filters="PLAYER_FILTERS"
         :model-value="currentFilter"
         @update:model-value="onFilterChange"
       />
-      <div class="w-full sm:w-72">
+      <div class="flex-1 sm:max-w-xs">
         <SearchInput
           :model-value="currentSearch"
           placeholder="Buscar jugador, UUID, IP..."
@@ -93,7 +113,7 @@ function formatDate(dateStr: string): string {
       </div>
     </div>
 
-    <!-- Players table -->
+    <!-- Players table with row-enter animation -->
     <DataTable
       :columns="columns"
       :rows="store.players as unknown as Record<string, unknown>[]"
@@ -147,6 +167,16 @@ function formatDate(dateStr: string): string {
         <span class="text-xs text-text-muted font-mono">
           {{ formatDate((row as any).last_seen) }}
         </span>
+      </template>
+
+      <template #cell-actions="{ row }">
+        <button
+          class="glass-button-secondary px-3 py-1.5 text-xs flex items-center gap-1.5 hover:text-white hover:border-purple-500 hover:bg-purple-500/20 transition-all duration-300"
+          @click.stop="onRowClick(row as Record<string, unknown>)"
+        >
+          <Eye :size="14" />
+          Ver
+        </button>
       </template>
     </DataTable>
 

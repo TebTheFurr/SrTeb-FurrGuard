@@ -62,38 +62,46 @@ function onBlockRowClick(_row: Record<string, unknown>) {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="page-container animate-fade-in">
     <!-- Page header -->
-    <div>
-      <h1 class="text-2xl font-display font-bold gradient-text">Dashboard</h1>
-      <p class="text-sm text-text-muted mt-1">Vista general del sistema</p>
-    </div>
+    <header class="section-header">
+      <div>
+        <h1 class="text-3xl font-display font-bold gradient-text tracking-tight">Dashboard</h1>
+        <p class="text-sm text-text-muted mt-1.5">Vista general del sistema FurrGuard</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-2 h-2 rounded-full bg-success animate-glow" />
+        <span class="text-xs text-text-muted font-medium">Sistema activo</span>
+      </div>
+    </header>
 
-    <!-- Stat cards -->
+    <div class="gradient-line h-px opacity-40" />
+
+    <!-- Stat cards — compact 4-column grid -->
     <LoadingSkeleton v-if="store.loading" :rows="1" />
 
-    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <StatCard
-        v-for="card in statCards"
-        :key="card.key"
-        :title="card.title"
-        :icon="card.icon"
-        :color="card.color"
-        :value="store.stats?.[card.key] ?? 0"
-      />
+    <div v-else class="grid grid-cols-2 sm:grid-cols-4 gap-3 stagger-children">
+      <div v-for="card in statCards" :key="card.key" class="glass-card-hover p-4">
+        <StatCard
+          :title="card.title"
+          :icon="card.icon"
+          :color="card.color"
+          :value="store.stats?.[card.key] ?? 0"
+        />
+      </div>
     </div>
 
     <!-- Quick actions -->
     <div class="flex flex-wrap gap-3">
       <button
-        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500/15 text-purple-400 text-sm font-medium hover:bg-purple-500/25 transition-colors"
+        class="glass-button inline-flex items-center gap-2.5 px-5 py-2.5 text-sm"
         @click="router.push({ name: 'whitelist' })"
       >
         <ShieldPlus :size="16" />
         Agregar Whitelist
       </button>
       <button
-        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/15 text-red-400 text-sm font-medium hover:bg-red-500/25 transition-colors"
+        class="glass-button-danger inline-flex items-center gap-2.5 px-5 py-2.5 text-sm"
         @click="router.push({ name: 'blacklist' })"
       >
         <ShieldOff :size="16" />
@@ -101,13 +109,21 @@ function onBlockRowClick(_row: Record<string, unknown>) {
       </button>
     </div>
 
-    <!-- Tables row -->
+    <!-- Tables — 2-column layout -->
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
       <!-- Recent connections -->
-      <div>
-        <h2 class="text-lg font-display font-semibold text-text-primary mb-3">
-          Conexiones Recientes
-        </h2>
+      <div class="glass-card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-base font-display font-semibold text-text-primary">
+            Conexiones Recientes
+          </h2>
+          <button
+            class="glass-button-secondary px-3 py-1.5 text-xs font-medium hover:text-text-primary"
+            @click="router.push({ name: 'connections' })"
+          >
+            Ver todo
+          </button>
+        </div>
         <DataTable
           :columns="connectionColumns"
           :rows="(store.stats?.recent_connections ?? []) as Record<string, unknown>[]"
@@ -142,10 +158,18 @@ function onBlockRowClick(_row: Record<string, unknown>) {
       </div>
 
       <!-- Recent blocks -->
-      <div>
-        <h2 class="text-lg font-display font-semibold text-text-primary mb-3">
-          Bloqueos Recientes
-        </h2>
+      <div class="glass-card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-base font-display font-semibold text-text-primary">
+            Bloqueos Recientes
+          </h2>
+          <button
+            class="glass-button-secondary px-3 py-1.5 text-xs font-medium hover:text-text-primary"
+            @click="router.push({ name: 'blacklist' })"
+          >
+            Ver todo
+          </button>
+        </div>
         <DataTable
           :columns="blockColumns"
           :rows="(store.stats?.recent_blocks ?? []) as Record<string, unknown>[]"

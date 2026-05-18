@@ -202,120 +202,133 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen p-6 pb-0 relative z-10 flex flex-col">
-    <!-- Header -->
-    <div class="flex items-center gap-4 mb-8">
-      <button
-        class="flex items-center gap-2 px-4 py-2.5 glass-card text-text-secondary text-sm font-medium transition-all hover:text-text-primary hover:border-purple-500 cursor-pointer"
-        @click="goBack"
-      >
-        <ArrowLeft :size="18" />
-        Volver al Panel
-      </button>
-      <h1 class="text-2xl font-display font-semibold text-text-primary">Visor de Jugador</h1>
+  <div class="page-container animate-fade-in-up">
+    <!-- Section header with back button -->
+    <div class="section-header">
+      <div class="flex items-center gap-3">
+        <button
+          class="glass-card-hover flex items-center gap-2 px-4 py-2.5 text-text-secondary text-sm font-medium hover:text-text-primary hover:border-purple-500/40"
+          @click="goBack"
+        >
+          <ArrowLeft :size="18" />
+          Volver
+        </button>
+        <div>
+          <h1 class="text-2xl font-display font-bold gradient-text">Visor de Jugador</h1>
+          <p class="text-sm text-text-muted mt-0.5">Detalle completo del jugador</p>
+        </div>
+      </div>
     </div>
 
     <!-- Loading state -->
-    <div v-if="loading" class="flex-1">
+    <div v-if="loading">
       <LoadingSkeleton :rows="8" />
     </div>
 
     <!-- Player not found -->
-    <div v-else-if="!player" class="flex-1 flex items-center justify-center">
-      <div class="text-center">
-        <p class="text-text-muted text-lg mb-4">Jugador no encontrado</p>
-        <button
-          class="px-6 py-2.5 gradient-primary text-white rounded-lg text-sm font-medium"
-          @click="goBack"
-        >
-          Volver al Panel
-        </button>
+    <div v-else-if="!player" class="glass-card p-12 flex flex-col items-center justify-center text-center">
+      <div class="w-16 h-16 rounded-2xl bg-dark-700 flex items-center justify-center mb-4">
+        <User :size="32" class="text-text-muted" />
       </div>
+      <p class="text-text-muted text-lg mb-6">Jugador no encontrado</p>
+      <button
+        class="glass-button px-6 py-2.5 text-sm font-medium"
+        @click="goBack"
+      >
+        Volver al Panel
+      </button>
     </div>
 
-    <!-- Main content -->
-    <div v-else class="grid grid-cols-1 lg:grid-cols-[520px_1fr] gap-6 max-w-[1600px] mx-auto w-full flex-1">
-      <!-- Left sidebar: Skin + quick info -->
-      <div class="glass-card p-6 lg:sticky lg:top-6 self-start min-w-[320px]">
-        <!-- Skin viewer title -->
-        <div class="flex items-center gap-2 text-text-secondary text-sm font-semibold uppercase tracking-wider mb-4">
-          <User :size="16" class="text-purple-400" />
-          Skin del Jugador
+    <!-- Main content: sidebar + content -->
+    <div v-else class="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6">
+
+      <!-- Left sidebar: Skin viewer + quick actions -->
+      <div class="space-y-4 lg:sticky lg:top-6 self-start">
+        <!-- Skin viewer card with gradient border -->
+        <div class="gradient-border rounded-2xl">
+          <div class="glass-card p-6 rounded-2xl">
+            <!-- Skin viewer -->
+            <div class="flex items-center justify-center w-full rounded-xl mb-5 bg-[radial-gradient(ellipse_at_center,rgba(139,92,246,0.08)_0%,transparent_70%)]">
+              <SkinViewer :uuid="uuid" :width="280" :height="380" />
+            </div>
+
+            <!-- Player name -->
+            <div class="text-center text-2xl font-display font-bold text-text-primary mb-2">
+              {{ player.last_nick }}
+            </div>
+
+            <!-- UUID (copyable) -->
+            <div
+              class="flex items-center justify-center gap-2 text-xs text-text-muted font-mono cursor-pointer hover:text-purple-400 transition-all duration-300 group"
+              @click="copyUuid"
+            >
+              <span class="break-all">{{ player.uuid }}</span>
+              <component :is="uuidCopied ? CheckCircle2 : Copy" :size="14" class="shrink-0 group-hover:text-purple-400 transition-colors duration-300" />
+            </div>
+          </div>
         </div>
 
-        <!-- Skin viewer -->
-        <div class="flex items-center justify-center w-full rounded-lg mb-5 bg-[radial-gradient(ellipse_at_center,rgba(139,92,246,0.1)_0%,transparent_70%)]">
-          <SkinViewer :uuid="uuid" :width="350" :height="450" />
-        </div>
+        <!-- Quick actions floating card -->
+        <div class="glass-card p-4 space-y-3">
+          <div class="flex items-center gap-2 text-text-tertiary text-xs font-semibold uppercase tracking-widest mb-1">
+            <ShieldAlert :size="12" />
+            Acciones Rapidas
+          </div>
 
-        <!-- Player name -->
-        <div class="text-center text-2xl font-semibold text-text-primary mb-2">
-          {{ player.last_nick }}
-        </div>
+          <div class="grid grid-cols-2 gap-2">
+            <!-- Whitelist -->
+            <button
+              v-if="!player.is_whitelisted"
+              class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium text-white bg-gradient-to-br from-green-500 to-emerald-600 hover:shadow-[0_4px_20px_rgba(34,197,94,0.3)] transition-all duration-300 active:scale-[0.97]"
+              @click="openWhitelistAdd"
+            >
+              <ShieldCheck :size="14" />
+              Whitelist
+            </button>
+            <button
+              v-else
+              class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium border border-green-500/30 text-green-400 bg-green-500/10 hover:bg-green-500/20 transition-all duration-300 active:scale-[0.97]"
+              @click="removeFromWhitelist"
+            >
+              <ShieldCheck :size="14" />
+              Quitar WL
+            </button>
 
-        <!-- UUID (copyable) -->
-        <div
-          class="flex items-center justify-center gap-2 text-xs text-text-muted font-mono cursor-pointer hover:text-purple-400 transition-colors group"
-          @click="copyUuid"
-        >
-          <span class="break-all">{{ player.uuid }}</span>
-          <component :is="uuidCopied ? CheckCircle2 : Copy" :size="14" class="shrink-0 group-hover:text-purple-400" />
-        </div>
-
-        <!-- Action buttons -->
-        <div class="flex gap-3 mt-5 flex-wrap">
-          <!-- Whitelist -->
-          <button
-            v-if="!player.is_whitelisted"
-            class="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-gradient-to-br from-green-500 to-emerald-600 hover:opacity-90 transition-all"
-            @click="openWhitelistAdd"
-          >
-            <ShieldCheck :size="16" />
-            Anadir a Whitelist
-          </button>
-          <button
-            v-else
-            class="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border border-glass-border-subtle text-text-secondary hover:text-text-primary hover:bg-dark-600 transition-all"
-            @click="removeFromWhitelist"
-          >
-            <ShieldCheck :size="16" />
-            Quitar de Whitelist
-          </button>
-
-          <!-- Blacklist -->
-          <button
-            v-if="!player.is_blacklisted"
-            class="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-gradient-to-br from-red-500 to-red-600 hover:opacity-90 transition-all"
-            @click="openBlacklistAdd"
-          >
-            <ShieldOff :size="16" />
-            Anadir a Blacklist
-          </button>
-          <button
-            v-else
-            class="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border border-glass-border-subtle text-text-secondary hover:text-text-primary hover:bg-dark-600 transition-all"
-            @click="removeFromBlacklist"
-          >
-            <ShieldOff :size="16" />
-            Quitar de Blacklist
-          </button>
+            <!-- Blacklist -->
+            <button
+              v-if="!player.is_blacklisted"
+              class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium text-white bg-gradient-to-br from-red-500 to-red-600 hover:shadow-[0_4px_20px_rgba(239,68,68,0.3)] transition-all duration-300 active:scale-[0.97]"
+              @click="openBlacklistAdd"
+            >
+              <ShieldOff :size="14" />
+              Blacklist
+            </button>
+            <button
+              v-else
+              class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium border border-red-500/30 text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-all duration-300 active:scale-[0.97]"
+              @click="removeFromBlacklist"
+            >
+              <ShieldOff :size="14" />
+              Quitar BL
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- Right main content: data sections -->
-      <div class="glass-card p-6 space-y-6">
+      <!-- Right main content -->
+      <div class="space-y-4 min-w-0">
 
         <!-- Section 1: Account Status -->
-        <section>
-          <div class="flex items-center gap-2 text-text-secondary text-sm font-semibold uppercase tracking-wider mb-4 pb-3 border-b border-glass-border-subtle">
-            <CheckCircle2 :size="16" class="text-purple-400" />
+        <div class="glass-card p-5">
+          <div class="flex items-center gap-2 text-text-secondary text-xs font-semibold uppercase tracking-widest mb-4 pb-3 border-b border-glass-border-subtle">
+            <CheckCircle2 :size="14" class="text-purple-400" />
             Estado de Cuenta
           </div>
 
           <!-- Premium status box -->
           <div
             v-if="premiumInfo"
-            class="flex items-center gap-4 p-4 rounded-lg border"
+            class="flex items-center gap-4 p-4 rounded-xl border transition-all duration-300"
             :class="isPremium
               ? 'bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/25'
               : 'bg-gradient-to-br from-red-500/10 to-red-500/5 border-red-500/25'"
@@ -327,7 +340,7 @@ onMounted(() => {
             />
             <div
               v-else
-              class="w-14 h-14 rounded-lg gradient-primary flex items-center justify-center text-white font-semibold text-2xl"
+              class="w-14 h-14 rounded-xl gradient-primary flex items-center justify-center text-white font-semibold text-2xl shadow-glow"
             >
               {{ player.last_nick.charAt(0).toUpperCase() }}
             </div>
@@ -356,18 +369,18 @@ onMounted(() => {
               </div>
             </div>
           </div>
-        </section>
+        </div>
 
-        <!-- Section 2: General Info -->
-        <section>
-          <div class="flex items-center gap-2 text-text-secondary text-sm font-semibold uppercase tracking-wider mb-4 pb-3 border-b border-glass-border-subtle">
-            <Server :size="16" class="text-purple-400" />
+        <!-- Section 2: General Info grid -->
+        <div class="glass-card p-5">
+          <div class="flex items-center gap-2 text-text-secondary text-xs font-semibold uppercase tracking-widest mb-4 pb-3 border-b border-glass-border-subtle">
+            <Server :size="14" class="text-purple-400" />
             Informacion General
           </div>
 
-          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 stagger-children">
             <!-- Status -->
-            <div class="bg-white/[0.02] border border-glass-border-subtle rounded-lg p-3">
+            <div class="bg-white/[0.02] border border-glass-border-subtle rounded-xl p-3 hover:border-purple-500/20 transition-all duration-300">
               <div class="text-xs font-medium text-text-muted uppercase tracking-wider mb-1">Estado</div>
               <div class="text-sm font-medium" :class="player.is_online ? 'text-success' : 'text-text-muted'">
                 {{ player.is_online ? 'Online' : 'Offline' }}
@@ -375,7 +388,7 @@ onMounted(() => {
             </div>
 
             <!-- Whitelisted -->
-            <div class="bg-white/[0.02] border border-glass-border-subtle rounded-lg p-3">
+            <div class="bg-white/[0.02] border border-glass-border-subtle rounded-xl p-3 hover:border-purple-500/20 transition-all duration-300">
               <div class="text-xs font-medium text-text-muted uppercase tracking-wider mb-1">Whitelisted</div>
               <div class="text-sm font-medium" :class="player.is_whitelisted ? 'text-success' : ''">
                 {{ player.is_whitelisted ? 'Si' : 'No' }}
@@ -383,7 +396,7 @@ onMounted(() => {
             </div>
 
             <!-- Blacklisted -->
-            <div class="bg-white/[0.02] border border-glass-border-subtle rounded-lg p-3">
+            <div class="bg-white/[0.02] border border-glass-border-subtle rounded-xl p-3 hover:border-purple-500/20 transition-all duration-300">
               <div class="text-xs font-medium text-text-muted uppercase tracking-wider mb-1">Blacklisted</div>
               <div class="text-sm font-medium" :class="player.is_blacklisted ? 'text-error' : ''">
                 {{ player.is_blacklisted ? 'Si' : 'No' }}
@@ -391,31 +404,31 @@ onMounted(() => {
             </div>
 
             <!-- Total Connections -->
-            <div class="bg-white/[0.02] border border-glass-border-subtle rounded-lg p-3">
+            <div class="bg-white/[0.02] border border-glass-border-subtle rounded-xl p-3 hover:border-purple-500/20 transition-all duration-300">
               <div class="text-xs font-medium text-text-muted uppercase tracking-wider mb-1">Conexiones</div>
               <div class="text-sm font-medium text-text-primary">{{ player.total_connections ?? 0 }}</div>
             </div>
 
             <!-- First Seen -->
-            <div class="bg-white/[0.02] border border-glass-border-subtle rounded-lg p-3">
+            <div class="bg-white/[0.02] border border-glass-border-subtle rounded-xl p-3 hover:border-purple-500/20 transition-all duration-300">
               <div class="text-xs font-medium text-text-muted uppercase tracking-wider mb-1">Primera vez</div>
               <div class="text-sm font-medium text-text-primary">{{ formatDate(player.first_seen) }}</div>
             </div>
 
             <!-- Last Seen -->
-            <div class="bg-white/[0.02] border border-glass-border-subtle rounded-lg p-3">
+            <div class="bg-white/[0.02] border border-glass-border-subtle rounded-xl p-3 hover:border-purple-500/20 transition-all duration-300">
               <div class="text-xs font-medium text-text-muted uppercase tracking-wider mb-1">Ultima vez</div>
               <div class="text-sm font-medium text-text-primary">{{ formatDate(player.last_seen) }}</div>
             </div>
 
             <!-- Last IP -->
-            <div class="bg-white/[0.02] border border-glass-border-subtle rounded-lg p-3">
+            <div class="bg-white/[0.02] border border-glass-border-subtle rounded-xl p-3 hover:border-purple-500/20 transition-all duration-300">
               <div class="text-xs font-medium text-text-muted uppercase tracking-wider mb-1">Ultima IP</div>
               <div class="text-sm font-medium text-text-primary font-mono">{{ player.last_ip ?? 'N/A' }}</div>
             </div>
 
             <!-- Last Country -->
-            <div class="bg-white/[0.02] border border-glass-border-subtle rounded-lg p-3">
+            <div class="bg-white/[0.02] border border-glass-border-subtle rounded-xl p-3 hover:border-purple-500/20 transition-all duration-300">
               <div class="text-xs font-medium text-text-muted uppercase tracking-wider mb-1">Ultimo Pais</div>
               <div class="text-sm font-medium text-text-primary flex items-center gap-1.5">
                 <CountryFlag :code="player.last_country_code ?? ''" />
@@ -423,12 +436,12 @@ onMounted(() => {
               </div>
             </div>
           </div>
-        </section>
+        </div>
 
-        <!-- Section 3: Name History (Premium only) -->
-        <section>
-          <div class="flex items-center gap-2 text-text-secondary text-sm font-semibold uppercase tracking-wider mb-4 pb-3 border-b border-glass-border-subtle">
-            <History :size="16" class="text-purple-400" />
+        <!-- Section 3: Name History (glass-card wrapper) -->
+        <div class="glass-card p-5">
+          <div class="flex items-center gap-2 text-text-secondary text-xs font-semibold uppercase tracking-widest mb-4 pb-3 border-b border-glass-border-subtle">
+            <History :size="14" class="text-purple-400" />
             Historial de Nombres
           </div>
 
@@ -439,7 +452,7 @@ onMounted(() => {
 
           <!-- Loading -->
           <div v-else-if="nameHistoryLoading" class="flex justify-center py-8">
-            <div class="w-8 h-8 border-3 border-dark-600 border-t-purple-500 rounded-full animate-spin" />
+            <div class="w-8 h-8 border-[3px] border-dark-600 border-t-purple-500 rounded-full animate-spin" />
           </div>
 
           <!-- Empty -->
@@ -448,7 +461,7 @@ onMounted(() => {
           </div>
 
           <!-- History list -->
-          <div v-else class="max-h-[200px] overflow-y-auto space-y-2">
+          <div v-else class="max-h-[240px] overflow-y-auto space-y-2 stagger-children">
             <div
               v-for="entry in [...nameHistory].sort((a, b) => {
                 if (a.name === player!.last_nick && b.name !== player!.last_nick) return -1
@@ -458,8 +471,8 @@ onMounted(() => {
                 return dateB - dateA
               })"
               :key="entry.name + (entry.changedToAt ?? '')"
-              class="flex items-center gap-3 p-3 bg-white/[0.02] border border-glass-border-subtle rounded-lg hover:bg-hover hover:border-purple-500 transition-all"
-              :class="entry.name === player!.last_nick ? 'border-purple-500/40 bg-purple-500/5' : ''"
+              class="flex items-center gap-3 p-3 bg-white/[0.02] border rounded-xl hover:bg-hover hover:border-purple-500/30 transition-all duration-300"
+              :class="entry.name === player!.last_nick ? 'border-purple-500/30 bg-purple-500/5' : 'border-glass-border-subtle'"
             >
               <PlayerAvatar :uuid="uuid" :size="28" />
               <div class="flex-1 min-w-0">
@@ -473,24 +486,25 @@ onMounted(() => {
               </div>
             </div>
           </div>
-        </section>
+        </div>
 
-        <!-- Section 4: IP History -->
-        <section>
-          <div class="flex items-center gap-2 text-text-secondary text-sm font-semibold uppercase tracking-wider mb-4 pb-3 border-b border-glass-border-subtle">
-            <Globe :size="16" class="text-purple-400" />
-            Historial de IPs ({{ ips.length }})
+        <!-- Section 4: IP History (glass-card wrapper) -->
+        <div class="glass-card p-5">
+          <div class="flex items-center gap-2 text-text-secondary text-xs font-semibold uppercase tracking-widest mb-4 pb-3 border-b border-glass-border-subtle">
+            <Globe :size="14" class="text-purple-400" />
+            Historial de IPs
+            <span class="ml-auto text-text-muted font-mono text-xs tabular-nums">{{ ips.length }}</span>
           </div>
 
           <div v-if="ips.length === 0" class="text-center py-8 text-text-muted text-sm">
             Sin historial de IPs
           </div>
 
-          <div v-else class="max-h-[200px] overflow-y-auto space-y-2">
+          <div v-else class="max-h-[240px] overflow-y-auto space-y-2 stagger-children">
             <div
               v-for="ip in ips"
               :key="ip.ip"
-              class="flex items-center gap-3 p-3 bg-white/[0.02] border border-glass-border-subtle rounded-lg hover:bg-hover hover:border-purple-500 transition-all"
+              class="flex items-center gap-3 p-3 bg-white/[0.02] border border-glass-border-subtle rounded-xl hover:bg-hover hover:border-purple-500/30 transition-all duration-300"
             >
               <div class="flex-1 min-w-0">
                 <div class="text-sm font-medium text-text-primary font-mono">{{ ip.ip }}</div>
@@ -506,18 +520,18 @@ onMounted(() => {
               </div>
             </div>
           </div>
-        </section>
+        </div>
 
-        <!-- Section 5: Recent Connections -->
-        <section>
-          <div class="flex items-center gap-2 text-text-secondary text-sm font-semibold uppercase tracking-wider mb-4 pb-3 border-b border-glass-border-subtle">
-            <Link :size="16" class="text-purple-400" />
+        <!-- Section 5: Recent Connections (glass-card wrapper) -->
+        <div class="glass-card p-5">
+          <div class="flex items-center gap-2 text-text-secondary text-xs font-semibold uppercase tracking-widest mb-4 pb-3 border-b border-glass-border-subtle">
+            <Link :size="14" class="text-purple-400" />
             Ultimas Conexiones
           </div>
 
           <!-- Loading -->
           <div v-if="connectionsLoading" class="flex justify-center py-8">
-            <div class="w-8 h-8 border-3 border-dark-600 border-t-purple-500 rounded-full animate-spin" />
+            <div class="w-8 h-8 border-[3px] border-dark-600 border-t-purple-500 rounded-full animate-spin" />
           </div>
 
           <!-- Empty -->
@@ -541,7 +555,7 @@ onMounted(() => {
                 <tr
                   v-for="c in connections"
                   :key="c.id"
-                  class="hover:bg-hover transition-colors"
+                  class="hover:bg-hover transition-all duration-200"
                 >
                   <td class="p-3 text-sm text-text-primary">{{ formatDateShort(c.created_at) }}</td>
                   <td class="p-3 text-sm text-text-primary font-mono">{{ c.ip }}</td>
@@ -560,7 +574,7 @@ onMounted(() => {
                   </td>
                   <td class="p-3">
                     <button
-                      class="px-3 py-1.5 bg-dark-700 border border-glass-border-subtle rounded text-xs text-text-secondary hover:bg-purple-500 hover:border-purple-500 hover:text-white transition-all"
+                      class="glass-button-secondary px-3 py-1.5 text-xs hover:text-white hover:border-purple-500 hover:bg-purple-500/20 transition-all duration-300"
                       @click="openConnectionDetail(c.id)"
                     >
                       Ver
@@ -570,7 +584,7 @@ onMounted(() => {
               </tbody>
             </table>
           </div>
-        </section>
+        </div>
       </div>
     </div>
 
@@ -584,7 +598,8 @@ onMounted(() => {
     <BlacklistModal
       v-model="showBlacklistModal"
       mode="add"
-      variant="player"
+      variant="unified"
+      :prefill-player-name="player?.last_nick ?? ''"
       @close="showBlacklistModal = false"
       @submit="showBlacklistModal = false; loadPlayerData()"
     />

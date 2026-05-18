@@ -92,13 +92,13 @@ async function addToBlacklist() {
   >
     <LoadingSkeleton v-if="loading" :rows="4" />
 
-    <div v-else-if="player" class="space-y-4">
+    <div v-else-if="player" class="space-y-5">
       <!-- Player header -->
-      <div class="flex items-center gap-3">
-        <PlayerAvatar :uuid="uuid" :size="48" />
+      <div class="flex items-center gap-4 p-4 rounded-xl bg-purple-500/5 border border-purple-500/10">
+        <PlayerAvatar :uuid="uuid" :size="52" />
         <div class="flex-1 min-w-0">
           <div class="text-base font-semibold text-text-primary truncate">{{ player.last_nick }}</div>
-          <div class="text-xs text-text-muted font-mono truncate">{{ uuid }}</div>
+          <div class="text-xs text-text-muted font-mono truncate mt-0.5">{{ uuid }}</div>
         </div>
       </div>
 
@@ -121,8 +121,8 @@ async function addToBlacklist() {
       </div>
 
       <!-- Info grid -->
-      <div class="grid grid-cols-2 gap-2">
-        <div v-if="player.last_country" class="flex items-center gap-1.5 text-xs text-text-secondary">
+      <div class="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-dark-800/30 border border-glass-border-subtle">
+        <div v-if="player.last_country" class="flex items-center gap-2 text-xs text-text-secondary">
           <CountryFlag :code="player.last_country_code ?? ''" />
           {{ player.last_country }}
         </div>
@@ -130,28 +130,28 @@ async function addToBlacklist() {
           IP: {{ player.last_ip }}
         </div>
         <div class="text-xs text-text-muted">
-          Conexiones: {{ player.total_connections ?? 0 }}
+          Conexiones: <span class="text-text-secondary font-medium">{{ player.total_connections ?? 0 }}</span>
         </div>
       </div>
 
       <!-- Actions -->
-      <div class="flex gap-2 pt-3 border-t border-glass-border-subtle">
+      <div class="flex gap-2 pt-4 border-t border-glass-border-subtle">
         <button
-          class="flex-1 px-3 py-2 rounded-lg text-xs font-medium border border-glass-border-subtle text-text-secondary hover:text-text-primary hover:bg-dark-600 transition-all"
+          class="glass-button-secondary flex-1 px-3 py-2.5 text-xs font-medium hover:text-text-primary"
           @click="viewFullDetail"
         >
           Ver detalle completo
         </button>
         <button
           v-if="!player.is_whitelisted"
-          class="px-3 py-2 rounded-lg text-xs font-medium bg-green-500/15 text-green-400 hover:bg-green-500/25 transition-all"
+          class="px-3 py-2.5 rounded-xl text-xs font-semibold bg-green-500/10 text-green-400 border border-green-500/15 hover:bg-green-500/20 transition-all duration-200"
           @click="addToWhitelist"
         >
           Whitelist
         </button>
         <button
           v-if="!player.is_blacklisted"
-          class="px-3 py-2 rounded-lg text-xs font-medium bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-all"
+          class="glass-button-danger px-3 py-2.5 text-xs"
           @click="addToBlacklist"
         >
           Blacklist
@@ -160,7 +160,7 @@ async function addToBlacklist() {
     </div>
 
     <!-- Not found -->
-    <div v-else class="text-center py-6">
+    <div v-else class="text-center py-8">
       <p class="text-text-muted text-sm">Jugador no encontrado</p>
     </div>
   </BaseModal>

@@ -14,7 +14,7 @@ export type Role = (typeof ROLE_HIERARCHY)[number]
 export const SIDEBAR_SECTIONS = [
   { id: 'overview', label: 'Dashboard', icon: 'LayoutDashboard' },
   {
-    category: 'Gestion',
+    category: 'Jugadores',
     items: [
       { id: 'players', label: 'Jugadores', icon: 'Users' },
       { id: 'connections', label: 'Conexiones', icon: 'Link' },
@@ -22,17 +22,17 @@ export const SIDEBAR_SECTIONS = [
     ],
   },
   {
-    category: 'Seguridad',
+    category: 'Proteccion',
     items: [
       { id: 'whitelist', label: 'Whitelist', icon: 'ShieldCheck' },
       { id: 'blacklist', label: 'Blacklist', icon: 'ShieldOff' },
       { id: 'sanctions', label: 'Sanciones', icon: 'Gavel' },
-      { id: 'providers', label: 'Proveedores VPN', icon: 'ShieldAlert' },
     ],
   },
   {
-    category: 'Geolocalizacion',
+    category: 'Filtrado',
     items: [
+      { id: 'providers', label: 'Proveedores', icon: 'ShieldAlert' },
       { id: 'countries', label: 'Paises', icon: 'MapPin' },
       { id: 'continents', label: 'Continentes', icon: 'Globe2' },
     ],

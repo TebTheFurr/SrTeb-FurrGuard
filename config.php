@@ -100,10 +100,6 @@ function validateApiKey(): bool {
     }
 
     if ($apiKey === null) {
-        $apiKey = $_GET['api_key'] ?? $_POST['api_key'] ?? null;
-    }
-
-    if ($apiKey === null) {
         return false;
     }
 
@@ -120,11 +116,15 @@ function requireApiKey(): void {
 }
 
 function getDiscordLoginUrl(): string {
+    if (empty($_SESSION['oauth_state'])) {
+        $_SESSION['oauth_state'] = bin2hex(random_bytes(32));
+    }
     $params = http_build_query([
         'client_id' => DISCORD_CLIENT_ID,
         'redirect_uri' => DISCORD_REDIRECT_URI,
         'response_type' => 'code',
         'scope' => 'identify',
+        'state' => $_SESSION['oauth_state'],
     ]);
     return 'https://discord.com/api/oauth2/authorize?' . $params;
 }

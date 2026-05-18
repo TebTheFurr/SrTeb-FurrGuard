@@ -16,7 +16,7 @@ const flagUrl = computed(() => {
     v-if="code"
     :src="flagUrl"
     :alt="code.toUpperCase()"
-    class="inline-block w-6 h-4 rounded-sm object-cover"
+    class="inline-block w-6 h-4 rounded-sm object-cover shadow-sm hover:scale-110 transition-transform duration-200"
     loading="lazy"
   />
   <span v-else class="inline-block w-6 h-4 rounded-sm bg-dark-600"></span>

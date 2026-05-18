@@ -18,10 +18,10 @@ const iconMap: Record<ToastType, typeof CheckCircle> = {
 }
 
 const colorMap: Record<ToastType, string> = {
-  success: 'border-success/30 bg-success-dim',
-  error: 'border-error/30 bg-error-dim',
-  warning: 'border-warning/30 bg-warning-dim',
-  info: 'border-info/30 bg-info-dim',
+  success: 'border-l-2 border-l-success bg-dark-800/90',
+  error: 'border-l-2 border-l-error bg-dark-800/90',
+  warning: 'border-l-2 border-l-warning bg-dark-800/90',
+  info: 'border-l-2 border-l-info bg-dark-800/90',
 }
 
 const iconColorMap: Record<ToastType, string> = {
@@ -30,14 +30,23 @@ const iconColorMap: Record<ToastType, string> = {
   warning: 'text-warning',
   info: 'text-info',
 }
+
+const iconBgMap: Record<ToastType, string> = {
+  success: 'bg-success-dim',
+  error: 'bg-error-dim',
+  warning: 'bg-warning-dim',
+  info: 'bg-info-dim',
+}
 </script>
 
 <template>
   <div
-    class="flex items-start gap-3 px-4 py-3 rounded-lg border backdrop-blur-md shadow-lg min-w-[300px] max-w-[420px] animate-[fade-in-up_0.3s_ease-out]"
+    class="flex items-start gap-3 px-4 py-3 rounded-lg border border-glass-border-subtle backdrop-blur-md shadow-lg min-w-[300px] max-w-[420px] animate-[slide-up_0.3s_var(--ease-out-expo)]"
     :class="colorMap[toast.type]"
   >
-    <component :is="iconMap[toast.type]" :size="18" :class="iconColorMap[toast.type]" class="mt-0.5 shrink-0" />
+    <div class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5" :class="iconBgMap[toast.type]">
+      <component :is="iconMap[toast.type]" :size="14" :class="iconColorMap[toast.type]" />
+    </div>
     <div class="flex-1 min-w-0">
       <div class="text-sm font-medium text-text-primary">{{ toast.title }}</div>
       <div v-if="toast.message" class="text-xs text-text-secondary mt-0.5">{{ toast.message }}</div>

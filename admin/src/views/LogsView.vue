@@ -81,42 +81,58 @@ function formatDate(dateStr: string): string {
 
 function typeBadgeClass(type: string): string {
   const map: Record<string, string> = {
-    auth: 'bg-blue-500/15 text-blue-400',
-    player: 'bg-green-500/15 text-green-400',
-    whitelist: 'bg-emerald-500/15 text-emerald-400',
-    blacklist: 'bg-red-500/15 text-red-400',
-    settings: 'bg-amber-500/15 text-amber-400',
-    connection: 'bg-purple-500/15 text-purple-400',
+    auth: 'bg-blue-500/15 text-blue-400 border-blue-500/20',
+    player: 'bg-green-500/15 text-green-400 border-green-500/20',
+    whitelist: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20',
+    blacklist: 'bg-red-500/15 text-red-400 border-red-500/20',
+    settings: 'bg-amber-500/15 text-amber-400 border-amber-500/20',
+    connection: 'bg-purple-500/15 text-purple-400 border-purple-500/20',
   }
-  return map[type] ?? 'bg-gray-500/15 text-gray-400'
+  return map[type] ?? 'bg-gray-500/15 text-gray-400 border-gray-500/20'
+}
+
+function typeIcon(type: string): string {
+  const map: Record<string, string> = {
+    auth: '\u{1F511}',
+    player: '\u{1F3AE}',
+    whitelist: '\u{2705}',
+    blacklist: '\u{1F6AB}',
+    settings: '\u{2699}\u{FE0F}',
+    connection: '\u{1F310}',
+  }
+  return map[type] ?? '\u{1F4CB}'
 }
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="page-container">
     <!-- Page header -->
-    <div>
-      <h1 class="text-2xl font-display font-bold gradient-text">Logs de Actividad</h1>
-      <p class="text-sm text-text-muted mt-1">Registro de todas las acciones realizadas en el panel</p>
+    <div class="section-header">
+      <div>
+        <h1 class="text-2xl font-display font-bold gradient-text">Logs de Actividad</h1>
+        <p class="text-sm text-text-muted mt-1">Registro de todas las acciones realizadas en el panel</p>
+      </div>
     </div>
 
     <!-- Filters and search -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-      <FilterTabs
-        :filters="LOG_TYPES"
-        :model-value="currentFilter"
-        @update:model-value="onFilterChange"
-      />
-      <div class="w-full sm:w-72">
-        <SearchInput
-          :model-value="currentSearch"
-          placeholder="Buscar en logs..."
-          @update:model-value="onSearchChange"
+    <div class="glass-card p-4">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <FilterTabs
+          :filters="LOG_TYPES"
+          :model-value="currentFilter"
+          @update:model-value="onFilterChange"
         />
+        <div class="w-full sm:w-72">
+          <SearchInput
+            :model-value="currentSearch"
+            placeholder="Buscar en logs..."
+            @update:model-value="onSearchChange"
+          />
+        </div>
+        <span class="text-xs text-text-muted ml-auto whitespace-nowrap">
+          {{ filteredLogs.length }} registro{{ filteredLogs.length !== 1 ? 's' : '' }}
+        </span>
       </div>
-      <span class="text-xs text-text-muted">
-        {{ filteredLogs.length }} registro{{ filteredLogs.length !== 1 ? 's' : '' }}
-      </span>
     </div>
 
     <!-- Logs table -->
@@ -133,9 +149,10 @@ function typeBadgeClass(type: string): string {
 
       <template #cell-type="{ row }">
         <span
-          class="inline-flex px-2 py-0.5 rounded text-xs font-semibold uppercase"
+          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold uppercase border"
           :class="typeBadgeClass((row as any).type)"
         >
+          <span class="text-[10px]">{{ typeIcon((row as any).type) }}</span>
           {{ (row as any).type }}
         </span>
       </template>
@@ -149,46 +166,50 @@ function typeBadgeClass(type: string): string {
       </template>
 
       <template #cell-ip_address="{ row }">
-        <span class="text-xs text-text-muted font-mono">{{ (row as any).ip_address ?? '-' }}</span>
+        <span class="text-xs text-text-muted font-mono bg-dark-800/60 px-2 py-0.5 rounded-md">{{ (row as any).ip_address ?? '-' }}</span>
       </template>
     </DataTable>
 
     <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex items-center justify-between">
-      <span class="text-xs text-text-muted">
-        Pagina {{ currentPage }} de {{ totalPages }}
-      </span>
-      <div class="flex items-center gap-2">
-        <button
-          class="px-3 py-1.5 rounded-lg text-sm text-text-muted hover:text-text-primary hover:bg-dark-600 transition-colors disabled:opacity-30"
-          :disabled="currentPage <= 1"
-          @click="onPageChange(currentPage - 1)"
-        >
-          Anterior
-        </button>
-        <button
-          v-for="page in totalPages"
-          :key="page"
-          class="w-8 h-8 rounded-lg text-sm font-medium transition-colors"
-          :class="page === currentPage
-            ? 'bg-purple-500/20 text-purple-400'
-            : 'text-text-muted hover:text-text-primary hover:bg-dark-600'"
-          @click="onPageChange(page)"
-        >
-          {{ page }}
-        </button>
-        <button
-          class="px-3 py-1.5 rounded-lg text-sm text-text-muted hover:text-text-primary hover:bg-dark-600 transition-colors disabled:opacity-30"
-          :disabled="currentPage >= totalPages"
-          @click="onPageChange(currentPage + 1)"
-        >
-          Siguiente
-        </button>
+    <div v-if="totalPages > 1" class="glass-card p-4">
+      <div class="flex items-center justify-between">
+        <span class="text-xs text-text-muted">
+          Pagina {{ currentPage }} de {{ totalPages }}
+        </span>
+        <div class="flex items-center gap-1">
+          <button
+            class="glass-button-secondary px-3 py-1.5 text-sm disabled:opacity-30 hover:text-text-primary"
+            :disabled="currentPage <= 1"
+            @click="onPageChange(currentPage - 1)"
+          >
+            Anterior
+          </button>
+          <div class="flex items-center gap-1 mx-1">
+            <button
+              v-for="page in totalPages"
+              :key="page"
+              class="w-8 h-8 rounded-lg text-sm font-medium transition-all duration-200"
+              :class="page === currentPage
+                ? 'gradient-primary text-white shadow-[0_0_12px_rgba(139,92,246,0.3)]'
+                : 'text-text-muted hover:text-text-primary hover:bg-hover'"
+              @click="onPageChange(page)"
+            >
+              {{ page }}
+            </button>
+          </div>
+          <button
+            class="glass-button-secondary px-3 py-1.5 text-sm disabled:opacity-30 hover:text-text-primary"
+            :disabled="currentPage >= totalPages"
+            @click="onPageChange(currentPage + 1)"
+          >
+            Siguiente
+          </button>
+        </div>
       </div>
     </div>
 
     <!-- Error display -->
-    <p v-if="store.error && !store.loading" class="text-red-400 text-sm text-center">
+    <p v-if="store.error && !store.loading" class="text-red-400 text-sm text-center py-2">
       {{ store.error }}
     </p>
   </div>

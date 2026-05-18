@@ -7,6 +7,7 @@ import PaginationBar from '@/components/shared/PaginationBar.vue'
 import CountryFlag from '@/components/shared/CountryFlag.vue'
 import StatusBadge from '@/components/shared/StatusBadge.vue'
 import IPModal from '@/components/modals/IPModal.vue'
+import { Globe } from 'lucide-vue-next'
 
 const store = useIPsStore()
 
@@ -66,12 +67,17 @@ function formatDate(dateStr: string): string {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="page-container">
     <!-- Page header -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-display font-bold gradient-text">Direcciones IP</h1>
-        <p class="text-sm text-text-muted mt-1">Historial de direcciones IP vistas en el servidor</p>
+    <div class="section-header">
+      <div class="flex items-center gap-3">
+        <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
+          <Globe :size="20" class="text-cyan-400" />
+        </div>
+        <div>
+          <h1 class="text-2xl font-display font-bold gradient-text">Direcciones IP</h1>
+          <p class="text-sm text-text-muted mt-0.5">Historial de direcciones IP vistas en el servidor</p>
+        </div>
       </div>
       <div class="w-full sm:w-72">
         <SearchInput
@@ -83,58 +89,64 @@ function formatDate(dateStr: string): string {
     </div>
 
     <!-- IPs table -->
-    <DataTable
-      :columns="columns"
-      :rows="store.ips as unknown as Record<string, unknown>[]"
-      :loading="store.loading"
-      empty-message="No se encontraron IPs"
-      @row-click="onRowClick"
-    >
-      <template #cell-ip="{ row }">
-        <span class="text-sm text-text-primary font-mono">{{ (row as any).ip }}</span>
-      </template>
+    <div class="glass-card overflow-hidden">
+      <DataTable
+        :columns="columns"
+        :rows="store.ips as unknown as Record<string, unknown>[]"
+        :loading="store.loading"
+        empty-message="No se encontraron IPs"
+        @row-click="onRowClick"
+      >
+        <template #cell-ip="{ row }">
+          <span class="text-sm text-text-primary font-mono font-medium">{{ (row as any).ip }}</span>
+        </template>
 
-      <template #cell-country="{ row }">
-        <div class="flex items-center gap-2">
-          <CountryFlag :code="(row as any).country_code ?? ''" />
-          <span class="text-sm text-text-secondary">{{ (row as any).country ?? '-' }}</span>
-        </div>
-      </template>
+        <template #cell-country="{ row }">
+          <div class="flex items-center gap-2">
+            <CountryFlag :code="(row as any).country_code ?? ''" />
+            <span class="text-sm text-text-secondary">{{ (row as any).country ?? '-' }}</span>
+          </div>
+        </template>
 
-      <template #cell-isp="{ row }">
-        <span class="text-sm text-text-secondary">{{ (row as any).isp ?? '-' }}</span>
-      </template>
+        <template #cell-isp="{ row }">
+          <span class="text-sm text-text-secondary">{{ (row as any).isp ?? '-' }}</span>
+        </template>
 
-      <template #cell-connection_count="{ row }">
-        <span class="text-sm text-text-secondary font-mono">{{ (row as any).connection_count ?? 0 }}</span>
-      </template>
+        <template #cell-connection_count="{ row }">
+          <span class="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-md text-sm text-text-secondary font-mono bg-dark-700/50">
+            {{ (row as any).connection_count ?? 0 }}
+          </span>
+        </template>
 
-      <template #cell-player_count="{ row }">
-        <span class="text-sm text-text-secondary font-mono">{{ (row as any).player_count ?? 0 }}</span>
-      </template>
+        <template #cell-player_count="{ row }">
+          <span class="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-md text-sm text-text-secondary font-mono bg-dark-700/50">
+            {{ (row as any).player_count ?? 0 }}
+          </span>
+        </template>
 
-      <template #cell-status="{ row }">
-        <div class="flex items-center gap-1">
-          <StatusBadge
-            v-if="(row as any).is_blacklisted"
-            status="Blacklist"
-            variant="danger"
-          />
-          <StatusBadge
-            v-else-if="(row as any).is_whitelisted"
-            status="Whitelist"
-            variant="success"
-          />
-          <span v-else class="text-xs text-text-muted">-</span>
-        </div>
-      </template>
+        <template #cell-status="{ row }">
+          <div class="flex items-center gap-1.5">
+            <StatusBadge
+              v-if="(row as any).is_blacklisted"
+              status="Blacklist"
+              variant="danger"
+            />
+            <StatusBadge
+              v-else-if="(row as any).is_whitelisted"
+              status="Whitelist"
+              variant="success"
+            />
+            <span v-else class="text-xs text-text-tertiary">-</span>
+          </div>
+        </template>
 
-      <template #cell-first_seen="{ row }">
-        <span class="text-xs text-text-muted font-mono">
-          {{ formatDate((row as any).first_seen) }}
-        </span>
-      </template>
-    </DataTable>
+        <template #cell-first_seen="{ row }">
+          <span class="text-xs text-text-muted font-mono">
+            {{ formatDate((row as any).first_seen) }}
+          </span>
+        </template>
+      </DataTable>
+    </div>
 
     <!-- Pagination -->
     <PaginationBar

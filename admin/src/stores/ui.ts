@@ -29,6 +29,7 @@ export const useUIStore = defineStore('ui', () => {
   const sidebarCollapsed = ref(false)
   const mobileMenuOpen = ref(false)
   const globalLoading = ref(false)
+  const ipsRevealed = ref(false)
 
   // ---- Getters ----
   const isModalOpen = computed(() => activeModal.value !== null)
@@ -80,6 +81,10 @@ export const useUIStore = defineStore('ui', () => {
     globalLoading.value = value
   }
 
+  function toggleIpsRevealed(): void {
+    ipsRevealed.value = !ipsRevealed.value
+  }
+
   return {
     // State
     toasts,
@@ -88,6 +93,7 @@ export const useUIStore = defineStore('ui', () => {
     sidebarCollapsed,
     mobileMenuOpen,
     globalLoading,
+    ipsRevealed,
     // Getters
     isModalOpen,
     // Actions
@@ -99,5 +105,6 @@ export const useUIStore = defineStore('ui', () => {
     toggleMobileMenu,
     closeMobileMenu,
     setGlobalLoading,
+    toggleIpsRevealed,
   }
 })

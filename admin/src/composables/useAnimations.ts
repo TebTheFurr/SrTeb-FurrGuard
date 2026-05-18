@@ -25,11 +25,11 @@ export function useAnimations() {
 
     gsap.from(elements, {
       opacity: 0,
-      y: options.y ?? 20,
-      duration: options.duration ?? 0.5,
-      stagger: options.stagger ?? 0.1,
+      y: options.y ?? 16,
+      duration: options.duration ?? 0.4,
+      stagger: options.stagger ?? 0.06,
       delay: options.delay ?? 0,
-      ease: 'power2.out',
+      ease: 'power3.out',
     })
   }
 
@@ -40,13 +40,13 @@ export function useAnimations() {
   function counterAnimation(
     element: HTMLElement,
     targetValue: number,
-    duration = 1.5,
+    duration = 1.2,
   ): void {
     const obj = { value: 0 }
     gsap.to(obj, {
       value: targetValue,
       duration,
-      ease: 'power2.out',
+      ease: 'power3.out',
       onUpdate: () => {
         element.textContent = Math.round(obj.value).toLocaleString()
       },
@@ -72,9 +72,9 @@ export function useAnimations() {
             if (entry.isIntersecting) {
               gsap.from(entry.target, {
                 opacity: 0,
-                y: options.y ?? 30,
-                duration: options.duration ?? 0.6,
-                ease: 'power2.out',
+                y: options.y ?? 24,
+                duration: options.duration ?? 0.5,
+                ease: 'power3.out',
               })
               observer.unobserve(entry.target)
             }
@@ -98,7 +98,7 @@ export function useAnimations() {
       const y = e.clientY - rect.top
 
       gsap.to(element, {
-        boxShadow: `${x / rect.width * 40 - 20}px ${y / rect.height * 40 - 20}px 30px rgba(139, 92, 246, 0.25), 0 0 20px rgba(139, 92, 246, 0.15)`,
+        boxShadow: `${x / rect.width * 30 - 15}px ${y / rect.height * 30 - 15}px 40px rgba(139, 92, 246, 0.2), 0 0 20px rgba(139, 92, 246, 0.1)`,
         duration: 0.3,
         ease: 'power2.out',
       })
@@ -106,8 +106,8 @@ export function useAnimations() {
 
     const handleMouseLeave = () => {
       gsap.to(element, {
-        boxShadow: 'none',
-        duration: 0.3,
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1), 0 10px 40px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+        duration: 0.4,
         ease: 'power2.out',
       })
     }
@@ -124,11 +124,46 @@ export function useAnimations() {
     return cleanup
   }
 
+  /**
+   * Scale-in entrance animation for an element.
+   */
+  function scaleIn(element: HTMLElement, duration = 0.3): void {
+    gsap.from(element, {
+      opacity: 0,
+      scale: 0.92,
+      duration,
+      ease: 'back.out(1.4)',
+    })
+  }
+
+  /**
+   * Slide in from side with blur.
+   */
+  function slideInFromSide(
+    selector: string,
+    direction: 'left' | 'right' = 'left',
+    options: { duration?: number; stagger?: number } = {},
+  ): void {
+    const elements = document.querySelectorAll(selector)
+    if (elements.length === 0) return
+
+    const xStart = direction === 'left' ? -20 : 20
+
+    gsap.from(elements, {
+      opacity: 0,
+      x: xStart,
+      filter: 'blur(4px)',
+      duration: options.duration ?? 0.4,
+      stagger: options.stagger ?? 0.05,
+      ease: 'power3.out',
+    })
+  }
+
   // Auto-cleanup on component unmount
   onUnmounted(() => {
     cleanupFns.forEach((fn) => fn())
     cleanupFns.length = 0
   })
 
-  return { staggerReveal, counterAnimation, scrollReveal, cardGlow }
+  return { staggerReveal, counterAnimation, scrollReveal, cardGlow, scaleIn, slideInFromSide }
 }

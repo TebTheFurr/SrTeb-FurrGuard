@@ -25,10 +25,13 @@ const dotClasses: Record<string, string> = {
 
 <template>
   <span
-    class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
+    class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium"
     :class="variantClasses[variant]"
   >
-    <span class="w-1.5 h-1.5 rounded-full" :class="dotClasses[variant]"></span>
+    <span
+      class="w-1.5 h-1.5 rounded-full animate-[status-pulse_2s_ease-in-out_infinite]"
+      :class="dotClasses[variant]"
+    ></span>
     {{ status }}
   </span>
 </template>
