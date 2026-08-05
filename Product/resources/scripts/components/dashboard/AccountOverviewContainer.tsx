@@ -4,6 +4,7 @@ import { useStoreState, useStoreActions, Actions, State } from 'easy-peasy';
 import { ApplicationStore } from '@/state';
 import PageContentBlock from '@/components/elements/PageContentBlock';
 import FlashMessageRender from '@/components/FlashMessageRender';
+import PageHeader from '@/components/elements/ui/PageHeader';
 import { useLocation, Link } from 'react-router-dom';
 import MessageBox from '@/components/MessageBox';
 import styled, { keyframes } from 'styled-components/macro';
@@ -936,7 +937,7 @@ export default () => {
             case 'oauth':
                 return (
                     <>
-                        <SectionTitle>OAuth Connections</SectionTitle>
+                        <SectionTitle>{t('oauth_title')}</SectionTitle>
                         <SectionDescription>
                             Link external sign-in providers to this account or remove providers you no longer use.
                         </SectionDescription>
@@ -1198,7 +1199,9 @@ export default () => {
     return (
         <PageContentBlock title={t('title')}>
             <FlashMessageRender byKey={'account'} className="mb-6" />
-            
+
+            <PageHeader title={t('title')} description={t('subtitle')} />
+
             <Container>
                 <Sidebar>
                     <SidebarNav>

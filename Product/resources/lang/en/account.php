@@ -2,6 +2,8 @@
 
 return [
     'title' => 'Account Settings',
+    'subtitle' => 'Manage your profile, security, access keys and activity.',
+    'oauth_title' => 'OAuth Connections',
     'profile' => 'Profile',
     'profile_settings' => 'Profile Settings',
     'profile_description' => 'Update your account settings and preferences',

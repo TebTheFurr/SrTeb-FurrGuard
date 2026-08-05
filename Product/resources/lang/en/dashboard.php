@@ -2,6 +2,9 @@
 
 return [
     'title' => 'Dashboard',
+    'subtitle' => 'Your servers and folders.',
+    'usage_servers' => ':count server(s)',
+    'usage_folders' => ':count folder(s)',
     'search' => 'Search for servers...',
     'search_servers' => 'Search servers...',
     'no_matches' => 'There were no servers found matching the search criteria provided.',

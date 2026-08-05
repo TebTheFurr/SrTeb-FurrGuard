@@ -2,6 +2,8 @@
 
 return [
     'title' => 'Ajustes de la cuenta',
+    'subtitle' => 'Gestiona tu perfil, seguridad, claves de acceso y actividad.',
+    'oauth_title' => 'Conexiones OAuth',
     'profile' => 'Perfil',
     'profile_settings' => 'Ajustes del perfil',
     'profile_description' => 'Actualiza la configuración y preferencias de tu cuenta',

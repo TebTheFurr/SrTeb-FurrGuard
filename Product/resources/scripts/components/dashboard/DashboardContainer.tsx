@@ -13,6 +13,8 @@ import useFlash from '@/plugins/useFlash';
 import { useStoreState } from 'easy-peasy';
 import { usePersistedState } from '@/plugins/usePersistedState';
 import Switch from '@/components/elements/Switch';
+import PageHeader from '@/components/elements/ui/PageHeader';
+import MetaChip from '@/components/elements/ui/MetaChip';
 import tw from 'twin.macro';
 import useSWR from 'swr';
 import { PaginatedResult } from '@/api/http';
@@ -28,7 +30,7 @@ import {
     updateFolder,
 } from '@/api/folders';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHome, faSearch, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faFolder, faHome, faSearch, faServer, faTimes } from '@fortawesome/free-solid-svg-icons';
 import styled, { css } from 'styled-components/macro';
 import {
     closestCorners,
@@ -129,10 +131,6 @@ const SortableItemShell = styled.div<{ $isDragging?: boolean }>`
             cursor: grabbing;
             filter: drop-shadow(0 22px 34px rgba(0, 0, 0, 0.22));
         `}
-`;
-
-const ToggleBar = styled.div`
-    ${tw`mb-4 flex justify-end items-center gap-2 flex-wrap`};
 `;
 
 const TogglePanel = styled.div`
@@ -812,20 +810,40 @@ export default () => {
                 onDragEnd={handleDragEnd}
                 onDragCancel={handleDragCancel}
             >
-                {rootAdmin && (
-                    <ToggleBar>
-                        <TogglePanel>
-                            <ToggleText style={{ color: showOnlyAdmin ? 'var(--color-base)' : 'var(--color-muted)' }}>
-                                {showOnlyAdmin ? t('showing_others_servers') : t('showing_your_servers')}
-                            </ToggleText>
-                            <Switch
-                                name={'show_all_servers'}
-                                defaultChecked={showOnlyAdmin}
-                                onChange={() => setShowOnlyAdmin((s) => !s)}
-                            />
-                        </TogglePanel>
-                    </ToggleBar>
-                )}
+                <PageHeader
+                    title={t('title')}
+                    description={t('subtitle')}
+                    meta={
+                        servers && (
+                            <>
+                                <MetaChip icon={faServer}>
+                                    {t('usage_servers', { count: servers.items.length })}
+                                </MetaChip>
+                                {orderedFoldersToDisplay.length > 0 && (
+                                    <MetaChip icon={faFolder}>
+                                        {t('usage_folders', { count: orderedFoldersToDisplay.length })}
+                                    </MetaChip>
+                                )}
+                            </>
+                        )
+                    }
+                    actions={
+                        rootAdmin && (
+                            <TogglePanel>
+                                <ToggleText
+                                    style={{ color: showOnlyAdmin ? 'var(--color-base)' : 'var(--color-muted)' }}
+                                >
+                                    {showOnlyAdmin ? t('showing_others_servers') : t('showing_your_servers')}
+                                </ToggleText>
+                                <Switch
+                                    name={'show_all_servers'}
+                                    defaultChecked={showOnlyAdmin}
+                                    onChange={() => setShowOnlyAdmin((s) => !s)}
+                                />
+                            </TogglePanel>
+                        )
+                    }
+                />
 
                 <SearchContainer>
                     <SearchIconWrapper>

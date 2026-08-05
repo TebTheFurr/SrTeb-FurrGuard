@@ -2,6 +2,9 @@
 
 return [
     'title' => 'Panel',
+    'subtitle' => 'Tus servidores y carpetas.',
+    'usage_servers' => ':count servidor(es)',
+    'usage_folders' => ':count carpeta(s)',
     'search' => 'Buscar servidores...',
     'search_servers' => 'Buscar servidores...',
     'no_matches' => 'No se encontraron servidores que coincidan con los criterios de búsqueda.',
