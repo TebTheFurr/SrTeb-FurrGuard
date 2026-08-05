@@ -104,6 +104,11 @@
                 display: block;
             }
         </style>
+        {{-- Admin-authored footer CSS, shared with the client area. Sanitised in
+             AssetComposer via FooterSanitizer before it reaches this template. --}}
+        @if(!empty($siteConfiguration['footerCustomCss']))
+            <style>{!! $siteConfiguration['footerCustomCss'] !!}</style>
+        @endif
         <script>
             (function() {
                 function getStoredTheme() {
@@ -268,11 +273,21 @@
                 </section>
             </div>
             <footer class="main-footer">
-                <div class="pull-right small text-gray" style="margin-right:10px;margin-top:-7px;">
-                    <strong><i class="fa fa-fw {{ $appIsGit ? 'fa-git-square' : 'fa-code-fork' }}"></i></strong> {{ $appVersion }}<br />
-                    <strong><i class="fa fa-fw fa-clock-o"></i></strong> {{ round(microtime(true) - LARAVEL_START, 3) }}s
+                @if(!empty($siteConfiguration['copyrightText']))
+                    {{-- Same markup and wrapper class as the client area, so the
+                         admin-authored footer HTML/CSS renders identically here. --}}
+                    <div class="luna-footer" data-variant="page">
+                        {!! str_replace('{year}', date('Y'), $siteConfiguration['copyrightText']) !!}
+                    </div>
+                @endif
+                <div class="admin-footer-meta">
+                    <span>
+                        <i class="fa fa-fw {{ $appIsGit ? 'fa-git-square' : 'fa-code-fork' }}"></i>{{ $appVersion }}
+                    </span>
+                    <span>
+                        <i class="fa fa-fw fa-clock-o"></i>{{ round(microtime(true) - LARAVEL_START, 3) }}s
+                    </span>
                 </div>
-                Copyright &copy; 2015 - {{ date('Y') }} <a href="https://pterodactyl.io/">Pterodactyl Software</a>.
             </footer>
         </div>
         @section('footer-scripts')

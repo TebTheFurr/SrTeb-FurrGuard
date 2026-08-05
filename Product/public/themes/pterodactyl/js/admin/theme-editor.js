@@ -190,6 +190,30 @@ function boolToDataAttr(value) {
 
 var colorPresets = [
     {
+        id: 'tebby',
+        name: 'Tebby (violeta)',
+        colors: {
+            primary: 'hsl(258, 90%, 66%)',
+            secondary: 'hsl(263, 70%, 50%)',
+            neutral: 'hsl(260, 9%, 17%)',
+            base: 'hsl(0, 0%, 100%)',
+            muted: 'hsl(258, 10%, 64%)',
+            inverted: 'hsl(258, 8%, 46%)',
+            background: 'hsl(260, 12%, 4%)',
+            background_secondary: 'hsl(258, 11%, 8%)'
+        },
+        light_colors: {
+            primary: 'hsl(263, 70%, 55%)',
+            secondary: 'hsl(263, 70%, 47%)',
+            neutral: 'hsl(258, 14%, 85%)',
+            base: 'hsl(260, 20%, 12%)',
+            muted: 'hsl(258, 9%, 42%)',
+            inverted: 'hsl(258, 12%, 30%)',
+            background: 'hsl(258, 25%, 97%)',
+            background_secondary: 'hsl(258, 20%, 93%)'
+        }
+    },
+    {
         id: 'default',
         name: 'Default',
         colors: {
