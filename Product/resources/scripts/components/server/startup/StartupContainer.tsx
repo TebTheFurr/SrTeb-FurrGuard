@@ -16,6 +16,7 @@ import Input from '@/components/elements/Input';
 import setSelectedDockerImage from '@/api/server/setSelectedDockerImage';
 import updateStartupCommand from '@/api/server/updateStartupCommand';
 import InputSpinner from '@/components/elements/InputSpinner';
+import PageHeader from '@/components/elements/ui/PageHeader';
 import useFlash from '@/plugins/useFlash';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTerminal, faCube, faInfoCircle, faBox, faSave, faUndo } from '@fortawesome/free-solid-svg-icons';
@@ -209,6 +210,7 @@ const StartupContainer = () => {
         )
     ) : (
         <ServerContentBlock title={t('startup.title')} showFlashKey="startup:image">
+            <PageHeader title={t('startup.title')} description={t('startup.subtitle')} />
             <CommandDisplay>
                 <CommandHeader>
                     <div className="flex items-center">

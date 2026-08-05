@@ -15,6 +15,7 @@ import { Button } from '@/components/elements/button/index';
 import { ServerContext } from '@/state/server';
 import useFileManagerSwr from '@/plugins/useFileManagerSwr';
 import FileManagerStatus from '@/components/server/files/FileManagerStatus';
+import PageHeader from '@/components/elements/ui/PageHeader';
 import MassActionsBar from '@/components/server/files/MassActionsBar';
 import UploadButton from '@/components/server/files/UploadButton';
 import ImportFromUrlButton from '@/components/server/files/ImportFromUrlButton';
@@ -77,6 +78,11 @@ const ViewButton = styled.button<{ $isActive: boolean }>`
     &:not(:last-child) {
         border-right: 1px solid var(--color-neutral);
     }
+`;
+
+/** Labels collapse to icon-only on narrow screens so the toolbar still fits. */
+const ViewButtonLabel = styled.span`
+    ${tw`hidden sm:inline`};
 `;
 
 const TrashButton = styled.button`
@@ -858,41 +864,46 @@ export default () => {
                     onRestored={() => mutate()}
                 />
             )}
-            <div className="hidden md:flex items-center justify-between mb-4">
-                {trashEnabled && (
-                    <TrashButton onClick={() => setShowTrash(true)}>
-                        <FontAwesomeIcon icon={faTrash} />
-                        {t('files.trash')}
-                    </TrashButton>
-                )}
-                {!trashEnabled && <div />}
-                <ViewToggle>
-                        <ViewButton
-                            $isActive={viewMode === 'list'}
-                            onClick={() => setViewMode('list')}
-                            title={t('files.list_view')}
-                        >
-                            <FontAwesomeIcon icon={faList} />
-                            {t('files.list')}
-                        </ViewButton>
-                        <ViewButton
-                            $isActive={viewMode === 'grid'}
-                            onClick={() => setViewMode('grid')}
-                            title={t('files.grid_view')}
-                        >
-                            <FontAwesomeIcon icon={faGripHorizontal} />
-                            {t('files.grid')}
-                        </ViewButton>
-                        <ViewButton
-                            $isActive={viewMode === 'ide'}
-                            onClick={() => setViewMode('ide')}
-                            title={t('files.ide_view')}
-                        >
-                            <FontAwesomeIcon icon={faCode} />
-                            {t('files.ide')}
-                        </ViewButton>
-                </ViewToggle>
-            </div>
+            <PageHeader
+                title={t('files.title')}
+                description={t('files.subtitle')}
+                actions={
+                    <>
+                        {trashEnabled && (
+                            <TrashButton onClick={() => setShowTrash(true)} title={t('files.trash')}>
+                                <FontAwesomeIcon icon={faTrash} />
+                                <ViewButtonLabel>{t('files.trash')}</ViewButtonLabel>
+                            </TrashButton>
+                        )}
+                        <ViewToggle>
+                            <ViewButton
+                                $isActive={viewMode === 'list'}
+                                onClick={() => setViewMode('list')}
+                                title={t('files.list_view')}
+                            >
+                                <FontAwesomeIcon icon={faList} />
+                                <ViewButtonLabel>{t('files.list')}</ViewButtonLabel>
+                            </ViewButton>
+                            <ViewButton
+                                $isActive={viewMode === 'grid'}
+                                onClick={() => setViewMode('grid')}
+                                title={t('files.grid_view')}
+                            >
+                                <FontAwesomeIcon icon={faGripHorizontal} />
+                                <ViewButtonLabel>{t('files.grid')}</ViewButtonLabel>
+                            </ViewButton>
+                            <ViewButton
+                                $isActive={viewMode === 'ide'}
+                                onClick={() => setViewMode('ide')}
+                                title={t('files.ide_view')}
+                            >
+                                <FontAwesomeIcon icon={faCode} />
+                                <ViewButtonLabel>{t('files.ide')}</ViewButtonLabel>
+                            </ViewButton>
+                        </ViewToggle>
+                    </>
+                }
+            />
             {viewMode === 'list' && (
                 <ListViewContent trashEnabled={trashEnabled} onOpenTrash={() => setShowTrash(true)} />
             )}

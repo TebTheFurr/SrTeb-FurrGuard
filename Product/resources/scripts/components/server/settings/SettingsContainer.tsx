@@ -4,6 +4,7 @@ import { ServerContext } from '@/state/server';
 import { useStoreState } from 'easy-peasy';
 import RenameServerBox from '@/components/server/settings/RenameServerBox';
 import FlashMessageRender from '@/components/FlashMessageRender';
+import PageHeader from '@/components/elements/ui/PageHeader';
 import Can from '@/components/elements/Can';
 import ReinstallServerBox from '@/components/server/settings/ReinstallServerBox';
 import EggChangerBox from '@/components/server/settings/EggChangerBox';
@@ -887,7 +888,9 @@ export default () => {
     return (
         <ServerContentBlock title={t('settings.title')}>
             <FlashMessageRender byKey={'settings'} className="mb-6" />
-            
+
+            <PageHeader title={t('settings.title')} description={t('settings.subtitle')} />
+
             <Container>
                 <Sidebar>
                     <SidebarNav>

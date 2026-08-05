@@ -77,6 +77,7 @@ return [
 
     'files' => [
         'title' => 'File Manager',
+        'subtitle' => 'Browse, edit and upload your server files.',
         'search' => 'Search files...',
         'search_all' => 'Search all files and folders...',
         'name' => 'Name',
@@ -259,6 +260,7 @@ return [
 
     'settings' => [
         'title' => 'Settings',
+        'subtitle' => 'Name, description, SFTP details and server actions.',
         'tabs' => [
             'general' => 'General',
             'sftp' => 'SFTP Access',
@@ -343,6 +345,7 @@ return [
 
     'startup' => [
         'title' => 'Startup',
+        'subtitle' => 'Startup command, egg variables and Docker image.',
         'command' => 'Startup Command',
         'copy' => 'Copy',
         'save' => 'Save',

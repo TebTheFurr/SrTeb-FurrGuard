@@ -77,6 +77,7 @@ return [
 
     'files' => [
         'title' => 'Administrador de archivos',
+        'subtitle' => 'Explora, edita y sube los archivos de tu servidor.',
         'search' => 'Buscar archivos...',
         'search_all' => 'Buscar en todos los archivos y carpetas...',
         'name' => 'Nombre',
@@ -259,6 +260,7 @@ return [
 
     'settings' => [
         'title' => 'Ajustes',
+        'subtitle' => 'Nombre, descripción, datos SFTP y acciones del servidor.',
         'tabs' => [
             'general' => 'General',
             'sftp' => 'Acceso SFTP',
@@ -343,6 +345,7 @@ return [
 
     'startup' => [
         'title' => 'Arranque',
+        'subtitle' => 'Comando de arranque, variables del egg e imagen Docker.',
         'command' => 'Comando de arranque',
         'copy' => 'Copiar',
         'save' => 'Guardar',

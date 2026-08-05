@@ -3,6 +3,7 @@ import { useActivityLogs, ActivityLogFilters } from '@/api/server/activity';
 import ServerContentBlock from '@/components/elements/ServerContentBlock';
 import { useFlashKey } from '@/plugins/useFlash';
 import FlashMessageRender from '@/components/FlashMessageRender';
+import PageHeader from '@/components/elements/ui/PageHeader';
 import Spinner from '@/components/elements/Spinner';
 import PaginationFooter from '@/components/elements/table/PaginationFooter';
 import { Link } from 'react-router-dom';
@@ -284,20 +285,24 @@ export default () => {
     return (
         <ServerContentBlock title={t('activity.title', 'Activity Log')}>
             <FlashMessageRender byKey={'server:activity'} />
-            <div className="mb-6 sm:flex sm:justify-end">
-                <div className="relative w-full sm:max-w-xs">
-                    <SearchIcon 
-                        className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
-                        style={{ color: 'var(--color-muted)' }}
-                    />
-                    <SearchInput
-                        type="text"
-                        placeholder={t('activity.filter_username', 'Filter by username...')}
-                        value={usernameSearch}
-                        onChange={(e) => setUsernameSearch(e.target.value)}
-                    />
-                </div>
-            </div>
+            <PageHeader
+                title={t('activity.title', 'Activity Log')}
+                description={t('activity.subtitle', 'Every action taken on this server, and who took it.')}
+                actions={
+                    <div className="relative w-full sm:w-64">
+                        <SearchIcon
+                            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+                            style={{ color: 'var(--color-muted)' }}
+                        />
+                        <SearchInput
+                            type="text"
+                            placeholder={t('activity.filter_username', 'Filter by username...')}
+                            value={usernameSearch}
+                            onChange={(e) => setUsernameSearch(e.target.value)}
+                        />
+                    </div>
+                }
+            />
             {!data && isValidating ? (
                 <Spinner centered />
             ) : !data?.items.length ? (
