@@ -4,6 +4,7 @@ namespace Pterodactyl\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
+use Pterodactyl\Helpers\DefaultFooter;
 
 class ThemeSettings extends Model
 {
@@ -108,7 +109,8 @@ class ThemeSettings extends Model
                 'logo_url' => '',
                 'logo_url_dark' => '',
                 'logo_url_light' => '',
-                'copyright_text' => 'Pterodactyl® © 2015 - ' . date('Y'),
+                'copyright_text' => DefaultFooter::html(),
+                'footer_custom_css' => DefaultFooter::css(),
                 'discord_invite_link' => '',
                 'show_discord_navbar' => false,
                 'privacy_blur_server_ip' => false,

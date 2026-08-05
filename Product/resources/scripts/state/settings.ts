@@ -251,6 +251,7 @@ export interface SiteSettings {
     logoDark?: string;
     logoLight?: string;
     copyrightText?: string;
+    footerCustomCss?: string;
     discordInviteLink?: string;
     showDiscordNavbar?: boolean;
     privacyBlurServerIp?: boolean;

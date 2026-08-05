@@ -6,6 +6,8 @@ use Illuminate\View\View;
 use Pterodactyl\Services\Helpers\AssetHashService;
 use Pterodactyl\Contracts\Repository\SettingsRepositoryInterface;
 use Pterodactyl\Models\ThemeSettings;
+use Pterodactyl\Helpers\DefaultFooter;
+use Pterodactyl\Helpers\FooterSanitizer;
 
 class AssetComposer
 {
@@ -124,7 +126,8 @@ class AssetComposer
             'logo' => ThemeSettings::getValue('general.logo_url', ''),
             'logoDark' => ThemeSettings::getValue('general.logo_url_dark', ThemeSettings::getValue('general.logo_url', '')),
             'logoLight' => ThemeSettings::getValue('general.logo_url_light', ThemeSettings::getValue('general.logo_url', '')),
-            'copyrightText' => $generalSettings['copyright_text'] ?? 'Pterodactyl® © 2015 - ' . date('Y'),
+            'copyrightText' => FooterSanitizer::html($generalSettings['copyright_text'] ?? DefaultFooter::html()),
+            'footerCustomCss' => FooterSanitizer::css($generalSettings['footer_custom_css'] ?? DefaultFooter::css()),
             'discordInviteLink' => $generalSettings['discord_invite_link'] ?? '',
             'showDiscordNavbar' => $generalSettings['show_discord_navbar'] ?? false,
             'privacyBlurServerIp' => (bool) ($generalSettings['privacy_blur_server_ip'] ?? false),

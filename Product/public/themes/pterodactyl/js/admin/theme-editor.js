@@ -520,7 +520,12 @@ function replaceAll(str, replacements) {
     for (var key in replacements) {
         if (replacements.hasOwnProperty(key)) {
             var regex = new RegExp('\\{\\{' + key + '\\}\\}', 'g');
-            str = str.replace(regex, replacements[key]);
+            // Use a replacer function so "$" sequences inside user-authored
+            // values (footer HTML/CSS, etc.) are inserted literally instead of
+            // being interpreted as $&/$1/$$ replacement patterns.
+            str = str.replace(regex, (function (value) {
+                return function () { return value; };
+            })(replacements[key]));
         }
     }
     return str;
@@ -747,7 +752,8 @@ function renderGeneralTab() {
         'SITE_NAME': esc(general.site_name || ''),
         'LOGO_URL_DARK': esc(general.logo_url_dark || general.logo_url || ''),
         'LOGO_URL_LIGHT': esc(general.logo_url_light || general.logo_url || ''),
-        'COPYRIGHT_TEXT': esc(general.copyright_text || 'Pterodactyl® © 2015 - ' + new Date().getFullYear()),
+        'COPYRIGHT_TEXT': esc(general.copyright_text || (defaults.general && defaults.general.copyright_text) || ''),
+        'FOOTER_CUSTOM_CSS': esc(general.footer_custom_css || (defaults.general && defaults.general.footer_custom_css) || ''),
         'DISCORD_INVITE_LINK': esc(general.discord_invite_link || ''),
         'SHOW_DISCORD_CHECKED': boolToDataAttr(toBool(general.show_discord_navbar, false)),
         'PRIVACY_BLUR_SERVER_IP_CHECKED': boolToDataAttr(toBool(general.privacy_blur_server_ip, false))

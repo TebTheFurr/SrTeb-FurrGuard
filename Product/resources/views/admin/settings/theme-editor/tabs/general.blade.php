@@ -23,10 +23,36 @@
                 </div>
                 <p class="te-help-text">Recommended size: 200x50px. PNG or SVG preferred.</p>
             </div>
+        </div>
+    </div>
+    <div class="te-section">
+        <div class="te-section-header">
+            <span class="te-section-title">Footer</span>
+        </div>
+        <div class="te-section-content">
             <div class="te-field">
-                <label class="te-label">Copyright Text</label>
-                <input type="text" class="te-input" data-path="general.copyright_text" value="{{COPYRIGHT_TEXT}}">
-                <p class="te-help-text">The copyright text displayed in the footer of the panel.</p>
+                <label class="te-label">Footer HTML</label>
+                <textarea class="te-input te-textarea te-code" data-path="general.copyright_text" rows="14" spellcheck="false" placeholder="&copy; {year} My Company">{{COPYRIGHT_TEXT}}</textarea>
+                <p class="te-help-text">
+                    The footer shown at the bottom of the panel and on the login screens. Full HTML is supported
+                    (links, images, inline SVG, <code>data:</code> URIs). The token <code>{year}</code> is replaced
+                    with the current year. For security, <code>&lt;script&gt;</code>, <code>&lt;iframe&gt;</code>,
+                    <code>&lt;form&gt;</code>, inline <code>on*</code> handlers and <code>javascript:</code> URLs are
+                    stripped before the footer is rendered.
+                </p>
+            </div>
+            <div class="te-field">
+                <label class="te-label">Footer CSS</label>
+                <textarea class="te-input te-textarea te-code" data-path="general.footer_custom_css" rows="14" spellcheck="false" placeholder=".luna-footer { ... }">{{FOOTER_CUSTOM_CSS}}</textarea>
+                <p class="te-help-text">
+                    Injected into a single <code>&lt;style&gt;</code> element on every page. The footer markup is
+                    wrapped in <code>&lt;div class="luna-footer" data-variant="page|auth"&gt;</code>, so scope your
+                    rules to <code>.luna-footer</code> to avoid affecting the rest of the panel. Use the theme
+                    variables (<code>--color-background</code>, <code>--color-background-secondary</code>,
+                    <code>--color-base</code>, <code>--color-muted</code>, <code>--color-inverted</code>,
+                    <code>--color-neutral</code>, <code>--color-primary</code>, <code>--border-radius</code>) so the
+                    footer follows the panel palette and light/dark mode automatically.
+                </p>
             </div>
         </div>
     </div>

@@ -2,6 +2,7 @@ import React, { forwardRef, useEffect, useState } from 'react';
 import { Form } from 'formik';
 import styled from 'styled-components/macro';
 import FlashMessageRender from '@/components/FlashMessageRender';
+import PanelFooter from '@/components/elements/PanelFooter';
 import tw from 'twin.macro';
 import { useStoreState } from 'easy-peasy';
 import { ApplicationStore } from '@/state';
@@ -75,21 +76,6 @@ const Title = styled.h2`
 const Subtitle = styled.p`
     ${tw`text-sm mt-1`};
     color: var(--color-muted);
-`;
-
-const Footer = styled.p`
-    ${tw`text-center text-xs mt-6`};
-    color: var(--color-inverted);
-
-    a {
-        color: var(--color-inverted);
-        text-decoration: none;
-        transition: color 0.15s ease;
-
-        &:hover {
-            color: var(--color-primary);
-        }
-    }
 `;
 
 const authBackgroundStyles = (props: AuthBackgroundProps) => props.$authBgImage ? `
@@ -276,7 +262,6 @@ const WideCardBrand = styled.div`
 const CenteredLayout = forwardRef<HTMLFormElement, Props>(({ title, subtitle, children, ...props }, ref) => {
     const name = useStoreState((state) => state.settings.data!.name);
     const activeLogo = useActiveLogo();
-    const copyrightText = useStoreState((state: ApplicationStore) => state.settings.data?.copyrightText);
     const authBackground = useAuthBackground();
 
     return (
@@ -297,7 +282,7 @@ const CenteredLayout = forwardRef<HTMLFormElement, Props>(({ title, subtitle, ch
                         {children}
                     </CenteredFormBox>
                 </Form>
-                <Footer dangerouslySetInnerHTML={{ __html: copyrightText || `&copy; ${new Date().getFullYear()} <a rel="noopener nofollow noreferrer" href="https://pterodactyl.io" target="_blank">Pterodactyl Software</a>` }} />
+                <PanelFooter variant={'auth'} />
             </CenteredCard>
         </CenteredWrapper>
     );
@@ -306,7 +291,6 @@ const CenteredLayout = forwardRef<HTMLFormElement, Props>(({ title, subtitle, ch
 const SplitLeftLayout = forwardRef<HTMLFormElement, Props>(({ title, subtitle, children, ...props }, ref) => {
     const name = useStoreState((state) => state.settings.data!.name);
     const activeLogo = useActiveLogo();
-    const copyrightText = useStoreState((state: ApplicationStore) => state.settings.data?.copyrightText);
     const components = useStoreState((state: ApplicationStore) => state.settings.data?.components);
     const bgType = components?.loginPanelBgType ?? 'image';
     const bgImage = components?.loginPanelBgImage ?? 'https://static0.gamerantimages.com/wordpress/wp-content/uploads/2022/08/minecraft-4.jpg?q=50&fit=crop&w=1296&h=891&dpr=1.5';
@@ -333,7 +317,7 @@ const SplitLeftLayout = forwardRef<HTMLFormElement, Props>(({ title, subtitle, c
                             {children}
                         </SplitFormBox>
                     </Form>
-                    <Footer dangerouslySetInnerHTML={{ __html: copyrightText || `&copy; ${new Date().getFullYear()} <a rel="noopener nofollow noreferrer" href="https://pterodactyl.io" target="_blank">Pterodactyl Software</a>` }} />
+                    <PanelFooter variant={'auth'} />
                 </SplitFormContainer>
             </SplitLeftPanel>
             <SplitRightPanel $bgType={bgType} $bgImage={bgImage} $gradientStart={gradientStart} $gradientEnd={gradientEnd} />
@@ -344,7 +328,6 @@ const SplitLeftLayout = forwardRef<HTMLFormElement, Props>(({ title, subtitle, c
 const MinimalLayout = forwardRef<HTMLFormElement, Props>(({ title, subtitle, children, ...props }, ref) => {
     const name = useStoreState((state) => state.settings.data!.name);
     const activeLogo = useActiveLogo();
-    const copyrightText = useStoreState((state: ApplicationStore) => state.settings.data?.copyrightText);
     const authBackground = useAuthBackground();
 
     return (
@@ -365,7 +348,7 @@ const MinimalLayout = forwardRef<HTMLFormElement, Props>(({ title, subtitle, chi
                         {children}
                     </MinimalFormArea>
                 </Form>
-                <Footer dangerouslySetInnerHTML={{ __html: copyrightText || `&copy; ${new Date().getFullYear()} <a rel="noopener nofollow noreferrer" href="https://pterodactyl.io" target="_blank">Pterodactyl Software</a>` }} />
+                <PanelFooter variant={'auth'} />
             </MinimalContainer>
         </MinimalWrapper>
     );
@@ -374,7 +357,6 @@ const MinimalLayout = forwardRef<HTMLFormElement, Props>(({ title, subtitle, chi
 const SplitCardLayout = forwardRef<HTMLFormElement, Props>(({ title, subtitle, children, ...props }, ref) => {
     const name = useStoreState((state) => state.settings.data!.name);
     const activeLogo = useActiveLogo();
-    const copyrightText = useStoreState((state: ApplicationStore) => state.settings.data?.copyrightText);
     const components = useStoreState((state: ApplicationStore) => state.settings.data?.components);
     const bgType = components?.loginPanelBgType ?? 'image';
     const bgImage = components?.loginPanelBgImage ?? 'https://static0.gamerantimages.com/wordpress/wp-content/uploads/2022/08/minecraft-4.jpg?q=50&fit=crop&w=1296&h=891&dpr=1.5';
@@ -399,7 +381,7 @@ const SplitCardLayout = forwardRef<HTMLFormElement, Props>(({ title, subtitle, c
                         )}
                         {children}
                     </Form>
-                    <Footer style={{ marginTop: '2rem' }} dangerouslySetInnerHTML={{ __html: copyrightText || `&copy; ${new Date().getFullYear()} <a rel="noopener nofollow noreferrer" href="https://pterodactyl.io" target="_blank">Pterodactyl Software</a>` }} />
+                    <PanelFooter variant={'auth'} style={{ marginTop: '2rem' }} />
                 </WideCardLeft>
                 <WideCardRight $bgType={bgType} $bgImage={bgImage} $gradientStart={gradientStart} $gradientEnd={gradientEnd} />
             </WideCard>
