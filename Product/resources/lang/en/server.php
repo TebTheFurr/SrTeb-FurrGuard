@@ -359,6 +359,18 @@ return [
             'title' => 'No Allocations',
             'message' => 'This server has no additional network allocations.',
         ],
+        'allocations_title' => 'Port Allocations',
+        'allocations_hint' => 'Addresses and ports players can use to reach your server.',
+        'domain_title' => 'Domain Configuration',
+        'domain_hint' => 'Generate the DNS records needed to use your own domain.',
+        'domain_label' => 'Your Domain',
+        'game_type' => 'Game Type',
+        'current_address' => 'Current Server Address',
+        'dns_title' => 'Required DNS Records',
+        'dns_hint' => 'Create these in your domain provider\'s DNS panel.',
+        'dns_type' => 'Type',
+        'dns_name' => 'Name / Host',
+        'dns_content' => 'Content / Value',
     ],
 
     'dashboard' => [

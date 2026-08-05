@@ -12,6 +12,7 @@ import RamUpgradeAlert from '@/components/server/console/RamUpgradeAlert';
 import { Alert } from '@/components/elements/alert';
 import UptimeDisplay from '@/components/server/console/UptimeDisplay';
 import StatusBadge from '@/components/server/console/StatusBadge';
+import PageHeader from '@/components/elements/ui/PageHeader';
 
 const ServerConsoleContainer = () => {
     const { t } = useTranslation('server');
@@ -34,30 +35,29 @@ const ServerConsoleContainer = () => {
                 </Alert>
             )}
             
-            <div className={'mb-4'}>
-                <h1
-                    className={'font-header font-medium text-2xl leading-tight truncate'}
-                    style={{ color: 'var(--color-base)' }}
-                >
-                    {name}
-                </h1>
-                <div className={'flex items-center gap-2 mt-2'}>
-                    <StatusBadge />
-                    {status !== null && status !== 'offline' && (
-                        <span className="text-sm" style={{ color: 'var(--color-muted)' }}>•</span>
-                    )}
-                    <UptimeDisplay />
-                </div>
-            </div>
-            
+            <PageHeader
+                title={name}
+                meta={
+                    <>
+                        <StatusBadge />
+                        {status !== null && status !== 'offline' && (
+                            <span className={'text-sm'} style={{ color: 'var(--color-inverted)' }}>
+                                •
+                            </span>
+                        )}
+                        <UptimeDisplay />
+                    </>
+                }
+            />
+
+            <ServerDetailsBlock className={'mb-4'} />
+
             <Spinner.Suspense>
                 <Console />
             </Spinner.Suspense>
             
             <RamUpgradeAlert />
-            
-            <ServerDetailsBlock className={'mt-4'} />
-            
+
             <div className={'grid grid-cols-1 md:grid-cols-3 gap-4 mt-4'}>
                 <Spinner.Suspense>
                     <StatGraphs />

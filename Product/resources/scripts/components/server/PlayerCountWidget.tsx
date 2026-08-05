@@ -6,7 +6,7 @@ import { faUsers } from '@fortawesome/free-solid-svg-icons';
 import { ApplicationStore } from '../../state';
 import { Server } from '../../api/server/getServer';
 import getMinecraftStatus, { MinecraftStatus } from '../../api/server/getMinecraftStatus';
-import StatBlock from './console/StatBlock';
+import StatTile from '@/components/elements/ui/StatTile';
 import styles from './PlayerCountWidget.module.css';
 
 type PlayerCountWidgetVariant = 'sidebar' | 'stat' | 'card';
@@ -85,22 +85,13 @@ const formatSidebarPlayers = (status: MinecraftStatus | null, hasFetched: boolea
     return `${status.players.online}/0 players`;
 };
 
-const getAlarmColor = (status: MinecraftStatus | null): string | undefined => {
+/** Slot fill percentage, or null when the server is offline or has no cap. */
+const getFillPercentage = (status: MinecraftStatus | null): number | null => {
     if (!status?.online || status.players.max <= 0) {
-        return undefined;
+        return null;
     }
 
-    const usage = status.players.online / status.players.max;
-
-    if (usage >= 0.9) {
-        return 'bg-red-500';
-    }
-
-    if (usage >= 0.8) {
-        return 'bg-yellow-500';
-    }
-
-    return undefined;
+    return (status.players.online / status.players.max) * 100;
 };
 
 const PlayerCountWidget = ({ server, variant, className }: PlayerCountWidgetProps) => {
@@ -164,10 +155,19 @@ const PlayerCountWidget = ({ server, variant, className }: PlayerCountWidgetProp
     const value = formatPlayers(status, hasFetched);
 
     if (variant === 'stat') {
+        const isOnline = hasFetched && !!status?.online;
+        const hasCap = isOnline && status!.players.max > 0;
+
         return (
-            <StatBlock title={'Players'} icon={faUsers} color={getAlarmColor(status)} className={className}>
-                {value}
-            </StatBlock>
+            <StatTile
+                icon={faUsers}
+                label={'Players'}
+                value={isOnline ? String(status!.players.online) : value}
+                limit={hasCap ? String(status!.players.max) : null}
+                percentage={getFillPercentage(status)}
+                hideLimit={!hasCap}
+                className={className}
+            />
         );
     }
 

@@ -1,47 +1,34 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStoreState } from 'easy-peasy';
-import {
-    faServer,
-    faCubes,
-    faDatabase,
-    faNetworkWired,
-} from '@fortawesome/free-solid-svg-icons';
+import { faHdd, faMemory, faMicrochip, faNetworkWired } from '@fortawesome/free-solid-svg-icons';
 import { bytesToString, ip, mbToBytes } from '@/lib/formatters';
 import { ServerContext } from '@/state/server';
 import { SocketEvent, SocketRequest } from '@/components/server/events';
-import StatBlock from '@/components/server/console/StatBlock';
 import useWebsocketEvent from '@/plugins/useWebsocketEvent';
 import classNames from 'classnames';
 import PrivacyServerHostBlur from '@/components/elements/PrivacyServerHostBlur';
 import { ApplicationStore } from '@/state';
 import PlayerCountWidget from '../PlayerCountWidget';
+import StatTile from '@/components/elements/ui/StatTile';
+import { percentOf } from '@/components/elements/ui/tokens';
+import styled from 'styled-components/macro';
+import tw from 'twin.macro';
 
 type Stats = Record<'memory' | 'cpu' | 'disk', number>;
 
-const getBackgroundColor = (value: number, max: number | null): string | undefined => {
-    const delta = !max ? 0 : value / max;
+const Grid = styled.div<{ $columns: number }>`
+    ${tw`grid gap-3`};
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 
-    if (delta > 0.8) {
-        if (delta > 0.9) {
-            return 'bg-red-500';
-        }
-        return 'bg-yellow-500';
+    @media (min-width: 1024px) {
+        grid-template-columns: repeat(${({ $columns }) => $columns}, minmax(0, 1fr));
     }
+`;
 
-    return undefined;
-};
-
-const Limit = ({ limit, children }: { limit: string | null; children: React.ReactNode }) => (
-    <>
-        {children}
-        {limit && (
-            <span className={'ml-1 text-[70%] select-none'} style={{ color: 'var(--color-inverted)' }}>
-                / {limit}
-            </span>
-        )}
-    </>
-);
+const Offline = styled.span`
+    color: var(--color-inverted);
+`;
 
 const ServerDetailsBlock = ({ className }: { className?: string }) => {
     const { t } = useTranslation('server');
@@ -59,6 +46,8 @@ const ServerDetailsBlock = ({ className }: { className?: string }) => {
         playerCountConfig?.placement === 'stat_block' &&
         playerCountAllowedEggs.length > 0 &&
         playerCountAllowedEggs.map((eggId) => Number(eggId)).includes(Number(serverData.eggId));
+
+    const isOffline = status === 'offline';
 
     const textLimits = useMemo(
         () => ({
@@ -94,49 +83,63 @@ const ServerDetailsBlock = ({ className }: { className?: string }) => {
     }, [instance, connected]);
 
     useWebsocketEvent(SocketEvent.STATS, (data) => {
-        let stats: any = {};
+        let values: any = {};
         try {
-            stats = JSON.parse(data);
+            values = JSON.parse(data);
         } catch (e) {
             return;
         }
 
         setStats({
-            memory: stats.memory_bytes,
-            cpu: stats.cpu_absolute,
-            disk: stats.disk_bytes,
+            memory: values.memory_bytes,
+            cpu: values.cpu_absolute,
+            disk: values.disk_bytes,
         });
     });
 
+    // A stopped server reports no live usage, so the bars are hidden rather
+    // than pinned at zero, which would read as "measured and empty".
+    const cpuPercentage = isOffline ? null : percentOf(stats.cpu, limits.cpu);
+    const memoryPercentage = isOffline ? null : percentOf(stats.memory, mbToBytes(limits.memory));
+    const diskPercentage = percentOf(stats.disk, mbToBytes(limits.disk));
+
     return (
         <div className={classNames(className)}>
-            <div className={classNames('grid grid-cols-1 sm:grid-cols-2 gap-3', showPlayerCountStat ? 'lg:grid-cols-5' : 'lg:grid-cols-4')}>
-                <StatBlock icon={faServer} title={t('console.details.cpu')} color={getBackgroundColor(stats.cpu, limits.cpu)}>
-                    {status === 'offline' ? (
-                        <span style={{ color: 'var(--color-inverted)' }}>{t('console.details.offline')}</span>
-                    ) : (
-                        <Limit limit={textLimits.cpu}>{stats.cpu.toFixed(2)}%</Limit>
-                    )}
-                </StatBlock>
-                <StatBlock
-                    icon={faCubes}
-                    title={t('console.details.memory')}
-                    color={getBackgroundColor(stats.memory / 1024, limits.memory * 1024)}
-                >
-                    {status === 'offline' ? (
-                        <span style={{ color: 'var(--color-inverted)' }}>{t('console.details.offline')}</span>
-                    ) : (
-                        <Limit limit={textLimits.memory}>{bytesToString(stats.memory)}</Limit>
-                    )}
-                </StatBlock>
-                <StatBlock icon={faDatabase} title={t('console.details.disk')} color={getBackgroundColor(stats.disk / 1024, limits.disk * 1024)}>
-                    <Limit limit={textLimits.disk}>{bytesToString(stats.disk)}</Limit>
-                </StatBlock>
-                <StatBlock icon={faNetworkWired} title={t('console.details.address')} copyOnClick={allocation}>
-                    <PrivacyServerHostBlur when={blurAllocationHost}>{allocation}</PrivacyServerHostBlur>
-                </StatBlock>
-                {showPlayerCountStat && <PlayerCountWidget server={serverData} variant="stat" />}
-            </div>
+            <Grid $columns={showPlayerCountStat ? 5 : 4}>
+                <StatTile
+                    icon={faMicrochip}
+                    label={t('console.details.cpu')}
+                    value={isOffline ? <Offline>{t('console.details.offline')}</Offline> : `${stats.cpu.toFixed(2)}%`}
+                    limit={textLimits.cpu}
+                    percentage={cpuPercentage}
+                    hideLimit={isOffline}
+                />
+                <StatTile
+                    icon={faMemory}
+                    label={t('console.details.memory')}
+                    value={
+                        isOffline ? <Offline>{t('console.details.offline')}</Offline> : bytesToString(stats.memory)
+                    }
+                    limit={textLimits.memory}
+                    percentage={memoryPercentage}
+                    hideLimit={isOffline}
+                />
+                <StatTile
+                    icon={faHdd}
+                    label={t('console.details.disk')}
+                    value={bytesToString(stats.disk)}
+                    limit={textLimits.disk}
+                    percentage={diskPercentage}
+                />
+                <StatTile
+                    icon={faNetworkWired}
+                    label={t('console.details.address')}
+                    value={<PrivacyServerHostBlur when={blurAllocationHost}>{allocation}</PrivacyServerHostBlur>}
+                    copyValue={allocation}
+                    hideLimit
+                />
+                {showPlayerCountStat && <PlayerCountWidget server={serverData} variant='stat' />}
+            </Grid>
         </div>
     );
 };

@@ -359,6 +359,18 @@ return [
             'title' => 'Sin asignaciones',
             'message' => 'Este servidor no tiene asignaciones de red adicionales.',
         ],
+        'allocations_title' => 'Asignaciones de puertos',
+        'allocations_hint' => 'Direcciones y puertos por los que se puede conectar a tu servidor.',
+        'domain_title' => 'Configuración de dominio',
+        'domain_hint' => 'Genera los registros DNS necesarios para usar tu propio dominio.',
+        'domain_label' => 'Tu dominio',
+        'game_type' => 'Tipo de juego',
+        'current_address' => 'Dirección actual del servidor',
+        'dns_title' => 'Registros DNS necesarios',
+        'dns_hint' => 'Créalos en el panel DNS de tu proveedor de dominio.',
+        'dns_type' => 'Tipo',
+        'dns_name' => 'Nombre / Host',
+        'dns_content' => 'Contenido / Valor',
     ],
 
     'dashboard' => [

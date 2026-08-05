@@ -24,6 +24,10 @@ import styled, { keyframes, css } from 'styled-components/macro';
 import { useStoreState } from 'easy-peasy';
 import { ApplicationStore } from '@/state';
 import PlayerCountWidget from '../server/PlayerCountWidget';
+import StatTile from '@/components/elements/ui/StatTile';
+import MetaChip from '@/components/elements/ui/MetaChip';
+import DataField from '@/components/elements/ui/DataField';
+import { percentOf } from '@/components/elements/ui/tokens';
 
 declare global {
     interface Window {
@@ -35,10 +39,6 @@ declare global {
 
 const isAlarmState = (current: number, limit: number): boolean => limit > 0 && current / (limit * 1024 * 1024) >= 0.9;
 
-/** Usage percentage, or null when the resource is unlimited (limit of 0). */
-const percentOf = (used: number, limit: number): number | null => (limit > 0 ? (used / limit) * 100 : null);
-
-const UNLIMITED = '∞';
 
 const pulse = keyframes`
     0%, 100% { opacity: 1; }
@@ -296,81 +296,9 @@ const DetailedTagRow = styled.div`
     ${tw`flex flex-wrap items-center gap-x-3 gap-y-1 mt-1`};
 `;
 
-const DetailedTag = styled.span<{ $warning?: boolean }>`
-    ${tw`inline-flex items-center gap-1.5 text-xs min-w-0`};
-    color: ${(props) => (props.$warning ? '#eab308' : 'var(--color-muted)')};
-
-    svg {
-        ${tw`flex-shrink-0`};
-        font-size: 0.7rem;
-        opacity: 0.85;
-    }
-
-    > span {
-        ${tw`truncate`};
-    }
-`;
-
-const DetailedAddressRow = styled.div`
-    ${tw`flex items-center gap-2 px-2.5 py-2 min-w-0 rounded-[var(--border-radius)]`};
-    background-color: var(--color-background);
-    border: 1px solid var(--color-neutral);
-
-    svg {
-        ${tw`flex-shrink-0`};
-        font-size: 0.75rem;
-        color: var(--color-muted);
-    }
-`;
-
-const DetailedAddress = styled.span`
-    ${tw`text-xs font-medium truncate`};
-    color: var(--color-base);
-`;
-
 const DetailedStatsGrid = styled.div`
     ${tw`grid gap-2`};
     grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
-`;
-
-const DetailedStatCard = styled.div<{ $alarm?: boolean }>`
-    ${tw`p-2.5 flex flex-col gap-1.5 rounded-[var(--border-radius)]`};
-    background-color: ${(props) => (props.$alarm ? 'rgba(239, 68, 68, 0.1)' : 'var(--color-background)')};
-    border: 1px solid ${(props) => (props.$alarm ? 'rgba(239, 68, 68, 0.3)' : 'var(--color-neutral)')};
-`;
-
-const DetailedStatLabel = styled.span<{ $alarm?: boolean }>`
-    ${tw`inline-flex items-center gap-1.5 text-xs`};
-    color: ${(props) => (props.$alarm ? '#ef4444' : 'var(--color-muted)')};
-
-    svg {
-        font-size: 0.7rem;
-    }
-`;
-
-const DetailedStatFigures = styled.div`
-    ${tw`flex items-baseline gap-1 min-w-0`};
-`;
-
-const DetailedStatValue = styled.span<{ $alarm?: boolean }>`
-    ${tw`text-sm font-semibold truncate`};
-    color: ${(props) => (props.$alarm ? '#ef4444' : 'var(--color-base)')};
-`;
-
-const DetailedStatLimit = styled.span`
-    ${tw`text-xs flex-shrink-0`};
-    color: var(--color-muted);
-`;
-
-const DetailedTrack = styled.div`
-    ${tw`w-full h-1 rounded-full overflow-hidden`};
-    background-color: var(--color-neutral);
-`;
-
-const DetailedBar = styled.div<{ $percentage: number; $alarm?: boolean }>`
-    ${tw`h-full rounded-full transition-all duration-300`};
-    width: ${(props) => Math.max(Math.min(props.$percentage, 100), 0)}%;
-    background-color: ${(props) => (props.$alarm ? '#ef4444' : 'var(--color-primary)')};
 `;
 
 const DetailedFooter = styled.div`
@@ -641,21 +569,18 @@ export default ({
                     <DetailedMeta>
                         <DetailedTitle>{server.name}</DetailedTitle>
                         <DetailedTagRow>
-                            <DetailedTag title={server.node}>
-                                <FontAwesomeIcon icon={faServer} />
-                                <span>{server.node}</span>
-                            </DetailedTag>
+                            <MetaChip icon={faServer} title={server.node}>
+                                {server.node}
+                            </MetaChip>
                             {server.nodeLocation && (
-                                <DetailedTag title={server.nodeLocation}>
-                                    <FontAwesomeIcon icon={faMapMarkerAlt} />
-                                    <span>{server.nodeLocation}</span>
-                                </DetailedTag>
+                                <MetaChip icon={faMapMarkerAlt} title={server.nodeLocation}>
+                                    {server.nodeLocation}
+                                </MetaChip>
                             )}
                             {server.isNodeUnderMaintenance && (
-                                <DetailedTag $warning title={t('maintenance', 'Maintenance')}>
-                                    <FontAwesomeIcon icon={faCircle} />
-                                    <span>{t('maintenance', 'Maintenance')}</span>
-                                </DetailedTag>
+                                <MetaChip icon={faCircle} tone={'warning'} title={t('maintenance', 'Maintenance')}>
+                                    {t('maintenance', 'Maintenance')}
+                                </MetaChip>
                             )}
                         </DetailedTagRow>
                     </DetailedMeta>
@@ -670,16 +595,17 @@ export default ({
                     </div>
                 </DetailedHeader>
 
-                <DetailedAddressRow>
-                    <FontAwesomeIcon icon={faNetworkWired} />
-                    <DetailedAddress>
-                        {address ? (
+                <DataField
+                    icon={faNetworkWired}
+                    value={
+                        address ? (
                             <PrivacyServerHostBlur when={blurServerHostAddress}>{address}</PrivacyServerHostBlur>
                         ) : (
                             t('no_address')
-                        )}
-                    </DetailedAddress>
-                </DetailedAddressRow>
+                        )
+                    }
+                    mono
+                />
 
                 {!stats || isSuspended ? (
                     <div className='flex items-center justify-center py-3'>{renderLoadingOrSuspended()}</div>
@@ -694,7 +620,6 @@ export default ({
                                     value: `${stats.cpuUsagePercent.toFixed(1)}%`,
                                     limit: cpuLimit,
                                     percentage: percentOf(stats.cpuUsagePercent, server.limits.cpu),
-                                    alarm: alarms.cpu,
                                 },
                                 {
                                     key: 'memory',
@@ -703,7 +628,6 @@ export default ({
                                     value: bytesToString(stats.memoryUsageInBytes),
                                     limit: memoryLimit,
                                     percentage: percentOf(stats.memoryUsageInBytes, mbToBytes(server.limits.memory)),
-                                    alarm: alarms.memory,
                                 },
                                 {
                                     key: 'disk',
@@ -712,24 +636,16 @@ export default ({
                                     value: bytesToString(stats.diskUsageInBytes),
                                     limit: diskLimit,
                                     percentage: percentOf(stats.diskUsageInBytes, mbToBytes(server.limits.disk)),
-                                    alarm: alarms.disk,
                                 },
                             ].map((stat) => (
-                                <DetailedStatCard key={stat.key} $alarm={stat.alarm}>
-                                    <DetailedStatLabel $alarm={stat.alarm}>
-                                        <FontAwesomeIcon icon={stat.icon} />
-                                        {stat.label}
-                                    </DetailedStatLabel>
-                                    <DetailedStatFigures>
-                                        <DetailedStatValue $alarm={stat.alarm}>{stat.value}</DetailedStatValue>
-                                        <DetailedStatLimit>/ {stat.limit ?? UNLIMITED}</DetailedStatLimit>
-                                    </DetailedStatFigures>
-                                    {stat.percentage !== null && (
-                                        <DetailedTrack>
-                                            <DetailedBar $percentage={stat.percentage} $alarm={stat.alarm} />
-                                        </DetailedTrack>
-                                    )}
-                                </DetailedStatCard>
+                                <StatTile
+                                    key={stat.key}
+                                    icon={stat.icon}
+                                    label={stat.label}
+                                    value={stat.value}
+                                    limit={stat.limit}
+                                    percentage={stat.percentage}
+                                />
                             ))}
                         </DetailedStatsGrid>
 
