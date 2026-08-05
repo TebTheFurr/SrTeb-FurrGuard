@@ -13,6 +13,9 @@ import Can from '@/components/elements/Can';
 import ServerContentBlock from '@/components/elements/ServerContentBlock';
 import tw from 'twin.macro';
 import EmptyState from '@/components/elements/EmptyState';
+import PageHeader from '@/components/elements/ui/PageHeader';
+import MetaChip from '@/components/elements/ui/MetaChip';
+import { faUsers } from '@fortawesome/free-solid-svg-icons';
 
 export default () => {
     const { t } = useTranslation('server');
@@ -53,11 +56,20 @@ export default () => {
     return (
         <ServerContentBlock title={t('users.title')}>
             <FlashMessageRender byKey={'users'} css={tw`mb-4`} />
-            <Can action={'user.create'}>
-                <div css={tw`mb-4 flex justify-end`}>
-                    <AddSubuserButton />
-                </div>
-            </Can>
+            <PageHeader
+                title={t('users.title')}
+                description={t('users.subtitle')}
+                meta={
+                    subusers.length > 0 && (
+                        <MetaChip icon={faUsers}>{t('users.usage', { count: subusers.length })}</MetaChip>
+                    )
+                }
+                actions={
+                    <Can action={'user.create'}>
+                        <AddSubuserButton />
+                    </Can>
+                }
+            />
             {!subusers.length ? (
                 <EmptyState
                     title={t('users.empty.title')}

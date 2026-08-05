@@ -14,6 +14,9 @@ import Fade from '@/components/elements/Fade';
 import ServerContentBlock from '@/components/elements/ServerContentBlock';
 import { useDeepMemoize } from '@/plugins/useDeepMemoize';
 import EmptyState from '@/components/elements/EmptyState';
+import PageHeader from '@/components/elements/ui/PageHeader';
+import MetaChip from '@/components/elements/ui/MetaChip';
+import { faDatabase } from '@fortawesome/free-solid-svg-icons';
 
 export default () => {
     const { t } = useTranslation('server');
@@ -42,18 +45,30 @@ export default () => {
     return (
         <ServerContentBlock title={t('databases.title')}>
             <FlashMessageRender byKey={'databases'} css={tw`mb-4`} />
+            <PageHeader
+                title={t('databases.title')}
+                description={t('databases.subtitle')}
+                meta={
+                    databaseLimit > 0 && (
+                        <MetaChip icon={faDatabase}>
+                            {t('databases.usage', { current: databases.length, limit: databaseLimit })}
+                        </MetaChip>
+                    )
+                }
+                actions={
+                    databaseLimit > 0 &&
+                    databaseLimit !== databases.length && (
+                        <Can action={'database.create'}>
+                            <CreateDatabaseButton />
+                        </Can>
+                    )
+                }
+            />
             {!databases.length && loading ? (
                 <Spinner size={'large'} centered />
             ) : (
                 <Fade timeout={150}>
                     <>
-                        {databaseLimit > 0 && databaseLimit !== databases.length && (
-                            <Can action={'database.create'}>
-                                <div css={tw`mb-4 flex justify-end`}>
-                                    <CreateDatabaseButton />
-                                </div>
-                            </Can>
-                        )}
                         {databases.length > 0 ? (
                             databases.map((database, index) => (
                                 <DatabaseRow

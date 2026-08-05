@@ -132,6 +132,8 @@ return [
 
     'schedules' => [
         'title' => 'Programaciones',
+        'subtitle' => 'Automatiza comandos, reinicios y copias con expresiones cron.',
+        'usage' => ':count programación(es)',
         'create' => 'Crear programación',
         'cron_cheatsheet' => 'Guía de cron',
         'edit' => 'Editar',
@@ -176,6 +178,8 @@ return [
 
     'backups' => [
         'title' => 'Copias de seguridad',
+        'subtitle' => 'Instantáneas completas del servidor que puedes restaurar cuando quieras.',
+        'usage' => ':current de :limit copias',
         'create' => 'Crear copia',
         'create_title' => 'Crear copia del servidor',
         'name_label' => 'Nombre de la copia',
@@ -215,6 +219,8 @@ return [
 
     'databases' => [
         'title' => 'Bases de datos',
+        'subtitle' => 'Bases de datos MySQL para tus plugins y aplicaciones.',
+        'usage' => ':current de :limit bases de datos',
         'create' => 'Crear base de datos',
         'create_title' => 'Crear nueva base de datos',
         'name_label' => 'Nombre de la base de datos',
@@ -309,6 +315,8 @@ return [
 
     'users' => [
         'title' => 'Usuarios',
+        'subtitle' => 'Personas con acceso a este servidor y los permisos que tienen.',
+        'usage' => ':count usuario(s)',
         'add' => 'Añadir usuario',
         'add_title' => 'Añadir un nuevo usuario a este servidor',
         'edit' => 'Editar usuario',

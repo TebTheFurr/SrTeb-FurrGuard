@@ -12,6 +12,9 @@ import { ServerContext } from '@/state/server';
 import ServerContentBlock from '@/components/elements/ServerContentBlock';
 import Pagination from '@/components/elements/Pagination';
 import EmptyState from '@/components/elements/EmptyState';
+import PageHeader from '@/components/elements/ui/PageHeader';
+import MetaChip from '@/components/elements/ui/MetaChip';
+import { faArchive } from '@fortawesome/free-solid-svg-icons';
 
 const BackupContainer = () => {
     const { t } = useTranslation('server');
@@ -38,6 +41,24 @@ const BackupContainer = () => {
     return (
         <ServerContentBlock title={t('backups.title')}>
             <FlashMessageRender byKey={'backups'} css={tw`mb-4`} />
+            <PageHeader
+                title={t('backups.title')}
+                description={t('backups.subtitle')}
+                meta={
+                    backupLimit > 0 && (
+                        <MetaChip icon={faArchive}>
+                            {t('backups.usage', { current: backups.backupCount, limit: backupLimit })}
+                        </MetaChip>
+                    )
+                }
+                actions={
+                    backupLimit > backups.backupCount && (
+                        <Can action={'backup.create'}>
+                            <CreateBackupButton />
+                        </Can>
+                    )
+                }
+            />
             {backupLimit === 0 ? (
                 <EmptyState
                     title={t('backups.disabled.title')}
@@ -45,13 +66,6 @@ const BackupContainer = () => {
                 />
             ) : (
                 <>
-                    {backupLimit > backups.backupCount && (
-                        <Can action={'backup.create'}>
-                            <div css={tw`mb-4 flex justify-end`}>
-                                <CreateBackupButton />
-                            </div>
-                        </Can>
-                    )}
                     <Pagination data={backups} onPageSelect={setPage}>
                         {({ items }) =>
                             !items.length ? (

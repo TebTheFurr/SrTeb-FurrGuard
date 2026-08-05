@@ -17,7 +17,31 @@ import ServerContentBlock from '@/components/elements/ServerContentBlock';
 import EmptyState from '@/components/elements/EmptyState';
 import ScheduleCheatsheetCards from '@/components/server/schedules/ScheduleCheatsheetCards';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown, faChevronUp } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faChevronUp, faClock } from '@fortawesome/free-solid-svg-icons';
+import styled from 'styled-components/macro';
+import PageHeader from '@/components/elements/ui/PageHeader';
+import MetaChip from '@/components/elements/ui/MetaChip';
+import Panel from '@/components/elements/ui/Panel';
+
+const CheatsheetToggle = styled.button`
+    ${tw`w-full flex items-center justify-between gap-3 px-4 py-3 text-sm font-medium transition-colors duration-150`};
+    color: var(--color-base);
+
+    &:hover {
+        background-color: var(--color-background);
+    }
+
+    svg {
+        ${tw`flex-shrink-0`};
+        font-size: 0.75rem;
+        color: var(--color-muted);
+    }
+`;
+
+const CheatsheetBody = styled.div`
+    ${tw`block md:flex w-full`};
+    border-top: 1px solid var(--color-neutral);
+`;
 
 export default () => {
     const { t } = useTranslation('server');
@@ -59,42 +83,37 @@ export default () => {
                 <>
                     <EditScheduleModal visible={visible} onModalDismissed={() => setVisible(false)} />
                     
-                    <Can action={'schedule.create'}>
-                        <div css={tw`mb-4 flex justify-end`}>
-                            <Button type={'button'} onClick={() => setVisible(true)}>
-                                {t('schedules.create')}
-                            </Button>
-                        </div>
-                    </Can>
-                        <div
-                            css={tw`mb-4 overflow-hidden`}
-                            style={{
-                                backgroundColor: 'var(--color-background-secondary)',
-                                border: '1px solid var(--color-neutral)',
-                                borderRadius: 'var(--border-radius, 12px)',
-                            }}
-                        >
-                            <button
-                                css={tw`w-full flex items-center justify-between p-4`}
-                                style={{ color: 'var(--color-base)' }}
-                                onClick={() => setShowCheatsheet((s) => !s)}
-                                type="button"
-                            >
-                                <span css={tw`font-medium`}>{t('schedules.cron_cheatsheet')}</span>
-                                <FontAwesomeIcon
-                                    icon={showCheatsheet ? faChevronUp : faChevronDown}
-                                    style={{ color: 'var(--color-muted)' }}
-                                />
-                            </button>
-                            {showCheatsheet && (
-                                <div
-                                    css={tw`block md:flex w-full`}
-                                    style={{ borderTop: '1px solid var(--color-neutral)' }}
-                                >
-                                    <ScheduleCheatsheetCards />
-                                </div>
-                            )}
-                        </div>
+                    <PageHeader
+                        title={t('schedules.title')}
+                        description={t('schedules.subtitle')}
+                        meta={
+                            schedules.length > 0 && (
+                                <MetaChip icon={faClock}>
+                                    {t('schedules.usage', { count: schedules.length })}
+                                </MetaChip>
+                            )
+                        }
+                        actions={
+                            <Can action={'schedule.create'}>
+                                <Button type={'button'} onClick={() => setVisible(true)}>
+                                    {t('schedules.create')}
+                                </Button>
+                            </Can>
+                        }
+                    />
+
+                    <Panel css={tw`mb-4`}>
+                        <CheatsheetToggle type={'button'} onClick={() => setShowCheatsheet((s) => !s)}>
+                            <span>{t('schedules.cron_cheatsheet')}</span>
+                            <FontAwesomeIcon icon={showCheatsheet ? faChevronUp : faChevronDown} />
+                        </CheatsheetToggle>
+                        {showCheatsheet && (
+                            <CheatsheetBody>
+                                <ScheduleCheatsheetCards />
+                            </CheatsheetBody>
+                        )}
+                    </Panel>
+
                     {schedules.length === 0 ? (
                         <EmptyState
                             title={t('schedules.empty.title')}

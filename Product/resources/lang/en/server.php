@@ -132,6 +132,8 @@ return [
 
     'schedules' => [
         'title' => 'Schedules',
+        'subtitle' => 'Automate commands, restarts and backups with cron expressions.',
+        'usage' => ':count schedule(s)',
         'create' => 'Create schedule',
         'cron_cheatsheet' => 'Cron Cheatsheet',
         'edit' => 'Edit',
@@ -176,6 +178,8 @@ return [
 
     'backups' => [
         'title' => 'Backups',
+        'subtitle' => 'Full server snapshots you can restore at any time.',
+        'usage' => ':current of :limit backups',
         'create' => 'Create Backup',
         'create_title' => 'Create server backup',
         'name_label' => 'Backup name',
@@ -215,6 +219,8 @@ return [
 
     'databases' => [
         'title' => 'Databases',
+        'subtitle' => 'MySQL databases for your plugins and applications.',
+        'usage' => ':current of :limit databases',
         'create' => 'Create Database',
         'create_title' => 'Create new database',
         'name_label' => 'Database Name',
@@ -309,6 +315,8 @@ return [
 
     'users' => [
         'title' => 'Users',
+        'subtitle' => 'People with access to this server and the permissions they hold.',
+        'usage' => ':count user(s)',
         'add' => 'Add User',
         'add_title' => 'Add a new user to this server',
         'edit' => 'Edit User',
