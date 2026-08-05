@@ -23,10 +23,33 @@ class DefaultFooter
     /**
      * Default footer HTML, rendered inside the `.luna-footer` wrapper.
      */
+    /**
+     * URL the status pill links to. Also used as the idempotency marker when
+     * back-filling the button into footers saved before it existed.
+     */
+    public const STATUS_URL = 'https://status.tebby.lgbt';
+
+    /**
+     * The "Status" pill shown next to the X button. Kept separate so the
+     * default markup and the back-fill migration share one definition.
+     */
+    public static function statusButton(): string
+    {
+        $url = self::STATUS_URL;
+
+        return <<<HTML
+        <a class="btn-x btn-status" href="{$url}" target="_blank" rel="noopener noreferrer" aria-label="Estado del servicio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            Status
+        </a>
+HTML;
+    }
+
     public static function html(): string
     {
         $logo = self::LOGO_DATA_URI;
         $year = self::YEAR_TOKEN;
+        $status = self::statusButton();
 
         return <<<HTML
 <div class="foot-top">
@@ -39,6 +62,7 @@ class DefaultFooter
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.9 1.6h3.4l-7.5 8.5L23.6 22h-6.9l-5.4-7-6.2 7H1.7l8-9.1L.9 1.6h7l4.9 6.4zm-1.2 18.3h1.9L6.9 3.6H4.8z"/></svg>
             @SrTeb_
         </a>
+{$status}
         <span class="eu">
             <svg viewBox="0 0 36 36" aria-hidden="true">
                 <circle cx="18" cy="18" r="17" fill="#003399"/>
