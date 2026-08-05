@@ -1,0 +1,73 @@
+.menu {
+  @apply relative inline-block text-left;
+
+  & .button {
+    @apply inline-flex justify-center items-center w-full py-2 rounded-md;
+    @apply transition-all duration-100;
+    color: var(--color-base);
+
+    &:hover, &[aria-expanded="true"] {
+      background-color: var(--color-neutral);
+      color: var(--color-base);
+    }
+
+    &:focus, &:focus-within, &:active {
+      @apply ring-2 ring-opacity-50;
+      --tw-ring-color: var(--color-primary);
+      color: var(--color-base);
+    }
+
+    & svg {
+      @apply w-5 h-5 transition-transform duration-75;
+    }
+
+    &[aria-expanded="true"] svg[data-animated="true"] {
+      @apply rotate-180;
+    }
+  }
+
+  & .items_container {
+    @apply absolute right-0 mt-2 origin-top-right z-10;
+    background-color: var(--color-background-secondary);
+    border: 1px solid var(--color-neutral);
+    border-radius: var(--border-radius, 12px);
+  }
+}
+
+.menu_item {
+  @apply flex items-center rounded w-full px-2 py-2;
+  color: var(--color-muted);
+
+  & svg {
+    @apply w-4 h-4 mr-4;
+    color: var(--color-inverted);
+  }
+
+  &:hover, &:focus {
+    background-color: var(--color-primary);
+    color: #fff;
+
+    & svg {
+      color: #fff;
+    }
+  }
+
+  &.danger {
+    &:hover, &:focus {
+      @apply bg-red-500 text-red-50;
+
+      & svg {
+        @apply text-red-50;
+      }
+    }
+  }
+
+  &.disabled {
+    @apply cursor-not-allowed opacity-30;
+    background-color: transparent;
+    
+    &:hover, &:focus {
+      background-color: var(--color-neutral);
+    }
+  }
+}

@@ -1,0 +1,125 @@
+<?php
+
+return [
+    'auth' => [
+        'fail' => 'Giriş başarısız',
+        'success' => 'Giriş yapıldı',
+        'password-reset' => 'Parola sıfırlandı',
+        'reset-password' => 'Parola sıfırlama istendi',
+        'checkpoint' => 'İki faktörlü kimlik doğrulama istendi',
+        'recovery-token' => 'İki faktörlü kurtarma jetonu kullanıldı',
+        'token' => 'İki faktörlü doğrulama tamamlandı',
+        'ip-blocked' => ':identifier için listelenmemiş IP adresinden istek engellendi',
+        'sftp' => [
+            'fail' => 'SFTP girişi başarısız',
+        ],
+    ],
+    'user' => [
+        'account' => [
+            'email-changed' => 'E-posta :old adresinden :new adresine değiştirildi',
+            'password-changed' => 'Parola değiştirildi',
+            'language-changed' => 'Dil :old değerinden :new değerine değiştirildi',
+        ],
+        'api-key' => [
+            'create' => ':identifier yeni API anahtarı oluşturuldu',
+            'delete' => ':identifier API anahtarı silindi',
+        ],
+        'ssh-key' => [
+            'create' => ':fingerprint SSH anahtarı hesaba eklendi',
+            'delete' => ':fingerprint SSH anahtarı hesaptan kaldırıldı',
+        ],
+        'two-factor' => [
+            'create' => 'İki faktörlü kimlik doğrulama etkinleştirildi',
+            'delete' => 'İki faktörlü kimlik doğrulama kapatıldı',
+        ],
+    ],
+    'server' => [
+        'reinstall' => 'Sunucu yeniden kuruldu',
+        'console' => [
+            'command' => 'Sunucuda ":command" çalıştırıldı',
+        ],
+        'power' => [
+            'start' => 'Sunucu başlatıldı',
+            'stop' => 'Sunucu durduruldu',
+            'restart' => 'Sunucu yeniden başlatıldı',
+            'kill' => 'Sunucu işlemi sonlandırıldı',
+        ],
+        'backup' => [
+            'download' => ':name yedeği indirildi',
+            'delete' => ':name yedeği silindi',
+            'restore' => ':name yedeği geri yüklendi (silinen dosyalar: :truncate)',
+            'restore-complete' => ':name yedeğinin geri yüklemesi tamamlandı',
+            'restore-failed' => ':name yedeğinin geri yüklemesi tamamlanamadı',
+            'start' => 'Yeni :name yedeği başlatıldı',
+            'complete' => ':name yedeği tamamlandı olarak işaretlendi',
+            'fail' => ':name yedeği başarısız olarak işaretlendi',
+            'lock' => ':name yedeği kilitlendi',
+            'unlock' => ':name yedeğinin kilidi açıldı',
+        ],
+        'database' => [
+            'create' => ':name veritabanı oluşturuldu',
+            'rotate-password' => ':name veritabanı için parola döndürüldü',
+            'delete' => ':name veritabanı silindi',
+        ],
+        'file' => [
+            'compress_one' => ':directory:file sıkıştırıldı',
+            'compress_other' => ':directory içinde :count dosya sıkıştırıldı',
+            'read' => ':file içeriği görüntülendi',
+            'copy' => ':file kopyası oluşturuldu',
+            'create-directory' => ':directory:name dizini oluşturuldu',
+            'decompress' => ':directory içinde :files açıldı',
+            'delete_one' => ':directory:files.0 silindi',
+            'delete_other' => ':directory içinde :count dosya silindi',
+            'download' => ':file indirildi',
+            'pull' => ':url uzak dosyası :directory konumuna indirildi',
+            'rename_one' => ':directory:files.0.from adı :directory:files.0.to olarak değiştirildi',
+            'rename_other' => ':directory içinde :count dosya yeniden adlandırıldı',
+            'write' => ':file dosyasına yeni içerik yazıldı',
+            'upload' => 'Dosya yükleme başlatıldı',
+            'uploaded' => ':directory:file yüklendi',
+        ],
+        'sftp' => [
+            'denied' => 'İzinler nedeniyle SFTP erişimi engellendi',
+            'create_one' => ':files.0 oluşturuldu',
+            'create_other' => ':count yeni dosya oluşturuldu',
+            'write_one' => ':files.0 içeriği değiştirildi',
+            'write_other' => ':count dosyanın içeriği değiştirildi',
+            'delete_one' => ':files.0 silindi',
+            'delete_other' => ':count dosya silindi',
+            'create-directory_one' => ':files.0 dizini oluşturuldu',
+            'create-directory_other' => ':count dizin oluşturuldu',
+            'rename_one' => ':files.0.from adı :files.0.to olarak değiştirildi',
+            'rename_other' => ':count dosya yeniden adlandırıldı veya taşındı',
+        ],
+        'allocation' => [
+            'create' => ':allocation sunucuya eklendi',
+            'notes' => ':allocation notları ":old" değerinden ":new" değerine güncellendi',
+            'primary' => ':allocation birincil sunucu tahsisi olarak ayarlandı',
+            'delete' => ':allocation tahsisi silindi',
+        ],
+        'schedule' => [
+            'create' => ':name zamanlaması oluşturuldu',
+            'update' => ':name zamanlaması güncellendi',
+            'execute' => ':name zamanlaması elle çalıştırıldı',
+            'delete' => ':name zamanlaması silindi',
+        ],
+        'task' => [
+            'create' => ':name zamanlaması için yeni ":action" görevi oluşturuldu',
+            'update' => ':name zamanlaması için ":action" görevi güncellendi',
+            'delete' => ':name zamanlaması için bir görev silindi',
+        ],
+        'settings' => [
+            'rename' => 'Sunucu adı :old değerinden :new değerine değiştirildi',
+            'description' => 'Sunucu açıklaması :old değerinden :new değerine değiştirildi',
+        ],
+        'startup' => [
+            'edit' => ':variable değişkeni değiştirildi',
+            'image' => 'Sunucu Docker imgesi :old değerinden :new değerine güncellendi',
+        ],
+        'subuser' => [
+            'create' => ':email alt kullanıcı olarak eklendi',
+            'update' => ':email alt kullanıcı izinleri güncellendi',
+            'delete' => ':email alt kullanıcı olarak kaldırıldı',
+        ],
+    ],
+];

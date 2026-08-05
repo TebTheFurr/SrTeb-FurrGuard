@@ -1,0 +1,63 @@
+.sidebar {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: max-content;
+    max-width: 100%;
+    margin-top: 0.65rem;
+    color: var(--color-base);
+    font-size: 0.75rem;
+    font-weight: 400;
+}
+
+.sidebarPulse {
+    position: relative;
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 999px;
+    background: #22c55e;
+    flex: 0 0 auto;
+}
+
+.sidebarPulse::after {
+    content: '';
+    position: absolute;
+    inset: -0.2rem;
+    border-radius: 999px;
+    background: rgba(34, 197, 94, 0.22);
+    animation: player-count-ping 2s ease-out infinite;
+}
+
+@keyframes player-count-ping {
+    0% {
+        opacity: 0.6;
+        transform: scale(0.8);
+    }
+
+    70%,
+    100% {
+        opacity: 0;
+        transform: scale(1.45);
+    }
+}
+
+.card {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+    color: var(--color-base);
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.cardIcon {
+    color: var(--color-primary);
+    font-size: 0.7rem;
+}
+
+.cardLabel {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

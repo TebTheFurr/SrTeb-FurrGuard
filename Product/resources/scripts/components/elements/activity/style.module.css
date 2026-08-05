@@ -1,0 +1,22 @@
+.icons {
+    @apply flex space-x-1 mx-2 transition-colors duration-100;
+    color: var(--color-inverted);
+
+    & svg {
+        @apply px-1 py-px cursor-pointer h-5 w-auto;
+        
+        &:hover {
+            color: var(--color-base);
+        }
+    }
+}
+
+.description {
+    @apply mt-1 text-sm break-words line-clamp-2 pr-4;
+    color: var(--color-muted);
+
+    & strong {
+        @apply font-semibold break-all;
+        color: var(--color-base);
+    }
+}

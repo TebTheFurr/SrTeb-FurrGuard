@@ -1,0 +1,649 @@
+.tabsContainer {
+    display: flex;
+    gap: 0;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--color-neutral);
+}
+
+.tab {
+    padding: 12px 20px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--color-muted);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 200ms ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: -1px;
+}
+
+.tab:hover {
+    color: var(--color-base);
+}
+
+.tab.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+}
+
+.tab svg {
+    width: 16px;
+    height: 16px;
+}
+
+.tabCount {
+    padding: 2px 8px;
+    background-color: var(--color-neutral);
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.tab.active .tabCount {
+    background-color: color-mix(in srgb, var(--color-primary) 15%, transparent);
+    color: var(--color-primary);
+}
+
+.filtersContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+    align-items: flex-end;
+}
+
+.filterGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 140px;
+}
+
+.filterLabel {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-muted);
+}
+
+.searchGroup {
+    flex: 1;
+    min-width: 200px;
+}
+
+.searchInput {
+    width: 100%;
+}
+
+.modGrid {
+    display: grid;
+    grid-template-columns: repeat(var(--grid-columns, 3), 1fr);
+    grid-auto-rows: 1fr;
+    gap: 16px;
+}
+
+@media (max-width: 1200px) {
+    .modGrid {
+        grid-template-columns: repeat(min(var(--grid-columns, 3), 2), 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .modGrid {
+        grid-template-columns: 1fr;
+    }
+    
+    .filtersContainer {
+        flex-direction: column;
+    }
+    
+    .filterGroup {
+        width: 100%;
+    }
+    
+    .searchGroup {
+        width: 100%;
+    }
+}
+
+.modCard {
+    background-color: var(--color-background-secondary);
+    border: 1px solid var(--color-neutral);
+    border-radius: var(--border-radius, 12px);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.modHeader {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.modIcon {
+    width: 48px;
+    height: 48px;
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    object-fit: cover;
+    background-color: var(--color-neutral);
+    flex-shrink: 0;
+}
+
+.modIconPlaceholder {
+    width: 48px;
+    height: 48px;
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    background-color: var(--color-neutral);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.modIconPlaceholder svg {
+    width: 24px;
+    height: 24px;
+    color: var(--color-muted);
+}
+
+.modInfo {
+    flex: 1;
+    min-width: 0;
+}
+
+.modName {
+    font-size: 15px;
+    line-height: 1;
+    margin-top: 4px;
+    font-weight: 600;
+    color: var(--color-base);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-decoration: none;
+    display: block;
+    transition: color 200ms ease;
+}
+
+.modName:hover {
+    color: var(--color-primary);
+}
+
+.modAuthor {
+    font-size: 12px;
+    color: var(--color-muted);
+}
+
+.modDescription {
+    font-size: 13px;
+    color: var(--color-inverted);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin: 0;
+    min-height: 39px;
+}
+
+.modFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-neutral);
+}
+
+.modMeta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.modStat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--color-muted);
+}
+
+.modStat svg {
+    width: 14px;
+    height: 14px;
+}
+
+.modActions {
+    display: flex;
+    gap: 8px;
+}
+
+.actionButton {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--color-neutral);
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    background-color: transparent;
+    color: var(--color-muted);
+    cursor: pointer;
+    transition: all 200ms ease;
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.actionButton:hover {
+    border-color: var(--color-secondary);
+    color: var(--color-base);
+}
+
+.actionButton.primary {
+    width: auto;
+    height: auto;
+    padding: 6px 14px;
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+}
+
+.actionButton.primary:hover {
+    background-color: var(--color-secondary);
+    border-color: var(--color-secondary);
+    color: #fff;
+}
+
+.actionButton.danger {
+    background-color: #dc2626;
+    border-color: #dc2626;
+    color: #fff;
+}
+
+.actionButton.danger:hover {
+    background-color: #b91c1c;
+    border-color: #b91c1c;
+}
+
+.actionButton.update {
+    background-color: #059669;
+    border-color: #059669;
+    color: #fff;
+}
+
+.actionButton.update:hover {
+    background-color: #047857;
+    border-color: #047857;
+}
+
+.actionButton svg {
+    width: 14px;
+    height: 14px;
+}
+
+.loadingContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 48px;
+}
+
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    text-align: center;
+    background-color: var(--color-background-secondary);
+    border: 1px solid var(--color-neutral);
+    border-radius: var(--border-radius, 12px);
+}
+
+.emptyState svg {
+    width: 48px;
+    height: 48px;
+    color: var(--color-muted);
+    margin-bottom: 16px;
+}
+
+.emptyStateTitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-base);
+    margin: 0 0 8px 0;
+}
+
+.emptyStateMessage {
+    font-size: 13px;
+    color: var(--color-muted);
+    margin: 0;
+}
+
+.modalContent {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.modalHeader {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.modalModIcon {
+    width: 40px;
+    height: 40px;
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    object-fit: cover;
+}
+
+.modalModInfo h3 {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-base);
+}
+
+.modalModInfo p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-muted);
+}
+
+.versionList {
+    max-height: 300px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.versionItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    background-color: color-mix(in srgb, var(--color-background) 50%, transparent);
+    border: 1px solid var(--color-neutral);
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    cursor: pointer;
+    transition: all 200ms ease;
+}
+
+.versionItem:hover {
+    border-color: var(--color-secondary);
+}
+
+.versionItem.selected {
+    border-color: var(--color-primary);
+    background-color: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.versionInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.versionName {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-base);
+}
+
+.versionMeta {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: var(--color-muted);
+}
+
+.versionGameVersions {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.gameVersionTag {
+    padding: 2px 6px;
+    background-color: var(--color-neutral);
+    border-radius: 3px;
+    font-size: 10px;
+    color: var(--color-muted);
+}
+
+.modalActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.versionSearch {
+    width: 100%;
+}
+
+.pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--color-neutral);
+}
+
+.paginationNav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pageCenter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.pageInfo {
+    font-size: 13px;
+    color: var(--color-muted);
+}
+
+.pageInputForm {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pageInput {
+    width: 56px;
+    padding: 6px 8px;
+    background-color: var(--color-background-secondary);
+    border: 1px solid var(--color-neutral);
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    color: var(--color-base);
+    font-size: 12px;
+    text-align: center;
+    -moz-appearance: textfield;
+}
+
+.pageInput::-webkit-outer-spin-button,
+.pageInput::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.pageInput:focus {
+    outline: none;
+    border-color: var(--color-secondary);
+}
+
+.pageGoButton {
+    padding: 6px 12px;
+    background-color: var(--color-primary);
+    border: 1px solid var(--color-primary);
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 200ms ease;
+}
+
+.pageGoButton:hover {
+    background-color: var(--color-secondary);
+    border-color: var(--color-secondary);
+    color: #fff;
+}
+
+.pageButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 12px;
+    background-color: transparent;
+    border: 1px solid var(--color-neutral);
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    color: var(--color-muted);
+    cursor: pointer;
+    transition: all 200ms ease;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.pageButton:hover:not(:disabled) {
+    border-color: var(--color-secondary);
+    color: var(--color-base);
+}
+
+.pageButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pageButton svg {
+    width: 14px;
+    height: 14px;
+}
+
+@media (max-width: 768px) {
+    .pagination {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .paginationNav {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+.uninstallModal {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 8px 0;
+}
+
+.uninstallIcon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background-color: rgba(220, 38, 38, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.uninstallIcon svg {
+    width: 28px;
+    height: 28px;
+    color: #dc2626;
+}
+
+.uninstallTitle {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-base);
+    margin: 0 0 12px 0;
+}
+
+.uninstallMessage {
+    font-size: 14px;
+    color: var(--color-muted);
+    margin: 0 0 12px 0;
+    line-height: 1.5;
+}
+
+.uninstallFileName {
+    padding: 12px 16px;
+    background-color: var(--color-neutral);
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    font-family: monospace;
+    font-size: 13px;
+    color: var(--color-base);
+    margin-bottom: 12px;
+    word-break: break-all;
+}
+
+.uninstallWarning {
+    font-size: 12px;
+    color: #dc2626;
+    margin: 0 0 20px 0;
+}
+
+.uninstallActions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.notInstalledContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    padding: 48px 24px;
+    text-align: center;
+    background-color: var(--color-background-secondary);
+    border: 1px solid var(--color-neutral);
+    border-radius: var(--border-radius, 12px);
+}
+
+.notInstalledTitle {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--color-base);
+    margin: 0 0 12px 0;
+}
+
+.notInstalledMessage {
+    font-size: 14px;
+    color: var(--color-muted);
+    margin: 0;
+    max-width: 400px;
+    line-height: 1.6;
+}

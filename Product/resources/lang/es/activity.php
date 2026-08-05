@@ -1,0 +1,125 @@
+<?php
+
+return [
+    'auth' => [
+        'fail' => 'Inicio de sesión fallido',
+        'success' => 'Sesión iniciada',
+        'password-reset' => 'Contraseña restablecida',
+        'reset-password' => 'Solicitud de restablecimiento de contraseña',
+        'checkpoint' => 'Autenticación en dos pasos solicitada',
+        'recovery-token' => 'Código de recuperación 2FA usado',
+        'token' => 'Desafío 2FA resuelto',
+        'ip-blocked' => 'Solicitud bloqueada desde IP no listada para :identifier',
+        'sftp' => [
+            'fail' => 'Inicio de sesión SFTP fallido',
+        ],
+    ],
+    'user' => [
+        'account' => [
+            'email-changed' => 'Correo cambiado de :old a :new',
+            'password-changed' => 'Contraseña cambiada',
+            'language-changed' => 'Idioma cambiado de :old a :new',
+        ],
+        'api-key' => [
+            'create' => 'Creada nueva clave de API :identifier',
+            'delete' => 'Eliminada clave de API :identifier',
+        ],
+        'ssh-key' => [
+            'create' => 'Añadida clave SSH :fingerprint a la cuenta',
+            'delete' => 'Eliminada clave SSH :fingerprint de la cuenta',
+        ],
+        'two-factor' => [
+            'create' => 'Activada autenticación en dos pasos',
+            'delete' => 'Desactivada autenticación en dos pasos',
+        ],
+    ],
+    'server' => [
+        'reinstall' => 'Servidor reinstalado',
+        'console' => [
+            'command' => 'Ejecutado ":command" en el servidor',
+        ],
+        'power' => [
+            'start' => 'Servidor iniciado',
+            'stop' => 'Servidor detenido',
+            'restart' => 'Servidor reiniciado',
+            'kill' => 'Proceso del servidor forzado a cerrar',
+        ],
+        'backup' => [
+            'download' => 'Descargada la copia de seguridad :name',
+            'delete' => 'Eliminada la copia de seguridad :name',
+            'restore' => 'Restaurada la copia :name (archivos eliminados: :truncate)',
+            'restore-complete' => 'Restauración de la copia :name completada',
+            'restore-failed' => 'Fallo al completar la restauración de la copia :name',
+            'start' => 'Iniciada nueva copia de seguridad :name',
+            'complete' => 'Marcada la copia :name como completada',
+            'fail' => 'Marcada la copia :name como fallida',
+            'lock' => 'Bloqueada la copia :name',
+            'unlock' => 'Desbloqueada la copia :name',
+        ],
+        'database' => [
+            'create' => 'Creada nueva base de datos :name',
+            'rotate-password' => 'Rotada la contraseña de la base de datos :name',
+            'delete' => 'Eliminada la base de datos :name',
+        ],
+        'file' => [
+            'compress_one' => 'Comprimido :directory:file',
+            'compress_other' => 'Comprimidos :count archivos en :directory',
+            'read' => 'Vistos los contenidos de :file',
+            'copy' => 'Creada una copia de :file',
+            'create-directory' => 'Creado el directorio :directory:name',
+            'decompress' => 'Descomprimidos :files en :directory',
+            'delete_one' => 'Eliminado :directory:files.0',
+            'delete_other' => 'Eliminados :count archivos en :directory',
+            'download' => 'Descargado :file',
+            'pull' => 'Descargado archivo remoto de :url a :directory',
+            'rename_one' => 'Renombrado :directory:files.0.from a :directory:files.0.to',
+            'rename_other' => 'Renombrados :count archivos en :directory',
+            'write' => 'Escrito nuevo contenido en :file',
+            'upload' => 'Iniciada subida de archivo',
+            'uploaded' => 'Subido :directory:file',
+        ],
+        'sftp' => [
+            'denied' => 'Acceso SFTP bloqueado por permisos',
+            'create_one' => 'Creado :files.0',
+            'create_other' => 'Creados :count archivos nuevos',
+            'write_one' => 'Modificado el contenido de :files.0',
+            'write_other' => 'Modificado el contenido de :count archivos',
+            'delete_one' => 'Eliminado :files.0',
+            'delete_other' => 'Eliminados :count archivos',
+            'create-directory_one' => 'Creado el directorio :files.0',
+            'create-directory_other' => 'Creados :count directorios',
+            'rename_one' => 'Renombrado :files.0.from a :files.0.to',
+            'rename_other' => 'Renombrados o movidos :count archivos',
+        ],
+        'allocation' => [
+            'create' => 'Añadida :allocation al servidor',
+            'notes' => 'Actualizadas las notas de :allocation de ":old" a ":new"',
+            'primary' => 'Establecida :allocation como asignación principal del servidor',
+            'delete' => 'Eliminada la asignación :allocation',
+        ],
+        'schedule' => [
+            'create' => 'Creada la programación :name',
+            'update' => 'Actualizada la programación :name',
+            'execute' => 'Ejecutada manualmente la programación :name',
+            'delete' => 'Eliminada la programación :name',
+        ],
+        'task' => [
+            'create' => 'Creada nueva tarea ":action" para la programación :name',
+            'update' => 'Actualizada la tarea ":action" de la programación :name',
+            'delete' => 'Eliminada una tarea de la programación :name',
+        ],
+        'settings' => [
+            'rename' => 'Renombrado el servidor de :old a :new',
+            'description' => 'Cambiada la descripción del servidor de :old a :new',
+        ],
+        'startup' => [
+            'edit' => 'Cambiada la variable :variable',
+            'image' => 'Actualizada la imagen Docker del servidor de :old a :new',
+        ],
+        'subuser' => [
+            'create' => 'Añadido :email como subusuario',
+            'update' => 'Actualizados los permisos del subusuario :email',
+            'delete' => 'Eliminado :email como subusuario',
+        ],
+    ],
+];

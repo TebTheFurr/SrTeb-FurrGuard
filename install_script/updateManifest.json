@@ -1,0 +1,26 @@
+{
+  "productName": "Luna Pterodactyl Theme",
+  "replace": [
+    "app",
+    "resources",
+    "routes",
+    "public",
+    "database/migrations",
+    "package.json"
+  ],
+  "preserve": [
+    "public/assets",
+    "app/Services/Subdomains/SubdomainService.php",
+    "app/Services/EggChanger/EggChangerService.php",
+    "app/Services/Modpacks/ModpackSearchService.php",
+    "app/Services/Mods/ModSearchService.php",
+    "app/Services/Plugins/PluginSearchService.php",
+    "app/Services/ReverseProxy/ReverseProxyService.php",
+    "app/Services/FreeServers/FreeServerService.php",
+    "app/Services/ServerIcon/ServerIconService.php",
+    "app/Services/ServerImport/ServerImportService.php",
+    "app/Services/EnvironmentVariables/EnvironmentVariableService.php",
+    "app/Services/ServerProperties/ServerPropertiesService.php",
+    "app/Services/MinecraftVersions/MinecraftVersionManagerService.php"
+  ]
+}

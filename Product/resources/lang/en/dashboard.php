@@ -1,0 +1,61 @@
+<?php
+
+return [
+    'title' => 'Dashboard',
+    'search' => 'Search for servers...',
+    'search_servers' => 'Search servers...',
+    'no_matches' => 'There were no servers found matching the search criteria provided.',
+    'cpu_title' => 'CPU',
+    'memory_title' => 'Memory',
+    'showing_others_servers' => "Showing others' servers",
+    'showing_your_servers' => 'Showing your servers',
+    'home' => 'Home',
+    'no_other_servers' => 'There are no other servers to display.',
+    'folder_empty' => 'This folder is empty.',
+    'no_servers' => 'There are no servers associated with your account.',
+    'no_servers_found' => 'No servers found',
+    'no_servers_available' => 'No servers available',
+
+    'claim' => [
+        'page_title' => 'Claim Servers',
+        'title' => 'Free Servers',
+        'subtitle' => 'Claim your free servers below to get started.',
+        'empty' => 'No free servers available right now.',
+        'server_expires' => 'This server will expire after :count day(s).',
+        'claim_before' => 'Claim before :date.',
+        'free' => 'Free',
+        'action' => 'Claim',
+        'errors' => [
+            'failed' => 'Failed to claim. Try again.',
+        ],
+        'requirements' => [
+            'email_verified' => 'Email verified',
+            'email_required' => 'Email verification required',
+            'resend_verification' => 'Resend verification email',
+            'resend_verification_sent' => 'Verification email sent.',
+            'resend_verification_failed' => 'Failed to resend verification email. Please try again.',
+            'resend_verification_wait' => 'Please wait before requesting another verification email.',
+            'two_factor_enabled' => '2FA enabled',
+            'two_factor_required' => 'Two-factor authentication required',
+        ],
+        'specs' => [
+            'ram' => 'RAM',
+            'disk' => 'Disk',
+            'cpu' => 'CPU',
+        ],
+    ],
+
+    'folders' => [
+        'create' => 'Create Folder',
+        'create_subfolder' => 'Create Subfolder',
+        'create_directory' => 'Create Folder',
+        'create_confirm' => 'Create',
+        'edit' => 'Edit Folder',
+        'delete' => 'Delete Folder',
+        'name' => 'Folder Name',
+        'placeholder' => 'Enter folder name',
+        'color' => 'Color',
+        'color_placeholder' => '#000000',
+        'move_server' => 'Move ":name"',
+    ],
+];

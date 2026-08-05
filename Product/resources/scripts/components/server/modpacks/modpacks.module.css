@@ -1,0 +1,1303 @@
+.tabsContainer {
+    display: flex;
+    gap: 0;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--color-neutral);
+}
+
+.tab {
+    padding: 12px 20px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--color-muted);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 200ms ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: -1px;
+}
+
+.tab:hover {
+    color: var(--color-base);
+}
+
+.tab.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+}
+
+.tab svg {
+    width: 16px;
+    height: 16px;
+}
+
+.filtersContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+    align-items: flex-end;
+}
+
+.filterGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 140px;
+}
+
+.forkPickerButton {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 58px;
+    padding: 10px 12px;
+    background-color: var(--color-background-secondary);
+    border: 1px solid var(--color-neutral);
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    color: var(--color-base);
+    cursor: pointer;
+    transition: all 200ms ease;
+    text-align: left;
+}
+
+.forkPickerButton:hover {
+    border-color: var(--color-secondary);
+}
+
+.forkPickerButton svg:last-child {
+    width: 14px;
+    height: 14px;
+    color: var(--color-muted);
+    flex-shrink: 0;
+}
+
+.forkPickerButtonIcon {
+    width: 38px;
+    height: 38px;
+    border-radius: calc(var(--border-radius, 12px) * 0.4);
+    object-fit: cover;
+    background-color: var(--color-neutral);
+    flex-shrink: 0;
+}
+
+.forkPickerButtonPlaceholder {
+    width: 38px;
+    height: 38px;
+    border-radius: calc(var(--border-radius, 12px) * 0.4);
+    background-color: var(--color-neutral);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.forkPickerButtonPlaceholder svg {
+    width: 18px;
+    height: 18px;
+    color: var(--color-muted);
+}
+
+.forkPickerButtonText {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.forkPickerButtonText strong {
+    font-size: 13px;
+    color: var(--color-base);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.forkPickerButtonText span {
+    font-size: 11px;
+    color: var(--color-muted);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.filterLabel {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-muted);
+}
+
+.searchGroup {
+    flex: 1;
+    min-width: 200px;
+}
+
+.searchInput {
+    width: 100%;
+}
+
+.modpackGrid {
+    display: grid;
+    grid-template-columns: repeat(var(--grid-columns, 3), 1fr);
+    grid-auto-rows: 1fr;
+    gap: 16px;
+}
+
+.forkPickerGrid {
+    display: grid;
+    grid-template-columns: repeat(var(--grid-columns, 3), 1fr);
+    gap: 16px;
+}
+
+@media (max-width: 1200px) {
+    .modpackGrid {
+        grid-template-columns: repeat(min(var(--grid-columns, 3), 2), 1fr);
+    }
+
+    .forkPickerGrid {
+        grid-template-columns: repeat(min(var(--grid-columns, 3), 2), 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .modpackGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .forkPickerGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .filtersContainer {
+        flex-direction: column;
+    }
+
+    .filterGroup {
+        width: 100%;
+    }
+
+    .searchGroup {
+        width: 100%;
+    }
+}
+
+.modpackCard {
+    background-color: var(--color-background-secondary);
+    border: 1px solid var(--color-neutral);
+    border-radius: var(--border-radius, 12px);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.modpackCardSelected {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+.versionCardMeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--color-muted);
+}
+
+.versionCardActions {
+    display: flex;
+    gap: 8px;
+    margin-top: auto;
+}
+
+.versionCardActions .actionButton {
+    flex: 1;
+}
+
+.modpackHeader {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.modpackIcon {
+    width: 56px;
+    height: 56px;
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    object-fit: cover;
+    background-color: var(--color-neutral);
+    flex-shrink: 0;
+}
+
+.modpackIconPlaceholder {
+    width: 56px;
+    height: 56px;
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    background-color: var(--color-neutral);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.modpackIconPlaceholder svg {
+    width: 24px;
+    height: 24px;
+    color: var(--color-muted);
+}
+
+.modpackInfo {
+    flex: 1;
+    min-width: 0;
+}
+
+.modpackName {
+    font-size: 15px;
+    line-height: 1;
+    margin-top: 4px;
+    font-weight: 600;
+    color: var(--color-base);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-decoration: none;
+    display: block;
+    transition: color 200ms ease;
+}
+
+.modpackName:hover {
+    color: var(--color-primary);
+}
+
+.modpackAuthor {
+    font-size: 12px;
+    color: var(--color-muted);
+    margin-top: 4px;
+    display: block;
+}
+
+.platformTag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-top: 6px;
+}
+
+.platformTag.modrinth {
+    background-color: rgba(30, 172, 80, 0.12);
+    color: #1eac50;
+}
+
+.platformTag.curseforge {
+    background-color: rgba(241, 100, 54, 0.12);
+    color: #f16436;
+}
+
+.modpackDescription {
+    font-size: 13px;
+    color: var(--color-inverted);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin: 0;
+    min-height: 39px;
+}
+
+.modpackFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-neutral);
+}
+
+.modpackFooterActionsOnly {
+    justify-content: flex-end;
+}
+
+.modpackMeta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.modpackStat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--color-muted);
+}
+
+.modpackStat svg {
+    width: 14px;
+    height: 14px;
+}
+
+.modpackActions {
+    display: flex;
+    gap: 8px;
+}
+
+.actionButton {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--color-neutral);
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    background-color: transparent;
+    color: var(--color-muted);
+    cursor: pointer;
+    transition: all 200ms ease;
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.actionButton:hover {
+    border-color: var(--color-secondary);
+    color: var(--color-base);
+}
+
+.actionButton.primary {
+    width: auto;
+    height: auto;
+    padding: 6px 14px;
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+}
+
+.actionButton.primary:hover {
+    background-color: var(--color-secondary);
+    border-color: var(--color-secondary);
+    color: #fff;
+}
+
+.actionButton.installedActionButton {
+    background-color: #1f8f4e;
+    border-color: #1f8f4e;
+    color: #fff;
+}
+
+.actionButton.installedActionButton:hover {
+    background-color: #187240;
+    border-color: #187240;
+    color: #fff;
+}
+
+.actionButton.details {
+    width: auto;
+    height: auto;
+    padding: 6px 14px;
+}
+
+.actionButton svg {
+    width: 14px;
+    height: 14px;
+}
+
+.loadingContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 48px;
+}
+
+.compatibilityNotice {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+    border-radius: var(--border-radius, 12px);
+    background-color: color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+
+.compatibilityNoticeIcon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    background-color: color-mix(in srgb, var(--color-primary) 14%, transparent);
+    color: var(--color-primary);
+}
+
+.compatibilityNoticeBody {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.compatibilityNoticeBody strong {
+    font-size: 14px;
+    color: var(--color-base);
+}
+
+.compatibilityNoticeBody span {
+    font-size: 12px;
+    color: var(--color-muted);
+}
+
+.javaWarning {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    border: 1px solid color-mix(in srgb, #f59e0b 35%, transparent);
+    border-radius: var(--border-radius, 12px);
+    background-color: color-mix(in srgb, #f59e0b 10%, transparent);
+}
+
+.javaWarningIcon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    background-color: color-mix(in srgb, #f59e0b 22%, transparent);
+    color: #f59e0b;
+}
+
+.javaWarningBody {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.javaWarningBody strong {
+    font-size: 14px;
+    color: var(--color-base);
+}
+
+.javaWarningBody span {
+    font-size: 12px;
+    color: var(--color-muted);
+    line-height: 1.5;
+}
+
+.javaWarningBody code {
+    padding: 1px 6px;
+    font-size: 11px;
+    background-color: color-mix(in srgb, var(--color-base) 8%, transparent);
+    border-radius: 4px;
+    color: var(--color-base);
+}
+
+.installedBanner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px;
+    margin-bottom: 20px;
+    border: 1px solid var(--color-neutral);
+    border-radius: var(--border-radius, 12px);
+    background-color: var(--color-background-secondary);
+}
+
+.installedBannerBody {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+
+.installedBannerIcon {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    background-color: color-mix(in srgb, var(--color-secondary) 14%, transparent);
+    color: var(--color-secondary);
+}
+
+.installedBannerImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+}
+
+.installedBannerText {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.installedBannerText strong {
+    font-size: 14px;
+    color: var(--color-base);
+}
+
+.installedBannerText span {
+    font-size: 12px;
+    color: var(--color-muted);
+}
+
+.installedBannerActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.bannerButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid var(--color-neutral);
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    background-color: transparent;
+    color: var(--color-muted);
+    cursor: pointer;
+    transition: all 200ms ease;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.bannerButton:hover:not(:disabled) {
+    border-color: var(--color-secondary);
+    color: var(--color-base);
+}
+
+.bannerButton:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.bannerButtonPrimary {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+}
+
+.bannerButtonPrimary:hover:not(:disabled) {
+    background-color: var(--color-secondary);
+    border-color: var(--color-secondary);
+    color: #fff;
+}
+
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    text-align: center;
+    background-color: var(--color-background-secondary);
+    border: 1px solid var(--color-neutral);
+    border-radius: var(--border-radius, 12px);
+}
+
+.emptyState svg {
+    width: 48px;
+    height: 48px;
+    color: var(--color-muted);
+    margin-bottom: 16px;
+}
+
+.emptyStateTitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-base);
+    margin: 0 0 8px 0;
+}
+
+.emptyStateMessage {
+    font-size: 13px;
+    color: var(--color-muted);
+    margin: 0;
+}
+
+.modalContent {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.modalHeader {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.modalModpackIcon {
+    width: 48px;
+    height: 48px;
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    object-fit: cover;
+}
+
+.modalModpackInfo h3 {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-base);
+}
+
+.modalModpackInfo p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-muted);
+}
+
+.forkPickerModalHeader h3 {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-base);
+}
+
+.forkPickerModalHeader p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-muted);
+}
+
+.versionList {
+    max-height: 300px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.versionItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    background-color: color-mix(in srgb, var(--color-background) 50%, transparent);
+    border: 1px solid var(--color-neutral);
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    cursor: pointer;
+    transition: all 200ms ease;
+}
+
+.versionItem:hover {
+    border-color: var(--color-secondary);
+}
+
+.versionItem.selected {
+    border-color: var(--color-primary);
+    background-color: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.versionInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.versionName {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-base);
+}
+
+.versionMeta {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: var(--color-muted);
+}
+
+.versionGameVersions {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.gameVersionTag {
+    padding: 2px 6px;
+    background-color: var(--color-neutral);
+    border-radius: 3px;
+    font-size: 10px;
+    color: var(--color-muted);
+}
+
+.serverPackTag {
+    padding: 2px 8px;
+    background-color: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.loaderTag {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    background-color: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    color: var(--color-primary);
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.versionSearch {
+    width: 100%;
+}
+
+.modalActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.installOptionsContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.installOption {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px;
+    background-color: color-mix(in srgb, var(--color-background) 50%, transparent);
+    border: 1px solid var(--color-neutral);
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    cursor: pointer;
+    transition: all 200ms ease;
+}
+
+.installOption:hover {
+    border-color: var(--color-secondary);
+}
+
+.installOption.selected {
+    border-color: var(--color-primary);
+    background-color: color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+
+.installOptionRadio {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--color-neutral);
+    flex-shrink: 0;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 200ms ease;
+}
+
+.installOption.selected .installOptionRadio {
+    border-color: var(--color-primary);
+}
+
+.installOptionRadioDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--color-primary);
+    transform: scale(0);
+    transition: transform 200ms ease;
+}
+
+.installOption.selected .installOptionRadioDot {
+    transform: scale(1);
+}
+
+.installOptionContent {
+    flex: 1;
+    min-width: 0;
+}
+
+.installOptionTitle {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-base);
+    margin-bottom: 4px;
+}
+
+.installOptionDescription {
+    font-size: 12px;
+    color: var(--color-muted);
+    line-height: 1.5;
+}
+
+.installOptionWarning {
+    font-size: 11px;
+    color: #ef4444;
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+.progressContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 8px 0;
+}
+
+.progressStatusRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.progressStepText {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--color-muted);
+    font-weight: 500;
+}
+
+.progressStepText svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    color: var(--color-primary);
+}
+
+.progressStepText.progressStepError {
+    color: #ef4444;
+}
+
+.progressStepText.progressStepDone {
+    color: #10b981;
+}
+
+.progressPercent {
+    font-size: 12px;
+    color: var(--color-muted);
+    font-weight: 600;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.progressBarTrack {
+    width: 100%;
+    height: 6px;
+    background-color: var(--color-neutral);
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+.progressBarFill {
+    height: 100%;
+    background-color: var(--color-primary);
+    border-radius: 9999px;
+    transition: width 400ms ease;
+}
+
+.progressBarFill.progressBarError {
+    background-color: #ef4444;
+}
+
+.progressBarFill.progressBarDone {
+    background-color: #10b981;
+}
+
+.loaderNotice {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    background-color: color-mix(in srgb, var(--color-primary) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    font-size: 13px;
+    color: var(--color-base);
+    line-height: 1.5;
+}
+
+.loaderNotice svg {
+    width: 18px;
+    height: 18px;
+    color: var(--color-primary);
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.postInstallChecklist {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border: 1px solid var(--color-neutral);
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    overflow: hidden;
+}
+
+.postInstallChecklistTitle {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-muted);
+    padding: 10px 14px 8px;
+    margin: 0;
+    border-bottom: 1px solid var(--color-neutral);
+}
+
+.postInstallItem {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--color-base);
+    line-height: 1.5;
+    border-bottom: 1px solid var(--color-neutral);
+}
+
+.postInstallItem:last-child {
+    border-bottom: none;
+}
+
+.postInstallItem div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.postInstallItem strong {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--color-base);
+}
+
+.postInstallItem span {
+    font-size: 12px;
+    color: var(--color-muted);
+}
+
+.postInstallItem code {
+    font-family: monospace;
+    font-size: 11px;
+    background-color: var(--color-neutral);
+    padding: 1px 5px;
+    border-radius: 3px;
+}
+
+.postInstallIconWarn {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    margin-top: 3px;
+    color: #f59e0b;
+}
+
+.postInstallIconInfo {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    margin-top: 3px;
+    color: var(--color-muted);
+}
+
+.postInstallIconDone {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    margin-top: 3px;
+    color: #10b981;
+}
+
+.detailsBody {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 16px;
+    background-color: color-mix(in srgb, var(--color-background) 50%, transparent);
+    border: 1px solid var(--color-neutral);
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--color-base);
+}
+
+.detailsBody img {
+    max-width: 100%;
+    height: auto;
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    margin: 8px 0;
+}
+
+.detailsBody h1,
+.detailsBody h2,
+.detailsBody h3 {
+    margin-top: 16px;
+    margin-bottom: 8px;
+    color: var(--color-base);
+}
+
+.detailsBody a {
+    color: var(--color-primary);
+    text-decoration: underline;
+}
+
+.detailsBody p {
+    margin: 0 0 12px 0;
+}
+
+.detailsBody ul,
+.detailsBody ol {
+    padding-left: 20px;
+    margin: 0 0 12px 0;
+}
+
+.detailsMeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 12px 0;
+}
+
+.detailsMetaItem {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.detailsMetaLabel {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-muted);
+}
+
+.detailsMetaValue {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--color-base);
+    font-weight: 500;
+}
+
+.detailsGallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.detailsGallery img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    border: 1px solid var(--color-neutral);
+    cursor: pointer;
+    transition: opacity 200ms ease;
+}
+
+.detailsGallery img:hover {
+    opacity: 0.8;
+}
+
+.pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--color-neutral);
+}
+
+.paginationNav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pageCenter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.pageInfo {
+    font-size: 13px;
+    color: var(--color-muted);
+}
+
+.pageInputForm {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pageInput {
+    width: 56px;
+    padding: 6px 8px;
+    background-color: var(--color-background-secondary);
+    border: 1px solid var(--color-neutral);
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    color: var(--color-base);
+    font-size: 12px;
+    text-align: center;
+    -moz-appearance: textfield;
+}
+
+.pageInput::-webkit-outer-spin-button,
+.pageInput::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.pageInput:focus {
+    outline: none;
+    border-color: var(--color-secondary);
+}
+
+.pageGoButton {
+    padding: 6px 12px;
+    background-color: var(--color-primary);
+    border: 1px solid var(--color-primary);
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 200ms ease;
+}
+
+.pageGoButton:hover {
+    background-color: var(--color-secondary);
+    border-color: var(--color-secondary);
+    color: #fff;
+}
+
+.pageButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 12px;
+    background-color: transparent;
+    border: 1px solid var(--color-neutral);
+    border-radius: calc(var(--border-radius, 12px) * 0.5);
+    color: var(--color-muted);
+    cursor: pointer;
+    transition: all 200ms ease;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.pageButton:hover:not(:disabled) {
+    border-color: var(--color-secondary);
+    color: var(--color-base);
+}
+
+.pageButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pageButton svg {
+    width: 16px;
+    height: 16px;
+}
+
+@media (max-width: 768px) {
+    .pagination {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .paginationNav {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .installedBanner {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .installedBannerActions {
+        justify-content: stretch;
+    }
+
+    .bannerButton {
+        justify-content: center;
+        flex: 1;
+    }
+}
+
+.notInstalledContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    padding: 48px 24px;
+    text-align: center;
+    background-color: var(--color-background-secondary);
+    border: 1px solid var(--color-neutral);
+    border-radius: var(--border-radius, 12px);
+}
+
+.notInstalledTitle {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--color-base);
+    margin: 0 0 12px 0;
+}
+
+.notInstalledMessage {
+    font-size: 14px;
+    color: var(--color-muted);
+    margin: 0;
+    max-width: 400px;
+    line-height: 1.6;
+}

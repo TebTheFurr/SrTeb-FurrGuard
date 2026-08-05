@@ -1,0 +1,61 @@
+<?php
+
+return [
+    'title' => 'Kontrol paneli',
+    'search' => 'Sunucu ara...',
+    'search_servers' => 'Sunucuları ara...',
+    'no_matches' => 'Arama kriterlerinize uyan sunucu bulunamadı.',
+    'cpu_title' => 'CPU',
+    'memory_title' => 'Bellek',
+    'showing_others_servers' => 'Başkalarının sunucuları gösteriliyor',
+    'showing_your_servers' => 'Sunucularınız gösteriliyor',
+    'home' => 'Ana sayfa',
+    'no_other_servers' => 'Gösterilecek başka sunucu yok.',
+    'folder_empty' => 'Bu klasör boş.',
+    'no_servers' => 'Hesabınıza bağlı sunucu yok.',
+    'no_servers_found' => 'Sunucu bulunamadı',
+    'no_servers_available' => 'Kullanılabilir sunucu yok',
+
+    'claim' => [
+        'page_title' => 'Sunucu talep et',
+        'title' => 'Ücretsiz sunucular',
+        'subtitle' => 'Başlamak için aşağıdan ücretsiz sunucularınızı talep edin.',
+        'empty' => 'Şu anda ücretsiz sunucu yok.',
+        'server_expires' => 'Bu sunucu :count gün sonra sona erecek.',
+        'claim_before' => ':date tarihine kadar talep edin.',
+        'free' => 'Ücretsiz',
+        'action' => 'Talep et',
+        'errors' => [
+            'failed' => 'Talep edilemedi. Tekrar deneyin.',
+        ],
+        'requirements' => [
+            'email_verified' => 'E-posta doğrulandı',
+            'email_required' => 'E-posta doğrulaması gerekli',
+            'resend_verification' => 'Doğrulama e-postasını yeniden gönder',
+            'resend_verification_sent' => 'Doğrulama e-postası gönderildi.',
+            'resend_verification_failed' => 'Doğrulama e-postası yeniden gönderilemedi. Lütfen tekrar deneyin.',
+            'resend_verification_wait' => 'Başka bir doğrulama e-postası istemeden önce lütfen bekleyin.',
+            'two_factor_enabled' => '2FA etkin',
+            'two_factor_required' => 'İki faktörlü kimlik doğrulama gerekli',
+        ],
+        'specs' => [
+            'ram' => 'RAM',
+            'disk' => 'Disk',
+            'cpu' => 'CPU',
+        ],
+    ],
+
+    'folders' => [
+        'create' => 'Klasör oluştur',
+        'create_subfolder' => 'Alt klasör oluştur',
+        'create_directory' => 'Klasör oluştur',
+        'create_confirm' => 'Oluştur',
+        'edit' => 'Klasörü düzenle',
+        'delete' => 'Klasörü sil',
+        'name' => 'Klasör adı',
+        'placeholder' => 'Klasör adını girin',
+        'color' => 'Renk',
+        'color_placeholder' => '#000000',
+        'move_server' => '":name" taşı',
+    ],
+];

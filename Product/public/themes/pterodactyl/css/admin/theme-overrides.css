@@ -1,0 +1,8 @@
+.sidebar-menu > .theme-editor-link > a {
+    background-color: color-mix(in srgb, var(--color-primary) 18%, transparent);
+    color: white;
+}
+
+.sidebar-menu > .theme-editor-link > a:hover {
+    background-color: var(--color-primary) !important;
+}

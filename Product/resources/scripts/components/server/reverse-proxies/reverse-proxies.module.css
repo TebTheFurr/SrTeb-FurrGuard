@@ -1,0 +1,666 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--color-base);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.subtitle {
+    font-size: 14px;
+    color: var(--color-muted);
+    margin: 0;
+}
+
+.statsRow {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.statCard {
+    flex: 1;
+    min-width: 120px;
+    background-color: var(--color-background-secondary);
+    border: 1px solid var(--color-neutral);
+    border-radius: var(--border-radius, 12px);
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.statLabel {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-muted);
+}
+
+.statValue {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--color-base);
+}
+
+.createSection {
+    background-color: var(--color-background-secondary);
+    border: 1px solid var(--color-neutral);
+    border-radius: var(--border-radius, 12px);
+    padding: 24px;
+}
+
+.createTitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-base);
+    margin: 0 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.createTitle svg {
+    color: var(--color-primary);
+}
+
+.createForm {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.inputGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 200px;
+}
+
+.inputLabel {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-muted);
+}
+
+.domainInput {
+    width: 100%;
+    padding: 12px 14px;
+    background-color: var(--color-background);
+    border: 1px solid var(--color-neutral);
+    border-radius: var(--border-radius, 12px);
+    color: var(--color-base);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.domainInput:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+}
+
+.inputUnavailable {
+    border-color: #ef4444;
+    background-color: color-mix(in srgb, #ef4444 5%, var(--color-background));
+}
+
+.inputUnavailable:focus {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px color-mix(in srgb, #ef4444 15%, transparent);
+}
+
+.selectWrapper {
+    position: relative;
+}
+
+.selectIcon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--color-muted);
+    font-size: 12px;
+}
+
+.allocationSelect {
+    width: 100%;
+    padding: 12px 14px;
+    padding-right: 40px;
+    background-color: var(--color-background);
+    border: 1px solid var(--color-neutral);
+    border-radius: var(--border-radius, 12px);
+    color: var(--color-base);
+    font-size: 14px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 200ms ease, box-shadow 200ms ease;
+    appearance: none;
+}
+
+.allocationSelect:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+}
+
+.sslToggleWrapper {
+    display: flex;
+    align-items: flex-end;
+}
+
+.sslToggleButton {
+    padding: 12px 20px;
+    background-color: var(--color-background);
+    border: 1px solid var(--color-neutral);
+    border-radius: var(--border-radius, 12px);
+    color: var(--color-muted);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 200ms ease;
+    white-space: nowrap;
+}
+
+.sslToggleButton:hover:not(:disabled) {
+    background-color: var(--color-background-secondary);
+    border-color: var(--color-primary);
+    color: var(--color-base);
+}
+
+.sslToggleButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.sslToggleActive {
+    background-color: color-mix(in srgb, var(--color-primary) 15%, var(--color-background));
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.sslToggleActive:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--color-primary) 20%, var(--color-background));
+}
+
+.createButton {
+    padding: 12px 24px;
+    background-color: var(--color-primary);
+    border: none;
+    border-radius: var(--border-radius, 12px);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 150ms ease, opacity 150ms ease;
+    white-space: nowrap;
+}
+
+.createButton:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--color-primary) 85%, #000);
+}
+
+.createButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.proxiesList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.proxyCard {
+    background-color: var(--color-background-secondary);
+    border: 1px solid var(--color-neutral);
+    border-radius: var(--border-radius, 12px);
+    padding: 16px 20px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.proxyInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    flex: 1;
+}
+
+.proxyDomain {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-base);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.proxyDomain svg {
+    color: var(--color-primary);
+    flex-shrink: 0;
+}
+
+.proxyMeta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--color-muted);
+    flex-wrap: wrap;
+}
+
+.metaItem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.metaItem svg {
+    width: 14px;
+    height: 14px;
+}
+
+.statusBadge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.statusPending {
+    background-color: color-mix(in srgb, #f59e0b 15%, transparent);
+    color: #f59e0b;
+}
+
+.statusActive {
+    background-color: color-mix(in srgb, #22c55e 15%, transparent);
+    color: #22c55e;
+}
+
+.statusFailed {
+    background-color: color-mix(in srgb, #ef4444 15%, transparent);
+    color: #ef4444;
+}
+
+.statusDeleting {
+    background-color: color-mix(in srgb, #6b7280 15%, transparent);
+    color: #6b7280;
+}
+
+.proxyActions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.primaryAction {
+    width: auto;
+    justify-content: center;
+}
+
+.noticeActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 2px;
+}
+
+.noticeActions .primaryAction {
+    flex: none;
+}
+
+.noticeActions .removeButton {
+    min-width: 0;
+}
+
+.removeButton {
+    flex: none;
+    min-height: 38px;
+    padding: 8px 12px;
+    background-color: transparent;
+    border: 1px solid color-mix(in srgb, #ef4444 30%, transparent);
+    border-radius: var(--border-radius, 12px);
+    color: #ef4444;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 150ms ease;
+}
+
+.removeButton:hover {
+    background-color: color-mix(in srgb, #ef4444 10%, transparent);
+    border-color: #ef4444;
+}
+
+.confirmButton,
+.removeButton {
+    box-sizing: border-box;
+    min-height: 38px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.emptyState {
+    background-color: var(--color-background-secondary);
+    border: 1px dashed var(--color-neutral);
+    border-radius: var(--border-radius, 12px);
+    padding: 48px 24px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.emptyTitle {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-base);
+    margin: 0;
+}
+
+.emptyText {
+    font-size: 14px;
+    color: var(--color-muted);
+    margin: 0;
+    max-width: 400px;
+}
+
+.disabledState {
+    background-color: var(--color-background-secondary);
+    border: 1px solid var(--color-neutral);
+    border-radius: var(--border-radius, 12px);
+    padding: 48px 24px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.errorState {
+    background-color: color-mix(in srgb, #ef4444 5%, var(--color-background-secondary));
+    border: 1px solid color-mix(in srgb, #ef4444 30%, transparent);
+    border-radius: var(--border-radius, 12px);
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #ef4444;
+    font-size: 14px;
+}
+
+.errorState svg {
+    flex-shrink: 0;
+}
+
+.loadingContainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--color-neutral);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.successMessage {
+    background-color: color-mix(in srgb, #22c55e 10%, var(--color-background-secondary));
+    border: 1px solid color-mix(in srgb, #22c55e 30%, transparent);
+    border-radius: var(--border-radius, 12px);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #22c55e;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.dnsNotice {
+    width: 100%;
+    background-color: color-mix(in srgb, var(--color-neutral) 55%, var(--color-background-secondary));
+    border: 1px solid color-mix(in srgb, var(--color-neutral) 80%, transparent);
+    border-radius: var(--border-radius, 12px);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.dnsNoticeTitle {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-base);
+}
+
+.dnsNoticeText {
+    font-size: 14px;
+    color: var(--color-muted);
+}
+
+.confirmButton {
+    background-color: var(--color-primary);
+    border: 1px solid var(--color-primary);
+    border-radius: var(--border-radius, 12px);
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 150ms ease, border-color 150ms ease, opacity 150ms ease;
+}
+
+.confirmButton:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--color-primary) 85%, #000);
+    border-color: color-mix(in srgb, var(--color-primary) 85%, #000);
+}
+
+.confirmButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.removeButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .createForm {
+        flex-direction: column;
+    }
+    
+    .inputGroup {
+        width: 100%;
+    }
+    
+    .createButton {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .proxyCard {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .proxyActions {
+        width: auto;
+        padding-top: 14px;
+        border-top: 1px solid var(--color-neutral);
+        margin-top: 10px;
+    }
+
+    .confirmButton,
+    .removeButton {
+        justify-content: center;
+    }
+}
+
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal {
+    background-color: var(--color-background-secondary);
+    border: 1px solid var(--color-neutral);
+    border-radius: var(--border-radius, 12px);
+    width: 100%;
+    max-width: 400px;
+    overflow: hidden;
+}
+
+.modalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--color-neutral);
+}
+
+.modalTitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-base);
+    margin: 0;
+}
+
+.modalClose {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: var(--color-muted);
+    cursor: pointer;
+    transition: all 150ms ease;
+}
+
+.modalClose:hover {
+    background-color: var(--color-neutral);
+    color: var(--color-base);
+}
+
+.modalBody {
+    padding: 20px;
+}
+
+.modalBody p {
+    margin: 0 0 8px;
+    font-size: 14px;
+    color: var(--color-base);
+}
+
+.modalBody p:last-child {
+    margin-bottom: 0;
+}
+
+.modalWarning {
+    color: var(--color-muted) !important;
+    font-size: 13px !important;
+}
+
+.modalFooter {
+    display: flex;
+    gap: 12px;
+    padding: 16px 20px;
+    border-top: 1px solid var(--color-neutral);
+    justify-content: flex-end;
+}
+
+.modalCancel {
+    padding: 10px 16px;
+    background-color: var(--color-neutral);
+    border: none;
+    border-radius: 8px;
+    color: var(--color-base);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 150ms ease;
+}
+
+.modalCancel:hover {
+    background-color: color-mix(in srgb, var(--color-neutral) 80%, #000);
+}
+
+.modalConfirm {
+    padding: 10px 16px;
+    background-color: #ef4444;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 150ms ease;
+}
+
+.modalConfirm:hover {
+    background-color: #dc2626;
+}

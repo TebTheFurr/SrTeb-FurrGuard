@@ -1,0 +1,61 @@
+<?php
+
+return [
+    'title' => 'Panel',
+    'search' => 'Buscar servidores...',
+    'search_servers' => 'Buscar servidores...',
+    'no_matches' => 'No se encontraron servidores que coincidan con los criterios de búsqueda.',
+    'cpu_title' => 'CPU',
+    'memory_title' => 'Memoria',
+    'showing_others_servers' => 'Mostrando servidores de otros',
+    'showing_your_servers' => 'Mostrando tus servidores',
+    'home' => 'Inicio',
+    'no_other_servers' => 'No hay otros servidores que mostrar.',
+    'folder_empty' => 'Esta carpeta está vacía.',
+    'no_servers' => 'No hay servidores asociados a tu cuenta.',
+    'no_servers_found' => 'No se encontraron servidores',
+    'no_servers_available' => 'No hay servidores disponibles',
+
+    'claim' => [
+        'page_title' => 'Reclamar servidores',
+        'title' => 'Servidores gratuitos',
+        'subtitle' => 'Reclama tus servidores gratuitos abajo para empezar.',
+        'empty' => 'No hay servidores gratuitos disponibles ahora mismo.',
+        'server_expires' => 'Este servidor caducará tras :count día(s).',
+        'claim_before' => 'Reclama antes del :date.',
+        'free' => 'Gratis',
+        'action' => 'Reclamar',
+        'errors' => [
+            'failed' => 'No se pudo reclamar. Inténtalo de nuevo.',
+        ],
+        'requirements' => [
+            'email_verified' => 'Correo verificado',
+            'email_required' => 'Verificación de correo obligatoria',
+            'resend_verification' => 'Reenviar correo de verificación',
+            'resend_verification_sent' => 'Correo de verificación enviado.',
+            'resend_verification_failed' => 'No se pudo reenviar el correo de verificación. Inténtalo de nuevo.',
+            'resend_verification_wait' => 'Espera antes de solicitar otro correo de verificación.',
+            'two_factor_enabled' => '2FA activado',
+            'two_factor_required' => 'Autenticación en dos pasos obligatoria',
+        ],
+        'specs' => [
+            'ram' => 'RAM',
+            'disk' => 'Disco',
+            'cpu' => 'CPU',
+        ],
+    ],
+
+    'folders' => [
+        'create' => 'Crear carpeta',
+        'create_subfolder' => 'Crear subcarpeta',
+        'create_directory' => 'Crear carpeta',
+        'create_confirm' => 'Crear',
+        'edit' => 'Editar carpeta',
+        'delete' => 'Eliminar carpeta',
+        'name' => 'Nombre de la carpeta',
+        'placeholder' => 'Introduce el nombre de la carpeta',
+        'color' => 'Color',
+        'color_placeholder' => '#000000',
+        'move_server' => 'Mover ":name"',
+    ],
+];

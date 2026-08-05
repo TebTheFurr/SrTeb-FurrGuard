@@ -1,0 +1,98 @@
+.button {
+    @apply px-4 py-2 inline-flex items-center justify-center;
+    @apply text-base font-semibold transition-all duration-100;
+    --tw-ring-offset-color: var(--color-background-secondary);
+    border-radius: var(--border-radius, 12px);
+}
+
+.button:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.button.small {
+    @apply px-4 py-0 h-8 font-normal text-sm;
+}
+
+.button.large {
+    @apply px-5 py-3;
+}
+
+.button.secondary {
+    @apply bg-transparent;
+    color: var(--color-base);
+}
+
+.button.secondary:disabled {
+    background: transparent !important;
+}
+
+.button:disabled {
+    @apply cursor-not-allowed;
+}
+
+.button.square {
+    @apply p-0 w-12 h-12;
+}
+
+.button.square.small {
+    @apply w-8 h-8;
+}
+
+.primary {
+    background-color: var(--color-primary);
+    color: #fff;
+    --tw-ring-color: var(--color-primary);
+
+    &:hover, &:active {
+        background-color: var(--color-secondary);
+        color: #fff;
+    }
+
+    &.secondary {
+        color: var(--color-base);
+
+        &:hover, &:active {
+            background-color: var(--color-primary);
+            color: #fff;
+        }
+    }
+
+    &:disabled {
+        opacity: 0.75;
+        color: #fff;
+    }
+}
+
+.text {
+    background-color: var(--color-neutral);
+    color: var(--color-base);
+    --tw-ring-color: var(--color-neutral);
+
+    &:hover, &:active {
+        background-color: var(--color-background-secondary);
+    }
+
+    &.secondary {
+        &:hover, &:active {
+            background-color: var(--color-neutral);
+        }
+    }
+
+    &:disabled {
+        opacity: 0.75;
+        color: var(--color-base);
+    }
+}
+
+.danger {
+    @apply bg-red-600 text-gray-50;
+    @apply hover:bg-red-500 active:bg-red-500;
+
+    &.secondary {
+        @apply hover:bg-red-600 active:bg-red-600;
+    }
+
+    &:disabled {
+        @apply bg-red-600/75 text-red-50/75;
+    }
+}

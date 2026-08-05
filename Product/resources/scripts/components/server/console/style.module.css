@@ -1,0 +1,123 @@
+.stat_block {
+    @apply flex items-center relative;
+    @apply px-4 py-3;
+    background-color: var(--color-background-secondary);
+    border: 1px solid var(--color-neutral);
+    border-radius: var(--border-radius, 12px);
+
+    & > .status_bar {
+        @apply w-1 h-full absolute left-0 top-0;
+        border-top-left-radius: var(--border-radius, 12px);
+        border-bottom-left-radius: var(--border-radius, 12px);
+    }
+
+    & > .icon {
+        @apply flex flex-shrink-0 items-center justify-center w-10 h-10;
+        @apply transition-colors duration-500;
+        /* @apply mr-3; */
+        color: var(--color-muted);
+        border-radius: calc(var(--border-radius, 12px) * 0.5);
+
+        & > svg {
+            @apply w-5 h-5 m-auto;
+        }
+    }
+}
+
+.stat_block_reversed {
+    & > .icon {
+        @apply mr-0 ml-3;
+        order: 1;
+    }
+}
+
+.terminal {
+    @apply flex flex-col w-full p-0 sm:p-0;
+
+    & > .container {
+        @apply p-1 sm:p-2 min-h-[16rem] flex-1 font-mono text-sm overflow-x-auto;
+        background-color: var(--color-background-secondary);
+        border: 1px solid var(--color-neutral);
+        border-bottom: none;
+        border-top-left-radius: calc(var(--border-radius, 12px) * 0.67);
+        border-top-right-radius: calc(var(--border-radius, 12px) * 0.67);
+
+        & #terminal {
+            @apply h-full;
+
+            &::-webkit-scrollbar-track {
+                @apply w-2;
+            }
+
+            &::-webkit-scrollbar-thumb {
+                background-color: var(--color-neutral);
+            }
+        }
+    }
+
+    & .command_icon {
+        @apply flex items-center top-0 left-0 absolute z-10 select-none h-full px-3 transition-colors duration-100;
+        color: var(--color-muted);
+    }
+
+    & .command_input {
+        @apply relative px-2 pl-10 py-4 w-full font-mono text-sm;
+        padding-right: 5.5rem;
+        background-color: var(--color-background-secondary);
+        color: var(--color-base);
+        border: 1px solid var(--color-neutral);
+        border-bottom-left-radius: calc(var(--border-radius, 12px) * 0.67);
+        border-bottom-right-radius: calc(var(--border-radius, 12px) * 0.67);
+        outline: none !important;
+        transition: background-color 300ms ease-in-out;
+
+        @screen sm {
+            padding-right: 3rem;
+        }
+
+        &::placeholder {
+            color: var(--color-inverted);
+        }
+
+        &:hover, &:active, &:focus {
+            border-color: var(--color-neutral);
+            outline: none !important;
+            box-shadow: none !important;
+        }
+    }
+}
+
+.chart_container {
+    @apply pt-2 relative;
+    background-color: var(--color-background-secondary);
+    border: 1px solid var(--color-neutral);
+    border-radius: var(--border-radius, 12px);
+    overflow: visible;
+}
+
+.chart_content {
+    @apply relative px-2 pb-2;
+    height: 180px;
+    overflow: visible;
+
+    & canvas {
+        max-height: 100%;
+    }
+}
+
+.terminal_sidebar {
+    @apply h-full flex flex-col;
+
+    & > .container {
+        @apply flex-1 min-h-0;
+        border: none;
+        border-radius: 0;
+    }
+
+    & .command_input {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        border-bottom: none;
+    }
+}

@@ -1,0 +1,94 @@
+.settingsNav {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-neutral) transparent;
+}
+
+.settingsNav::-webkit-scrollbar {
+    height: 4px;
+}
+
+.settingsNav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.settingsNav::-webkit-scrollbar-thumb {
+    background: var(--color-neutral);
+    border-radius: 2px;
+}
+
+.navButton {
+    position: relative;
+}
+
+.navButton::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 0;
+    background: var(--color-primary);
+    border-radius: 0 2px 2px 0;
+    transition: height 0.2s ease;
+}
+
+.navButton.active::before {
+    height: 60%;
+}
+
+.fadeIn {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.inputCopyWrapper {
+    position: relative;
+}
+
+.inputCopyWrapper input {
+    padding-right: 48px;
+}
+
+.copyButton {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 6px 8px;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+    color: var(--color-muted);
+    background: var(--color-background);
+}
+
+.copyButton:hover {
+    color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.copyButton.copied {
+    color: #22c55e;
+}
+
+.dangerGlow {
+    box-shadow: 0 0 40px -10px rgba(239, 68, 68, 0.15);
+}
+
+.infoItemHover {
+    transition: background 0.15s ease;
+}
+
+.infoItemHover:hover {
+    background: color-mix(in srgb, var(--color-neutral) 30%, transparent);
+}
