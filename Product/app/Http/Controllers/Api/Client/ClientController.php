@@ -31,7 +31,9 @@ class ClientController extends ClientApiController
 
         // Start the query builder and ensure we eager load any requested relationships from the request.
         $builder = QueryBuilder::for(
-            Server::query()->with($this->getIncludesForTransformer($transformer, ['node']))
+            // node.location is eager loaded so the server list can render the
+            // node's location without an extra query per server.
+            Server::query()->with($this->getIncludesForTransformer($transformer, ['node', 'node.location']))
         )->allowedFilters([
             'uuid',
             'name',

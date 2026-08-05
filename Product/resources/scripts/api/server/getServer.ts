@@ -19,6 +19,7 @@ export interface Server {
     name: string;
     node: string;
     nodeId: number;
+    nodeLocation: string | null;
     isNodeUnderMaintenance: boolean;
     status: ServerStatus;
     sftpDetails: {
@@ -57,6 +58,7 @@ export const rawDataToServerObject = ({ attributes: data }: FractalResponseData)
     name: data.name,
     node: data.node,
     nodeId: data.node_id,
+    nodeLocation: data.node_location || null,
     isNodeUnderMaintenance: data.is_node_under_maintenance,
     status: data.status,
     invocation: data.invocation,

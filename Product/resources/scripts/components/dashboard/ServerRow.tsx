@@ -1,7 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircle, faHdd, faMemory, faMicrochip, faNetworkWired, faFolder } from '@fortawesome/free-solid-svg-icons';
+import {
+    faArrowDown,
+    faArrowUp,
+    faCircle,
+    faHdd,
+    faMapMarkerAlt,
+    faMemory,
+    faMicrochip,
+    faNetworkWired,
+    faFolder,
+    faServer,
+} from '@fortawesome/free-solid-svg-icons';
 import { Link } from 'react-router-dom';
 import { Server } from '@/api/server/getServer';
 import getServerResourceUsage, { ServerPowerState, ServerStats } from '@/api/server/getServerResourceUsage';
@@ -23,6 +34,11 @@ declare global {
 }
 
 const isAlarmState = (current: number, limit: number): boolean => limit > 0 && current / (limit * 1024 * 1024) >= 0.9;
+
+/** Usage percentage, or null when the resource is unlimited (limit of 0). */
+const percentOf = (used: number, limit: number): number | null => (limit > 0 ? (used / limit) * 100 : null);
+
+const UNLIMITED = '∞';
 
 const pulse = keyframes`
     0%, 100% { opacity: 1; }
@@ -263,7 +279,7 @@ const DetailedCard = styled(ServerCardBase)`
 `;
 
 const DetailedHeader = styled.div`
-    ${tw`flex items-center gap-3`};
+    ${tw`flex items-start justify-between gap-3`};
 `;
 
 const DetailedMeta = styled.div`
@@ -275,30 +291,105 @@ const DetailedTitle = styled.h3`
     color: var(--color-base);
 `;
 
-const DetailedSubtitle = styled.p`
-    ${tw`text-xs truncate mt-0.5`};
-    color: var(--color-muted);
+/** Node / location / maintenance chips shown under the server name. */
+const DetailedTagRow = styled.div`
+    ${tw`flex flex-wrap items-center gap-x-3 gap-y-1 mt-1`};
 `;
 
-const DetailedStatsGrid = styled.div<{ $hasPlayerCount?: boolean }>`
+const DetailedTag = styled.span<{ $warning?: boolean }>`
+    ${tw`inline-flex items-center gap-1.5 text-xs min-w-0`};
+    color: ${(props) => (props.$warning ? '#eab308' : 'var(--color-muted)')};
+
+    svg {
+        ${tw`flex-shrink-0`};
+        font-size: 0.7rem;
+        opacity: 0.85;
+    }
+
+    > span {
+        ${tw`truncate`};
+    }
+`;
+
+const DetailedAddressRow = styled.div`
+    ${tw`flex items-center gap-2 px-2.5 py-2 min-w-0 rounded-[var(--border-radius)]`};
+    background-color: var(--color-background);
+    border: 1px solid var(--color-neutral);
+
+    svg {
+        ${tw`flex-shrink-0`};
+        font-size: 0.75rem;
+        color: var(--color-muted);
+    }
+`;
+
+const DetailedAddress = styled.span`
+    ${tw`text-xs font-medium truncate`};
+    color: var(--color-base);
+`;
+
+const DetailedStatsGrid = styled.div`
     ${tw`grid gap-2`};
-    grid-template-columns: repeat(${(props) => (props.$hasPlayerCount ? 4 : 3)}, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
 `;
 
 const DetailedStatCard = styled.div<{ $alarm?: boolean }>`
-    ${tw`p-2.5 rounded-[var(--border-radius)]`};
+    ${tw`p-2.5 flex flex-col gap-1.5 rounded-[var(--border-radius)]`};
     background-color: ${(props) => (props.$alarm ? 'rgba(239, 68, 68, 0.1)' : 'var(--color-background)')};
     border: 1px solid ${(props) => (props.$alarm ? 'rgba(239, 68, 68, 0.3)' : 'var(--color-neutral)')};
 `;
 
-const DetailedStatLabel = styled.span`
-    ${tw`block text-xs mb-1`};
-    color: var(--color-muted);
+const DetailedStatLabel = styled.span<{ $alarm?: boolean }>`
+    ${tw`inline-flex items-center gap-1.5 text-xs`};
+    color: ${(props) => (props.$alarm ? '#ef4444' : 'var(--color-muted)')};
+
+    svg {
+        font-size: 0.7rem;
+    }
+`;
+
+const DetailedStatFigures = styled.div`
+    ${tw`flex items-baseline gap-1 min-w-0`};
 `;
 
 const DetailedStatValue = styled.span<{ $alarm?: boolean }>`
-    ${tw`block text-sm font-semibold`};
+    ${tw`text-sm font-semibold truncate`};
     color: ${(props) => (props.$alarm ? '#ef4444' : 'var(--color-base)')};
+`;
+
+const DetailedStatLimit = styled.span`
+    ${tw`text-xs flex-shrink-0`};
+    color: var(--color-muted);
+`;
+
+const DetailedTrack = styled.div`
+    ${tw`w-full h-1 rounded-full overflow-hidden`};
+    background-color: var(--color-neutral);
+`;
+
+const DetailedBar = styled.div<{ $percentage: number; $alarm?: boolean }>`
+    ${tw`h-full rounded-full transition-all duration-300`};
+    width: ${(props) => Math.max(Math.min(props.$percentage, 100), 0)}%;
+    background-color: ${(props) => (props.$alarm ? '#ef4444' : 'var(--color-primary)')};
+`;
+
+const DetailedFooter = styled.div`
+    ${tw`flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pt-2.5`};
+    border-top: 1px solid var(--color-neutral);
+`;
+
+const DetailedNetGroup = styled.div`
+    ${tw`flex items-center gap-4`};
+`;
+
+const DetailedNetItem = styled.span<{ $direction: 'down' | 'up' }>`
+    ${tw`inline-flex items-center gap-1.5 text-xs font-medium`};
+    color: var(--color-base);
+
+    svg {
+        font-size: 0.65rem;
+        color: ${(props) => (props.$direction === 'down' ? '#22c55e' : 'var(--color-primary)')};
+    }
 `;
 
 type Timer = ReturnType<typeof setInterval>;
@@ -549,15 +640,26 @@ export default ({
                 <DetailedHeader>
                     <DetailedMeta>
                         <DetailedTitle>{server.name}</DetailedTitle>
-                        <DetailedSubtitle>
-                            {address ? (
-                                <PrivacyServerHostBlur when={blurServerHostAddress}>{address}</PrivacyServerHostBlur>
-                            ) : (
-                                t('no_address')
+                        <DetailedTagRow>
+                            <DetailedTag title={server.node}>
+                                <FontAwesomeIcon icon={faServer} />
+                                <span>{server.node}</span>
+                            </DetailedTag>
+                            {server.nodeLocation && (
+                                <DetailedTag title={server.nodeLocation}>
+                                    <FontAwesomeIcon icon={faMapMarkerAlt} />
+                                    <span>{server.nodeLocation}</span>
+                                </DetailedTag>
                             )}
-                        </DetailedSubtitle>
+                            {server.isNodeUnderMaintenance && (
+                                <DetailedTag $warning title={t('maintenance', 'Maintenance')}>
+                                    <FontAwesomeIcon icon={faCircle} />
+                                    <span>{t('maintenance', 'Maintenance')}</span>
+                                </DetailedTag>
+                            )}
+                        </DetailedTagRow>
                     </DetailedMeta>
-                    <div className='flex items-center gap-2'>
+                    <div className='flex items-center gap-2 flex-shrink-0'>
                         {renderMoveButton()}
                         {!isSuspended && stats && (
                             <StatusBadge $status={stats.status}>
@@ -568,37 +670,83 @@ export default ({
                     </div>
                 </DetailedHeader>
 
+                <DetailedAddressRow>
+                    <FontAwesomeIcon icon={faNetworkWired} />
+                    <DetailedAddress>
+                        {address ? (
+                            <PrivacyServerHostBlur when={blurServerHostAddress}>{address}</PrivacyServerHostBlur>
+                        ) : (
+                            t('no_address')
+                        )}
+                    </DetailedAddress>
+                </DetailedAddressRow>
+
                 {!stats || isSuspended ? (
                     <div className='flex items-center justify-center py-3'>{renderLoadingOrSuspended()}</div>
                 ) : (
-                    <DetailedStatsGrid $hasPlayerCount={showPlayerCountCard}>
-                        <DetailedStatCard $alarm={alarms.cpu}>
-                            <DetailedStatLabel>{t('cpu')}</DetailedStatLabel>
-                            <DetailedStatValue $alarm={alarms.cpu}>
-                                {stats.cpuUsagePercent.toFixed(1)}%
-                            </DetailedStatValue>
-                        </DetailedStatCard>
-                        <DetailedStatCard $alarm={alarms.memory}>
-                            <DetailedStatLabel>{t('memory')}</DetailedStatLabel>
-                            <DetailedStatValue $alarm={alarms.memory}>
-                                {bytesToString(stats.memoryUsageInBytes)}
-                            </DetailedStatValue>
-                        </DetailedStatCard>
-                        <DetailedStatCard $alarm={alarms.disk}>
-                            <DetailedStatLabel>{t('disk')}</DetailedStatLabel>
-                            <DetailedStatValue $alarm={alarms.disk}>
-                                {bytesToString(stats.diskUsageInBytes)}
-                            </DetailedStatValue>
-                        </DetailedStatCard>
-                        {showPlayerCountCard && (
-                            <DetailedStatCard>
-                                <DetailedStatLabel>Players</DetailedStatLabel>
-                                <DetailedStatValue>
-                                    <PlayerCountWidget server={server} variant='card' />
-                                </DetailedStatValue>
-                            </DetailedStatCard>
-                        )}
-                    </DetailedStatsGrid>
+                    <>
+                        <DetailedStatsGrid>
+                            {[
+                                {
+                                    key: 'cpu',
+                                    icon: faMicrochip,
+                                    label: t('cpu'),
+                                    value: `${stats.cpuUsagePercent.toFixed(1)}%`,
+                                    limit: cpuLimit,
+                                    percentage: percentOf(stats.cpuUsagePercent, server.limits.cpu),
+                                    alarm: alarms.cpu,
+                                },
+                                {
+                                    key: 'memory',
+                                    icon: faMemory,
+                                    label: t('memory'),
+                                    value: bytesToString(stats.memoryUsageInBytes),
+                                    limit: memoryLimit,
+                                    percentage: percentOf(stats.memoryUsageInBytes, mbToBytes(server.limits.memory)),
+                                    alarm: alarms.memory,
+                                },
+                                {
+                                    key: 'disk',
+                                    icon: faHdd,
+                                    label: t('disk'),
+                                    value: bytesToString(stats.diskUsageInBytes),
+                                    limit: diskLimit,
+                                    percentage: percentOf(stats.diskUsageInBytes, mbToBytes(server.limits.disk)),
+                                    alarm: alarms.disk,
+                                },
+                            ].map((stat) => (
+                                <DetailedStatCard key={stat.key} $alarm={stat.alarm}>
+                                    <DetailedStatLabel $alarm={stat.alarm}>
+                                        <FontAwesomeIcon icon={stat.icon} />
+                                        {stat.label}
+                                    </DetailedStatLabel>
+                                    <DetailedStatFigures>
+                                        <DetailedStatValue $alarm={stat.alarm}>{stat.value}</DetailedStatValue>
+                                        <DetailedStatLimit>/ {stat.limit ?? UNLIMITED}</DetailedStatLimit>
+                                    </DetailedStatFigures>
+                                    {stat.percentage !== null && (
+                                        <DetailedTrack>
+                                            <DetailedBar $percentage={stat.percentage} $alarm={stat.alarm} />
+                                        </DetailedTrack>
+                                    )}
+                                </DetailedStatCard>
+                            ))}
+                        </DetailedStatsGrid>
+
+                        <DetailedFooter>
+                            <DetailedNetGroup>
+                                <DetailedNetItem $direction='down' title={t('network')}>
+                                    <FontAwesomeIcon icon={faArrowDown} />
+                                    {bytesToString(stats.networkRxInBytes)}
+                                </DetailedNetItem>
+                                <DetailedNetItem $direction='up' title={t('network')}>
+                                    <FontAwesomeIcon icon={faArrowUp} />
+                                    {bytesToString(stats.networkTxInBytes)}
+                                </DetailedNetItem>
+                            </DetailedNetGroup>
+                            {showPlayerCountCard && <PlayerCountWidget server={server} variant='card' />}
+                        </DetailedFooter>
+                    </>
                 )}
             </DetailedCard>
         );
