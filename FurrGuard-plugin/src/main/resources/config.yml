@@ -1,0 +1,43 @@
+# ═══════════════════════════════════════
+# FurrGuard - plugin Velocity
+# (c) SrTeb Limited - https://srteb.eu
+# ═══════════════════════════════════════
+
+# false: el proxy deja entrar a todos sin comprobar nada
+enabled: true
+# Registra accion, estado y tiempo de cada llamada a la API (nunca cuerpos ni la clave)
+debug: false
+
+api:
+  # Endpoint de plugins del panel. Obligatorio https://
+  url: "https://tu-dominio.com/api/plugin.php"
+  # Clave generada en el panel: Ajustes -> API key
+  key: "YOUR_SECURE_API_KEY_HERE"
+  # Plazo total de cada peticion, reintentos incluidos (ms, maximo 25000)
+  timeout: 8000
+  # Plazo para abrir la conexion (ms)
+  connect-timeout: 5000
+  # Solo desarrollo: permite http:// (la clave viajaria sin cifrar)
+  allow-insecure-http: false
+  # Que hacer con un login cuando la API no da una decision (red, timeout, 5xx, 429 o JSON invalido):
+  #   deny  -> se deniega y el jugador ve "error de verificacion" (recomendado)
+  #   allow -> entra sin comprobar
+  # Una clave rechazada (401/403) o una configuracion incorrecta deniegan siempre.
+  failure-policy: deny
+  # Cada cuantos segundos se consultan los cambios del panel (1-300)
+  poll-interval: 5
+
+cache:
+  # Guarda las respuestas correctas de la API para no repetir la consulta si el jugador reconecta.
+  # Se vacia sola al cambiar algo en el panel y con /fg reload.
+  enabled: true
+  # Segundos
+  duration: 300
+
+license:
+  # Enlace que ve el jugador si el plugin no tiene licencia
+  discord-url: "discord.gg/srteb"
+
+notifications:
+  # Paises (ISO 3166-1) que no disparan el aviso "no hispanohablante" (ajuste notify_hispanic del panel)
+  hispanic-countries: [ES, MX, AR, CO, PE, VE, CL, EC, GT, CU, BO, DO, HN, PY, SV, NI, CR, PA, UY, GQ]

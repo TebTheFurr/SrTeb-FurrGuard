@@ -18,22 +18,29 @@ plugins {
 }
 
 group = 'org.grinch'
-version = '1.0.0'
+version = '2.0.0'
+
+def velocityApiVersion = '3.4.0'
 
 repositories {
     mavenCentral()
     maven {
-        name = "papermc-repo"
-        url = "https://repo.papermc.io/repository/maven-public/"
+        name = 'papermc-repo'
+        url = 'https://repo.papermc.io/repository/maven-public/'
     }
 }
 
 dependencies {
-    compileOnly 'com.velocitypowered:velocity-api:3.4.0-SNAPSHOT'
-    annotationProcessor 'com.velocitypowered:velocity-api:3.4.0-SNAPSHOT'
+    compileOnly "com.velocitypowered:velocity-api:$velocityApiVersion"
+    annotationProcessor "com.velocitypowered:velocity-api:$velocityApiVersion"
 
-    implementation 'com.google.code.gson:gson:2.10.1'
-    implementation 'org.yaml:snakeyaml:2.2'
+    // libs/furrguard-common (includeBuild): trae gson y snakeyaml; todo se sombrea y reubica
+    implementation 'org.grinch.furrguard:furrguard-common:2.0.0'
+
+    testImplementation "com.velocitypowered:velocity-api:$velocityApiVersion"
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 def targetJavaVersion = 17
@@ -46,35 +53,35 @@ tasks.withType(JavaCompile).configureEach {
     options.release.set(targetJavaVersion)
 }
 
-// ============================================
-// SHADOW JAR
-// ============================================
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// Un unico artefacto desplegable: build/libs/FurrGuard-<version>.jar (el sombreado)
+tasks.named('jar') {
+    enabled = false
+}
+tasks.named('assemble') {
+    dependsOn tasks.named('shadowJar')
+}
 
 shadowJar {
-    // Usamos el clasificador 'shadow' para evitar conflictos de escritura con Gradle
-    archiveClassifier.set('shadow')
+    archiveClassifier.set('')
 
+    relocate 'org.grinch.furrguard.common', 'org.grinch.furrGuard.libs.common'
     relocate 'com.google.gson', 'org.grinch.furrGuard.libs.gson'
     relocate 'org.yaml.snakeyaml', 'org.grinch.furrGuard.libs.snakeyaml'
 
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
-
-    minimize()
-}
-
-tasks.processResources {
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
-    filesMatching('velocity-plugin.json') {
-        expand 'version': project.version
-    }
+    exclude 'module-info.class', 'META-INF/versions/*/module-info.class'
 }
 
 tasks {
     runVelocity {
-        velocityVersion("3.4.0-SNAPSHOT")
+        velocityVersion(velocityApiVersion)
     }
 }
 
+// BuildConstants.VERSION (y con ella velocity-plugin.json y la licencia) sale de 'version'
 def templateSource = file('src/main/templates')
 def templateDest = layout.buildDirectory.dir('generated/sources/templates')
 def generateTemplates = tasks.register('generateTemplates', Copy) { task ->
@@ -92,68 +99,44 @@ project.idea.project.settings.taskTriggers.afterSync generateTemplates
 project.eclipse.synchronizationTasks(generateTemplates)
 
 // ============================================
-// PROGUARD - OFUSCACIÓN DEDICADA
+// PROGUARD - build/libs/FurrGuard-<version>-obfuscated.jar
 // ============================================
 
-task obfuscatePlugin(type: ProGuardTask, dependsOn: shadowJar) {
-    injars(shadowJar.archiveFile)
+def toolchainHome = javaToolchains.launcherFor(java.toolchain).map { it.metadata.installationPath }
 
-    outjars("build/libs/FurrGuard-${project.version}-obfuscated.jar")
+def obfuscatePlugin = tasks.register('obfuscatePlugin', ProGuardTask) {
+    dependsOn tasks.named('shadowJar')
+    injars(tasks.named('shadowJar').flatMap { it.archiveFile })
+    outjars(layout.buildDirectory.file("libs/FurrGuard-${project.version}-obfuscated.jar"))
+    printmapping(layout.buildDirectory.file('proguard/mapping.txt'))
 
-    // Librerías de Java 17+ - usar jmods correctamente
-    def javaHome = System.getProperty('java.home')
-    // Incluir los jmods necesarios de Java
-    libraryjars("$javaHome/jmods/java.base.jmod", jarfilter: 'classes')
-    libraryjars("$javaHome/jmods/java.sql.jmod", jarfilter: 'classes')
-    libraryjars("$javaHome/jmods/java.logging.jmod", jarfilter: 'classes')
-    libraryjars("$javaHome/jmods/java.management.jmod", jarfilter: 'classes')
-    libraryjars("$javaHome/jmods/java.naming.jmod", jarfilter: 'classes')
-    libraryjars("$javaHome/jmods/java.desktop.jmod", jarfilter: 'classes')
-    libraryjars("$javaHome/jmods/java.instrument.jmod", jarfilter: 'classes')
+    // jmods del toolchain 17 y no los de la JVM que ejecuta Gradle: ProGuard 7.4 no lee clases de Java 22+
+    def jmods = toolchainHome.get().dir('jmods')
+    ['java.base', 'java.net.http', 'java.sql', 'java.logging', 'java.desktop',
+     'java.management', 'java.naming', 'java.instrument'].each { module ->
+        libraryjars(jmods.file("${module}.jmod"), jarfilter: '!**.jar', filter: '!module-info.class')
+    }
     libraryjars(sourceSets.main.compileClasspath)
 
-    // --- REGLAS ESTABLES MEMORIZADAS ---
     dontshrink()
     dontoptimize()
     useuniqueclassmembernames()
     repackageclasses('a')
 
-    // Ignorar advertencias de dependencias opcionales
     dontwarn 'sun.misc.**'
-    dontwarn 'java.sql.**'
-    dontwarn 'org.grinch.furrGuard.libs.gson.internal.**'
-    dontwarn 'org.grinch.furrGuard.libs.snakeyaml.**'
 
-    keepattributes '*Annotation*,Signature,InnerClasses,EnclosingMethod'
+    keepattributes '*Annotation*,Signature,InnerClasses,EnclosingMethod,Record,PermittedSubclasses,NestHost,NestMembers'
 
-    // Protección de Enums
-    keepclassmembers 'enum * { \
-        public static **[] values(); \
-        public static ** valueOf(java.lang.String); \
-    }'
-    keep 'enum * { *; }'
+    keepclassmembers 'enum * { public static **[] values(); public static ** valueOf(java.lang.String); }'
 
-    // Protección General de Serializable
-    keepclassmembers 'class * implements java.io.Serializable { \
-        static final long serialVersionUID; \
-        private static final java.io.ObjectStreamField[] serialPersistentFields; \
-        !static !transient <fields>; \
-        private void writeObject(java.io.ObjectOutputStream); \
-        private void readObject(java.io.ObjectInputStream); \
-        java.lang.Object writeReplace(); \
-        java.lang.Object readResolve(); \
-    }'
-
-    // 🛡️ REGLA NUEVA: Proteger las respuestas de la API para que GSON pueda leer el JSON
-    keep 'class org.grinch.furrGuard.api.response.** { *; }'
-
-    // --- PROTECCIÓN DE CLASE PRINCIPAL ---
+    // Punto de entrada de velocity-plugin.json (Guice inyecta el constructor)
     keep 'public class org.grinch.furrGuard.FurrGuard { *; }'
-
-    // Protección estricta para plugins de Velocity
     keep '@com.velocitypowered.api.plugin.Plugin class * { *; }'
+
+    // Librerias sombreadas sin ofuscar: reflexion de Gson/SnakeYAML, records e interfaces selladas de la comun
+    keep 'class org.grinch.furrGuard.libs.** { *; }'
 }
 
-build {
+tasks.named('build') {
     dependsOn obfuscatePlugin
 }

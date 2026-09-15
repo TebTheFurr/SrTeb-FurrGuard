@@ -1,0 +1,262 @@
+# Mensajes por defecto de FurrGuard. Los que existan en el panel (get_messages) mandan sobre estos.
+# Codigos legacy (&c, &l, &x&R&R&G&G&B&B). Los valores de los {placeholders} se insertan como texto plano.
+# Globales en todos: {server_name} y {discord} (ajustes server_name y discord_url del panel).
+
+prefix: "&8[&x&0&0&F&F&A&A&lFurrGuard&8] &7"
+
+# ── Kicks al entrar (y al re-verificar a los conectados) ──────────────────────────────
+# {id}: ID del baneo o referencia para soporte (tambien sale en la consola)
+
+kick_proxy: |-
+  &8╔════════════════════════════════════╗
+  &8║  &6&l{server_name}&8                    ║
+  &8║                                    ║
+  &8║     &c&l✘ CONEXIÓN DENEGADA ✘&8        ║
+  &8║                                    ║
+  &8║   &7Se ha detectado el uso de       ║
+  &8║   &c&lPROXY&7 en tu conexión.         ║
+  &8║                                    ║
+  &8║   &7Si crees que es un error,       ║
+  &8║   &fabre un ticket en nuestro       ║
+  &8║   &b&lDiscord&7.                      ║
+  &8║                                    ║
+  &8║   &8Discord: &b{discord}&8
+  &8║   &8ID: &7{id}&8                       ║
+  &8╚════════════════════════════════════╝
+
+kick_vpn: |-
+  &8╔════════════════════════════════════╗
+  &8║  &6&l{server_name}&8                    ║
+  &8║                                    ║
+  &8║     &c&l✘ CONEXIÓN DENEGADA ✘&8        ║
+  &8║                                    ║
+  &8║   &7Se ha detectado el uso de       ║
+  &8║   &c&lVPN&7 en tu conexión.           ║
+  &8║                                    ║
+  &8║   &7Las VPNs no están permitidas    ║
+  &8║   &7en este servidor.               ║
+  &8║                                    ║
+  &8║   &8Discord: &b{discord}&8
+  &8║   &8ID: &7{id}&8                       ║
+  &8╚════════════════════════════════════╝
+
+kick_hosting: |-
+  &8╔════════════════════════════════════╗
+  &8║  &6&l{server_name}&8                    ║
+  &8║                                    ║
+  &8║     &c&l✘ CONEXIÓN DENEGADA ✘&8        ║
+  &8║                                    ║
+  &8║   &7Tu conexión proviene de un      ║
+  &8║   &c&lDatacenter/Hosting&7.           ║
+  &8║                                    ║
+  &8║   &7Solo conexiones residenciales   ║
+  &8║   &7están permitidas.               ║
+  &8║                                    ║
+  &8║   &8Discord: &b{discord}&8
+  &8║   &8ID: &7{id}&8                       ║
+  &8╚════════════════════════════════════╝
+
+kick_mobile: |-
+  &8╔════════════════════════════════════╗
+  &8║  &6&l{server_name}&8                    ║
+  &8║                                    ║
+  &8║     &c&l✘ CONEXIÓN DENEGADA ✘&8        ║
+  &8║                                    ║
+  &8║   &7Tu conexión proviene de una     ║
+  &8║   &c&lRed Móvil&7.                    ║
+  &8║                                    ║
+  &8║   &7Solo conexiones residenciales   ║
+  &8║   &7están permitidas.               ║
+  &8║                                    ║
+  &8║   &8Discord: &b{discord}&8
+  &8║   &8ID: &7{id}&8                       ║
+  &8╚════════════════════════════════════╝
+
+# {reason}: motivo del baneo. {time_remaining}: " permanentemente" o " temporalmente (2d 3h 15m)"
+kick_blacklisted: |-
+  &8╔════════════════════════════════════╗
+  &8║  &6&l{server_name}&8                    ║
+  &8║                                    ║
+  &8║     &c&l✘ CUENTA SUSPENDIDA ✘&8        ║
+  &8║                                    ║
+  &8║   &7Tu cuenta ha sido suspendida{time_remaining}&7.
+  &8║                                    ║
+  &8║   &e&lRazón:&f {reason}&8
+  &8║                                    ║
+  &8║   &7Si crees que es un error,       ║
+  &8║   &fcontacta con la administración. ║
+  &8║                                    ║
+  &8║   &8Discord: &b{discord}&8
+  &8║   &8ID: &7{id}&8                       ║
+  &8╚════════════════════════════════════╝
+
+kick_blocked_provider: |-
+  &8╔════════════════════════════════════╗
+  &8║  &6&l{server_name}&8                    ║
+  &8║                                    ║
+  &8║     &c&l✘ CONEXIÓN DENEGADA ✘&8        ║
+  &8║                                    ║
+  &8║   &7Tu proveedor de internet       ║
+  &8║   &7está &c&lbloqueado&7.              ║
+  &8║                                    ║
+  &8║   &eISP:&f {isp}&8
+  &8║                                    ║
+  &8║   &7Contacta con administración    ║
+  &8║   &7para más información.          ║
+  &8║                                    ║
+  &8║   &8Discord: &b{discord}&8
+  &8║   &8ID: &7{id}&8                       ║
+  &8╚════════════════════════════════════╝
+
+kick_blocked_country: |-
+  &8╔════════════════════════════════════╗
+  &8║  &6&l{server_name}&8                    ║
+  &8║                                    ║
+  &8║     &c&l✘ CONEXIÓN DENEGADA ✘&8        ║
+  &8║                                    ║
+  &8║   &7Tu país está &c&lbloqueado&7.      ║
+  &8║                                    ║
+  &8║   &ePaís:&f {country}&8
+  &8║                                    ║
+  &8║   &7Disculpa las molestias.        ║
+  &8║                                    ║
+  &8║   &8Discord: &b{discord}&8
+  &8║   &8ID: &7{id}&8                       ║
+  &8╚════════════════════════════════════╝
+
+kick_blocked_continent: |-
+  &8╔════════════════════════════════════╗
+  &8║  &6&l{server_name}&8                    ║
+  &8║                                    ║
+  &8║     &c&l✘ CONEXIÓN DENEGADA ✘&8        ║
+  &8║                                    ║
+  &8║   &7Tu continente está &c&lbloqueado&7. ║
+  &8║                                    ║
+  &8║   &eContinente:&f {continent}&8
+  &8║                                    ║
+  &8║   &7Disculpa las molestias.        ║
+  &8║                                    ║
+  &8║   &8Discord: &b{discord}&8
+  &8║   &8ID: &7{id}&8                       ║
+  &8╚════════════════════════════════════╝
+
+kick_compromised_account: |-
+  &8╔════════════════════════════════════╗
+  &8║  &6&l{server_name}&8                    ║
+  &8║                                    ║
+  &8║     &c&l✘ CUENTA COMPROMETIDA ✘&8      ║
+  &8║                                    ║
+  &8║   &7Tu cuenta ha sido marcada como  ║
+  &8║   &c&lcomprometida&7 por seguridad.    ║
+  &8║                                    ║
+  &8║   &7Contacta con la administración  ║
+  &8║   &7para resolver este problema.    ║
+  &8║                                    ║
+  &8║   &8Discord: &b{discord}&8
+  &8║   &8ID: &7{id}&8                       ║
+  &8╚════════════════════════════════════╝
+
+kick_default: |-
+  &8╔════════════════════════════════════╗
+  &8║  &6&l{server_name}&8                    ║
+  &8║                                    ║
+  &8║     &c&l✘ CONEXIÓN DENEGADA ✘&8        ║
+  &8║                                    ║
+  &8║   &7No se permite tu conexión      ║
+  &8║   &7a este servidor.               ║
+  &8║                                    ║
+  &8║   &7Si crees que es un error,       ║
+  &8║   &fcontacta con la administración. ║
+  &8║                                    ║
+  &8║   &8Discord: &b{discord}&8
+  &8║   &8ID: &7{id}&8                       ║
+  &8╚════════════════════════════════════╝
+
+# La API no respondio, fallo o no pudo geolocalizar (api.failure-policy: deny)
+kick_api_error: |-
+  &8╔════════════════════════════════════╗
+  &8║     &c&l✘ ERROR DE VERIFICACIÓN ✘&8   ║
+  &8║                                    ║
+  &8║   &7No se pudo verificar tu        ║
+  &8║   &7conexión en este momento.       ║
+  &8║                                    ║
+  &8║   &7Por favor, inténtalo de nuevo.  ║
+  &8║                                    ║
+  &8║   &8ID: &7{id}&8                       ║
+  &8╚════════════════════════════════════╝
+
+kick_timeout: |-
+  &8╔════════════════════════════════════╗
+  &8║     &c&l✘ TIEMPO DE ESPERA AGOTADO ✘&8 ║
+  &8║                                    ║
+  &8║   &7La verificación tardó demasiado║
+  &8║   &7en completarse.                 ║
+  &8║                                    ║
+  &8║   &7Por favor, inténtalo de nuevo.  ║
+  &8║                                    ║
+  &8║   &8ID: &7{id}&8                       ║
+  &8╚════════════════════════════════════╝
+
+kick_unknown_error: |-
+  &8╔════════════════════════════════════╗
+  &8║     &c&l✘ ERROR DE VERIFICACIÓN ✘&8   ║
+  &8║                                    ║
+  &8║   &7Error inesperado al verificar   ║
+  &8║   &7tu conexión.                    ║
+  &8║                                    ║
+  &8║   &7Por favor, inténtalo de nuevo.  ║
+  &8║                                    ║
+  &8║   &8ID: &7{id}&8                       ║
+  &8╚════════════════════════════════════╝
+
+# Solo del plugin: mientras verifica la licencia o si config.yml no es valida
+kick_starting: |-
+  &8╔════════════════════════════════════╗
+  &8║  &6&l{server_name}&8
+  &8║                                    ║
+  &8║     &e&l⚠ SERVIDOR INICIANDO ⚠&8
+  &8║                                    ║
+  &8║   &7El sistema de seguridad aún     ║
+  &8║   &7no está listo.                  ║
+  &8║                                    ║
+  &8║   &fReintenta en unos segundos.     ║
+  &8╚════════════════════════════════════╝
+
+# Solo del plugin: {discord} es license.discord-url de config.yml
+kick_unlicensed: |-
+  &8━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  &c     FurrGuard - Sin Licencia
+  &8━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  &7  El plugin no está verificado.
+  &7  Contacta con el administrador.
+
+  &8  Discord: &b{discord}
+  &8━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# ── Avisos a admins (furrguard.notify / furrguard.admin) ─────────────────────────────
+# Acciones del panel: {type} y {value}
+whitelist_added: "&x&0&0&F&F&A&A&l+ &7Whitelist añadida: &f{type} &8= &f{value}"
+whitelist_removed: "&c&l- &7Whitelist eliminada: &f{type} &8= &f{value}"
+blacklist_added: "&c&l+ &7Blacklist añadida: &f{type} &8= &f{value}"
+blacklist_removed: "&x&0&0&F&F&A&A&l- &7Blacklist eliminada: &f{type} &8= &f{value}"
+
+# Logins bloqueados: {player} (con el nombre baneado entre parentesis si difiere), {ip}, {isp},
+# {country}, {country_code}, {continent}, {ban_id}, {reason} (etiqueta), {block_reason}
+notify_proxy_blocked: "&c&l🛡 &c{player} &7bloqueado &8• &f{ip} &8• &cProxy detectado"
+notify_vpn_blocked: "&c&l🛡 &c{player} &7bloqueado &8• &f{ip} &8• &cVPN detectada"
+notify_hosting_blocked: "&c&l🛡 &c{player} &7bloqueado &8• &f{ip} &8• &cHosting detectado"
+notify_mobile_blocked: "&c&l🛡 &c{player} &7bloqueado &8• &f{ip} &8• &cRed móvil detectada"
+notify_provider_blocked: "&c&l🛡 &c{player} &7bloqueado &8• &f{ip} &8• &cProveedor: &f{isp}"
+notify_country_blocked: "&c&l🛡 &c{player} &7bloqueado &8• &f{ip} &8• &cPaís: &f{country}"
+notify_continent_blocked: "&c&l🛡 &c{player} &7bloqueado &8• &f{ip} &8• &cContinente: &f{continent}"
+notify_blacklisted: "&c&l🛡 &c{player} &7bloqueado &8• &f{ip} &8• &cBlacklist &8[#{ban_id}]"
+notify_compromised_account: "&c&l🛡 &c{player} &7bloqueado &8• &f{ip} &8• &cCuenta comprometida"
+player_blocked: "&c&l🛡 &c{player} &7bloqueado &8• &f{ip} &8• &c{reason}"
+
+# Expulsado al re-verificar tras un cambio en el panel
+notify_player_kicked: "&c&l⚔ &c{player} &7expulsado &8• &f{ip} &8• &c{reason}"
+
+# Conexiones (ajustes notify_connections / notify_hispanic)
+notify_player_join: "&e➜ &e{player} &7conectó desde &f{country} &8({country_code})"
+notify_non_hispanic_join: "&6⚠ &f{player} &7conectó desde &f{country} &8({country_code}) &6(No hispanohablante)"

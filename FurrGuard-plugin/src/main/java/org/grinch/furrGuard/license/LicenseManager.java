@@ -1,762 +1,380 @@
 package org.grinch.furrGuard.license;
 
-import com.velocitypowered.api.proxy.Player;
+import com.google.gson.JsonObject;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.scheduler.ScheduledTask;
-import net.kyori.adventure.text.Component;
-import org.grinch.furrGuard.FurrGuard;
+import org.grinch.furrGuard.BuildConstants;
+import org.grinch.furrGuard.license.LicenseResponses.LicenseInfo;
+import org.grinch.furrGuard.license.LicenseResponses.LinkStatus;
+import org.grinch.furrGuard.license.LicenseResponses.Verification;
 import org.slf4j.Logger;
 
-import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.file.Files;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Path;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 /**
- * Sistema de Licencias FurrDownloads para FurrGuard
- * Basado en OAuth2 con código de vinculación
+ * Licencia FurrDownloads (vinculacion OAuth con codigo).
+ *
+ * <ul>
+ *   <li>La clave solo se borra ante un rechazo explicito ({@link LicenseResponses.Verdict#INVALID}).</li>
+ *   <li>Si el servidor de licencias no responde, se reintenta con backoff y la red sigue abierta
+ *       {@link LicenseResponses#GRACE_PERIOD} desde la ultima verificacion correcta.</li>
+ *   <li>Cada paso corre en el scheduler de Velocity y programa el siguiente: nunca hay dos a la vez
+ *       ni se bloquea un hilo de eventos. El estado es volatil y el resto del plugin solo lo consulta.</li>
+ * </ul>
  */
-public class LicenseManager {
+public final class LicenseManager {
 
-    // ============================================
-    // CONFIGURACIÓN HARDCODEADA - NO CAMBIAR
-    // ============================================
+    public enum Status {
+        /** Aun sin veredicto, o sin respuesta del servidor y fuera del periodo de gracia. */
+        PENDING,
+        VALID,
+        /** Sin respuesta del servidor de licencias, dentro del periodo de gracia. */
+        GRACE,
+        /** Sin clave, o clave rechazada: esperando vinculacion. */
+        UNLICENSED
+    }
 
-    /**
-     * ID del plugin HARDCODEADO
-     * Debe coincidir con el plugin_id creado en el panel web
-     */
     private static final String PLUGIN_ID = "furrguard";
-
-    /**
-     * Versión del plugin HARDCODEADA
-     * ¡ACTUALIZAR ESTE VALOR CON CADA NUEVA VERSIÓN!
-     */
-    private static final String PLUGIN_VERSION = "1.0.6";
-
-    /**
-     * URL de la API HARCODEADA
-     */
     private static final String API_URL = "https://furrdownloads.srteb.eu/api";
+    private static final String LINK_URL = "https://furrdownloads.srteb.eu/link/";
+    private static final String USER_AGENT = "FurrGuard-Velocity/" + BuildConstants.VERSION;
+    private static final Duration HTTP_TIMEOUT = Duration.ofSeconds(15);
+    private static final Duration REVERIFY_EVERY = Duration.ofHours(6);
+    private static final Duration HEARTBEAT_EVERY = Duration.ofMinutes(5);
+    private static final Duration LINK_POLL_EVERY = Duration.ofSeconds(10);
+    private static final int LINK_POLL_ATTEMPTS = 30; // 5 minutos: lo que dura un codigo
+    private static final long[] BACKOFF_SECONDS = {15, 30, 60, 120, 300, 600};
 
-    // ============================================
-    // VARIABLES DE INSTANCIA
-    // ============================================
+    /** {@code status} 0: sin respuesta, descrita en {@code error}. */
+    record Response(int status, String body, String error) {
+    }
 
-    private final FurrGuard plugin;
-    private final Logger logger;
+    private final Object plugin;
     private final ProxyServer server;
+    private final Logger logger;
     private final Path dataDirectory;
+    private final HttpClient http = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .followRedirects(HttpClient.Redirect.NEVER)
+            .build();
+    private final Function<HttpRequest, Response> transport;
 
-    private String encryptedApiKey;
-    private String instanceId;
-    private LicenseInfo licenseInfo;
-    private boolean licensed = false;
-    private ScheduledTask heartbeatTask;
-    private UpdateInfo availableUpdate;
-    private final List<Runnable> licenseValidCallbacks = new ArrayList<>();
+    private volatile Status status = Status.PENDING;
+    private volatile LicenseInfo license;
+    private volatile long lastValidAt;
+    private volatile String apiKey;
+    private volatile String hwid;
+    private volatile int failures;
+    private volatile boolean updateChecked;
+    private volatile boolean closed;
+    private volatile ScheduledTask nextStep;
+    private volatile ScheduledTask heartbeat;
 
-    public LicenseManager(FurrGuard plugin, Logger logger, ProxyServer server, Path dataDirectory) {
+    public LicenseManager(Object plugin, ProxyServer server, Logger logger, Path dataDirectory) {
+        this(plugin, server, logger, dataDirectory, null);
+    }
+
+    /** {@code transport} null usa HTTP real; los tests pasan uno falso (la URL no es configurable). */
+    LicenseManager(Object plugin, ProxyServer server, Logger logger, Path dataDirectory,
+                   Function<HttpRequest, Response> transport) {
         this.plugin = plugin;
-        this.logger = logger;
         this.server = server;
+        this.logger = logger;
         this.dataDirectory = dataDirectory;
+        this.transport = transport != null ? transport : this::exchange;
     }
 
-    // ============================================
-    // SISTEMA DE LICENCIAS (NUEVO FLUJO OAUTH)
-    // ============================================
-
-    /**
-     * Verifica la licencia del plugin
-     */
-    public void verifyLicense() {
-        logger.info("Verificando licencia...");
-
-        // Leer archivo key si existe
-        Path keyFile = dataDirectory.resolve("key");
-        if (Files.exists(keyFile)) {
-            String keyContent = readKeyFile(keyFile);
-            if (keyContent != null && !keyContent.isEmpty()) {
-                String hwid = generateHWID();
-
-                CompletableFuture.supplyAsync(() -> {
-                    try {
-                        return verifyApiKey(keyContent, hwid);
-                    } catch (Exception e) {
-                        logger.error("Error al verificar licencia: " + e.getMessage());
-                        return new LicenseResponse();
-                    }
-                }).thenAccept(response -> {
-                    if (response.success) {
-                        this.licenseInfo = response.license;
-                        this.licensed = true;
-                        this.instanceId = response.instance_id;
-                        this.encryptedApiKey = keyContent;
-
-                        showLicenseSuccess(response);
-                        enablePluginFeatures();
-                    } else {
-                        try {
-                            Files.deleteIfExists(keyFile);
-                            logger.warn("API key inválida. Iniciando nuevo flujo de vinculación.");
-                            initiateLinkingFlow();
-                        } catch (IOException e) {
-                            logger.error("Error al borrar archivo key: " + e.getMessage());
-                        }
-                    }
-                });
-                return;
-            }
-        }
-
-        // No hay archivo key, iniciar flujo de vinculación
-        initiateLinkingFlow();
-    }
-
-    /**
-     * Inicia el flujo de vinculación OAuth
-     */
-    private void initiateLinkingFlow() {
-        String hwid = generateHWID();
-
-        // Recopilar información del servidor
-        Map<String, String> serverInfo = new HashMap<>();
-        serverInfo.put("name", "FurrGuard");
-        serverInfo.put("version", PLUGIN_VERSION);
-        serverInfo.put("platform", "velocity");
-        serverInfo.put("port", String.valueOf(server.getBoundAddress().getPort()));
-
-        CompletableFuture.supplyAsync(() -> {
-            try {
-                return initiateLinking(hwid, serverInfo);
-            } catch (Exception e) {
-                logger.error("Error al iniciar vinculación: " + e.getMessage());
-                return new LinkingResponse();
-            }
-        }).thenAccept(response -> {
-            if (response.success) {
-                showLinkingInstructions(response);
-                startPollingForCompletion(response.link_code);
-            } else {
-                logger.error("Error al iniciar vinculación: " + response.error);
-            }
-        });
-    }
-
-    /**
-     * Muestra instrucciones de vinculación en consola
-     */
-    private void showLinkingInstructions(LinkingResponse response) {
-        logger.info("╔═══════════════════════════════════════════════════════════════════════╗");
-        logger.info("║  INICIALIZACIÓN REQUERIDA - VERIFICACIÓN DISCORD                     ║");
-        logger.info("╠═══════════════════════════════════════════════════════════════════════╣");
-        logger.info("║  Este servidor necesita verificación con Discord.                     ║");
-        logger.info("║  ¡La sesión expira en 5 minutos!                                      ║");
-        logger.info("║                                                                        ║");
-        logger.info("║  Código de vinculación: " + String.format("%-43s", response.link_code) + "║");
-        logger.info("║                                                                        ║");
-        logger.info("║  Abre este enlace en tu navegador:                                    ║");
-        logger.info("║  " + String.format("%-63s", getLinkUrl(response.link_code)) + "║");
-        logger.info("║                                                                        ║");
-        logger.info("║  O escanea este código QR:                                             ║");
-        logger.info("║  " + String.format("%-63s", "[QR: " + getQrCodeUrl(response.link_code) + "]") + "║");
-        logger.info("║                                                                        ║");
-        logger.info("║  Esperando vinculación...                                             ║");
-        logger.info("╚═══════════════════════════════════════════════════════════════════════╝");
-    }
-
-    /**
-     * Inicia el polling para verificar si la vinculación se completó
-     */
-    private void startPollingForCompletion(String linkCode) {
-        final int[] attempts = {0};
-        final int maxAttempts = 30; // 30 intentos = 5 minutos
-
-        Runnable pollTask = new Runnable() {
-            @Override
-            public void run() {
-                if (licensed) {
-                    return; // Ya está licenciado
-                }
-
-                if (attempts[0] >= maxAttempts) {
-                    logger.error("╔═══════════════════════════════════════════════════════════════════════╗");
-                    logger.error("║  TIEMPO DE ESPERA AGOTADO (5 MINUTOS)                                ║");
-                    logger.error("╠═══════════════════════════════════════════════════════════════════════╣");
-                    logger.error("║  La sesión de vinculación ha expirado.                                ║");
-                    logger.error("║  Reinicia el servidor para generar un nuevo código.                     ║");
-                    logger.error("╚═══════════════════════════════════════════════════════════════════════╝");
-                    return;
-                }
-
-                attempts[0]++;
-
-                CompletableFuture.supplyAsync(() -> {
-                    try {
-                        return checkLinkingStatus(linkCode);
-                    } catch (Exception e) {
-                        logger.warn("Error al verificar estado: " + e.getMessage());
-                        return new LinkingStatusResponse();
-                    }
-                }).thenAccept(status -> {
-                    if ("completed".equals(status.status)) {
-                        saveKeyFile(status.api_key_encrypted, status.instance_id);
-
-                        String hwid = generateHWID();
-                        try {
-                            LicenseResponse licenseResponse = verifyApiKey(status.api_key_encrypted, hwid);
-                            if (licenseResponse.success) {
-                                licenseInfo = licenseResponse.license;
-                                licensed = true;
-                                instanceId = status.instance_id;
-                                encryptedApiKey = status.api_key_encrypted;
-
-                                logger.info("╔═══════════════════════════════════════════════════════════════════════╗");
-                                logger.info("║  ¡SERVIDOR VINCULADO CORRECTAMENTE! ✅                               ║");
-                                logger.info("╠═══════════════════════════════════════════════════════════════════════╣");
-                                logger.info("║  La licencia se ha vinculado correctamente.                         ║");
-                                logger.info("║  Plugin: " + String.format("%-59s", licenseResponse.license.plugin_name) + "║");
-                                logger.info("║  Usuario: " + String.format("%-59s", licenseResponse.license.discord_username) + "║");
-                                logger.info("║  Servidor: " + String.format("%2d/%-62d",
-                                    licenseResponse.license.active_servers,
-                                    licenseResponse.license.max_servers) + "║");
-                                logger.info("╚═══════════════════════════════════════════════════════════════════════╝");
-
-                                enablePluginFeatures();
-                            }
-                        } catch (Exception e) {
-                            logger.error("Error al verificar licencia: " + e.getMessage());
-                        }
-                    } else if ("expired".equals(status.status)) {
-                        logger.error("La sesión de vinculación ha expirado.");
-                    } else {
-                        server.getScheduler().buildTask(plugin, this)
-                            .delay(10, TimeUnit.SECONDS)
-                            .schedule();
-                    }
-                });
-            }
-        };
-
-        server.getScheduler()
-            .buildTask(plugin, (task) -> pollTask.run())
-            .delay(10, TimeUnit.SECONDS)
-            .schedule();
-    }
-
-    private void showLicenseSuccess(LicenseResponse response) {
-        logger.info("╔══════════════════════════════════════════╗");
-        logger.info("║        LICENCIA VÁLIDA ✅               ║");
-        logger.info("╠══════════════════════════════════════════╣");
-        logger.info("║ Plugin: " + String.format("%-30s", response.license.plugin_name) + " ║");
-        logger.info("║ Usuario: " + String.format("%-29s", response.license.discord_username) + " ║");
-        logger.info("║ Rol: " + String.format("%-33s", response.license.role) + " ║");
-        logger.info("║ Discord ID: " + String.format("%-26s", response.license.discord_id) + " ║");
-        logger.info("║ Servidores: " + String.format("%2d/%-31d",
-            response.license.active_servers, response.license.max_servers) + " ║");
-
-        if (response.license.is_lifetime) {
-            logger.info("║ Tipo: Lifetime                           ║");
-        } else {
-            logger.info("║ Expira: " + String.format("%-30s", response.license.expires_at) + " ║");
-        }
-        logger.info("╚══════════════════════════════════════════╝");
-    }
-
-    private void saveKeyFile(String encryptedApiKey, String instanceId) {
-        Path keyFile = dataDirectory.resolve("key");
-        try {
-            String content = "# FurrDownloads License Key\n" +
-                "# DO NOT modify this file\n" +
-                "key=" + encryptedApiKey + "\n" +
-                "instance_id=" + instanceId + "\n";
-            Files.writeString(keyFile, content);
-        } catch (IOException e) {
-            logger.error("Error al guardar archivo key: " + e.getMessage());
-        }
-    }
-
-    private String readKeyFile(Path keyFile) {
-        try {
-            String content = Files.readString(keyFile);
-            for (String line : content.split("\n")) {
-                if (line.startsWith("key=")) {
-                    return line.substring(4).trim();
-                }
-            }
-        } catch (IOException e) {
-            logger.warn("Error al leer archivo key: " + e.getMessage());
-        }
-        return null;
-    }
-
-    // ============================================
-    // LLAMADAS A LA API
-    // ============================================
-
-    private LinkingResponse initiateLinking(String hwid, Map<String, String> serverInfo) throws Exception {
-        StringBuilder json = new StringBuilder();
-        json.append("{");
-        json.append("\"plugin_id\":\"").append(PLUGIN_ID).append("\",");
-        json.append("\"hwid\":\"").append(hwid).append("\",");
-        json.append("\"server_info\":{");
-        json.append("\"name\":\"").append(escapeJson(serverInfo.get("name"))).append("\",");
-        json.append("\"version\":\"").append(escapeJson(serverInfo.get("version"))).append("\",");
-        json.append("\"platform\":\"velocity\"");
-        json.append("}}");
-
-        URL url = new URL(API_URL + "/plugin/link");
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "application/json");
-        conn.setRequestProperty("User-Agent", "FurrDownloads-Plugin/2.0");
-        conn.setConnectTimeout(15000);
-        conn.setReadTimeout(15000);
-        conn.setDoOutput(true);
-
-        try (OutputStream os = conn.getOutputStream()) {
-            byte[] input = json.toString().getBytes("utf-8");
-            os.write(input, 0, input.length);
-        }
-
-        return parseLinkingResponse(readResponse(conn));
-    }
-
-    private LinkingStatusResponse checkLinkingStatus(String code) throws Exception {
-        URL url = new URL(API_URL + "/plugin/link/status/" + code);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("GET");
-        conn.setRequestProperty("User-Agent", "FurrDownloads-Plugin/2.0");
-        conn.setConnectTimeout(10000);
-        conn.setReadTimeout(10000);
-
-        return parseLinkingStatusResponse(readResponse(conn));
-    }
-
-    private LicenseResponse verifyApiKey(String encryptedKey, String hwid) throws Exception {
-        StringBuilder json = new StringBuilder();
-        json.append("{");
-        json.append("\"api_key\":\"").append(encryptedKey).append("\",");
-        json.append("\"hwid\":\"").append(hwid).append("\"");
-        json.append("}");
-
-        URL url = new URL(API_URL + "/plugin/verify");
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "application/json");
-        conn.setRequestProperty("User-Agent", "FurrDownloads-Plugin/2.0");
-        conn.setConnectTimeout(15000);
-        conn.setReadTimeout(15000);
-        conn.setDoOutput(true);
-
-        try (OutputStream os = conn.getOutputStream()) {
-            byte[] input = json.toString().getBytes("utf-8");
-            os.write(input, 0, input.length);
-        }
-
-        return parseLicenseResponse(readResponse(conn));
-    }
-
-    private void sendHeartbeat() {
-        if (encryptedApiKey == null) return;
-
-        CompletableFuture.supplyAsync(() -> {
-            try {
-                StringBuilder json = new StringBuilder();
-                json.append("{\"api_key\":\"").append(encryptedApiKey).append("\"}");
-
-                URL url = new URL(API_URL + "/plugin/heartbeat");
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("POST");
-                conn.setRequestProperty("Content-Type", "application/json");
-                conn.setRequestProperty("User-Agent", "FurrDownloads-Plugin/2.0");
-                conn.setConnectTimeout(5000);
-                conn.setReadTimeout(5000);
-                conn.setDoOutput(true);
-
-                try (OutputStream os = conn.getOutputStream()) {
-                    byte[] input = json.toString().getBytes("utf-8");
-                    os.write(input, 0, input.length);
-                }
-
-                readResponse(conn);
-            } catch (Exception e) {
-                // Silencioso
-            }
-            return null;
-        });
-    }
-
-    private String readResponse(HttpURLConnection conn) throws Exception {
-        int responseCode = conn.getResponseCode();
-        InputStream is = responseCode < 400 ? conn.getInputStream() : conn.getErrorStream();
-
-        if (is == null) {
-            throw new Exception("No response from server (code: " + responseCode + ")");
-        }
-
-        BufferedReader br = new BufferedReader(new InputStreamReader(is, "utf-8"));
-        StringBuilder response = new StringBuilder();
-        String line;
-        while ((line = br.readLine()) != null) {
-            response.append(line);
-        }
-
-        return response.toString();
-    }
-
-    // ============================================
-    // PARSERS
-    // ============================================
-
-    private LinkingResponse parseLinkingResponse(String json) {
-        LinkingResponse response = new LinkingResponse();
-        response.success = json.contains("\"success\"") && json.contains("true");
-
-        if (response.success) {
-            response.link_code = extractString(json, "link_code");
-            response.oauth_url = extractString(json, "oauth_url");
-        } else {
-            response.error = extractString(json, "error");
-        }
-        return response;
-    }
-
-    private LinkingStatusResponse parseLinkingStatusResponse(String json) {
-        LinkingStatusResponse response = new LinkingStatusResponse();
-        response.status = extractString(json, "status");
-        if ("completed".equals(response.status)) {
-            response.api_key_encrypted = extractString(json, "api_key_encrypted");
-            response.instance_id = extractString(json, "instance_id");
-
-            response.license = new LicenseInfo();
-            response.license.plugin_id = extractString(json, "plugin_id");
-            response.license.plugin_name = extractString(json, "plugin_name");
-            response.license.discord_id = extractString(json, "discord_id");
-            response.license.discord_username = extractString(json, "discord_username");
-            response.license.role = extractString(json, "role");
-            response.license.max_servers = extractInt(json, "max_servers");
-            response.license.active_servers = extractInt(json, "active_servers");
-            response.license.is_lifetime = json.contains("\"is_lifetime\"") && json.contains("true");
-            response.license.expires_at = extractString(json, "expires_at");
-        }
-        return response;
-    }
-
-    private LicenseResponse parseLicenseResponse(String json) {
-        LicenseResponse response = new LicenseResponse();
-        response.success = json.contains("\"success\"") && json.contains("true");
-
-        if (response.success) {
-            response.license = new LicenseInfo();
-            response.license.plugin_id = extractString(json, "plugin_id");
-            response.license.plugin_name = extractString(json, "plugin_name");
-            response.license.discord_id = extractString(json, "discord_id");
-            response.license.discord_username = extractString(json, "discord_username");
-            response.license.role = extractString(json, "role");
-            response.license.max_servers = extractInt(json, "max_servers");
-            response.license.active_servers = extractInt(json, "active_servers");
-            response.license.is_lifetime = json.contains("\"is_lifetime\"") && json.contains("true");
-            response.license.expires_at = extractString(json, "expires_at");
-            response.instance_id = extractString(json, "instance_id");
-        } else {
-            response.error = extractString(json, "error");
-            response.message = extractString(json, "message");
-        }
-
-        return response;
-    }
-
-    private String extractString(String json, String key) {
-        String pattern = "\"" + key + "\"\\s*:\\s*\"([^\"]+)\"";
-        java.util.regex.Pattern p = java.util.regex.Pattern.compile(pattern);
-        java.util.regex.Matcher m = p.matcher(json);
-        return m.find() ? m.group(1) : "";
-    }
-
-    private int extractInt(String json, String key) {
-        String pattern = "\"" + key + "\":(\\d+)";
-        java.util.regex.Pattern p = java.util.regex.Pattern.compile(pattern);
-        java.util.regex.Matcher m = p.matcher(json);
-        return m.find() ? Integer.parseInt(m.group(1)) : 0;
-    }
-
-    private String escapeJson(String s) {
-        if (s == null) return "";
-        return s.replace("\\", "\\\\").replace("\"", "\\\"");
-    }
-
-    // ============================================
-    // HWID GENERATION
-    // ============================================
-
-    private String generateHWID() {
-        try {
-            StringBuilder hwidData = new StringBuilder();
-
-            hwidData.append(System.getProperty("os.name"));
-            hwidData.append(System.getProperty("os.version"));
-            hwidData.append(System.getProperty("os.arch"));
-            hwidData.append(System.getProperty("java.version"));
-            hwidData.append(server.getBoundAddress().getHostString());
-            hwidData.append(String.valueOf(server.getBoundAddress().getPort()));
-            hwidData.append("furrdownloads-hwid-salt-velocity");
-
-            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(hwidData.toString().getBytes("UTF-8"));
-
-            StringBuilder hexString = new StringBuilder();
-            for (byte b : hash) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) hexString.append('0');
-                hexString.append(hex);
-            }
-
-            return hexString.toString();
-        } catch (java.security.NoSuchAlgorithmException e) {
-            logger.error("SHA-256 algorithm not available - cannot generate HWID");
-            throw new RuntimeException("Cannot generate HWID: SHA-256 not available", e);
-        } catch (java.io.UnsupportedEncodingException e) {
-            logger.error("UTF-8 encoding not available - cannot generate HWID");
-            throw new RuntimeException("Cannot generate HWID: UTF-8 not available", e);
-        } catch (Exception e) {
-            logger.error("Error generating HWID: " + e.getMessage());
-            throw new RuntimeException("Cannot generate HWID", e);
-        }
-    }
-
-    // ============================================
-    // GESTIÓN DEL PLUGIN
-    // ============================================
-
-    private void enablePluginFeatures() {
-        logger.info("Iniciando funcionalidades del plugin...");
-
-        // Iniciar heartbeat cada 5 minutos
-        heartbeatTask = server.getScheduler()
-            .buildTask(plugin, (task) -> sendHeartbeat())
-            .repeat(5, TimeUnit.MINUTES)
-            .schedule();
-
-        // Ejecutar callbacks de licencia válida
-        for (Runnable callback : licenseValidCallbacks) {
-            callback.run();
-        }
-        licenseValidCallbacks.clear();
-
-        // Verificar actualizaciones después de iniciar
-        server.getScheduler().buildTask(plugin, this::checkForUpdates)
-            .delay(50, TimeUnit.MILLISECONDS)
-            .schedule();
-
-        logger.info("FurrGuard se ha iniciado correctamente con licencia válida.");
+    public void start() {
+        schedule(Duration.ZERO, this::boot);
+        heartbeat = server.getScheduler().buildTask(plugin, this::sendHeartbeat)
+                .delay(HEARTBEAT_EVERY).repeat(HEARTBEAT_EVERY).schedule();
     }
 
     public void shutdown() {
-        if (heartbeatTask != null) {
-            heartbeatTask.cancel();
-        }
+        closed = true;
+        cancel(nextStep);
+        cancel(heartbeat);
     }
 
-    // ============================================
-    // SISTEMA DE ACTUALIZACIONES
-    // ============================================
-
-    /**
-     * Verifica si hay una nueva versión disponible del plugin
-     * Muestra advertencias en consola (colores ANSI para Pterodactyl) y a jugadores OP
-     */
-    private void checkForUpdates() {
-        try {
-            StringBuilder json = new StringBuilder();
-            json.append("{");
-            json.append("\"plugin_id\":\"").append(PLUGIN_ID).append("\",");
-            json.append("\"current_version\":\"").append(PLUGIN_VERSION).append("\"");
-            json.append("}");
-
-            URL url = new URL(API_URL + "/plugin/check-version");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setRequestProperty("User-Agent", "FurrDownloads-Plugin/2.0");
-            conn.setConnectTimeout(10000);
-            conn.setReadTimeout(10000);
-            conn.setDoOutput(true);
-
-            try (OutputStream os = conn.getOutputStream()) {
-                byte[] input = json.toString().getBytes("utf-8");
-                os.write(input, 0, input.length);
-            }
-
-            String response = readResponse(conn);
-            UpdateCheckResult updateResult = parseUpdateCheck(response);
-
-            if (updateResult.has_update) {
-                this.availableUpdate = updateResult.update;
-                showUpdateWarning(updateResult.update);
-                notifyPlayersAboutUpdate(updateResult.update);
-            }
-        } catch (Exception e) {
-            // Silencioso - no mostrar errores al verificar actualizaciones
-        }
+    public Status status() {
+        return status;
     }
-
-    /**
-     * Muestra advertencia en consola con colores ANSI (compatible con Pterodactyl)
-     */
-    private void showUpdateWarning(UpdateInfo update) {
-        String ANSI_RESET = "\u001B[0m";
-        String ANSI_RED = "\u001B[31m";
-        String ANSI_BOLD = "\u001B[1m";
-        String ANSI_YELLOW = "\u001B[33m";
-
-        logger.warn("");
-        logger.warn(ANSI_RED + "╔════════════════════════════════════════════════════════════════╗" + ANSI_RESET);
-        logger.warn(ANSI_RED + "║" + ANSI_BOLD + "  ⚠ ¡NUEVA VERSIÓN DISPONIBLE! ⚠" + ANSI_RESET + "                             ║" + ANSI_RESET);
-        logger.warn(ANSI_RED + "╠════════════════════════════════════════════════════════════════╣" + ANSI_RESET);
-        logger.warn(ANSI_RED + "║  Versión actual: " + ANSI_RESET + PLUGIN_VERSION + ANSI_RED + "    Nueva versión: " + ANSI_YELLOW + update.latest_version + ANSI_RESET + "  ║" + ANSI_RESET);
-        logger.warn(ANSI_RED + "║                                                                        ║" + ANSI_RESET);
-        logger.warn(ANSI_RED + "║  Descarga la nueva versión en:                                      ║" + ANSI_RESET);
-        logger.warn(ANSI_YELLOW + "║  " + update.download_url + " ║" + ANSI_RESET);
-        logger.warn(ANSI_RED + "╚════════════════════════════════════════════════════════════════╝" + ANSI_RESET);
-        logger.warn("");
-    }
-
-    /**
-     * Notifica a los jugadores con permiso * (OP) sobre la actualización
-     */
-    private void notifyPlayersAboutUpdate(UpdateInfo update) {
-        String message = "&c&l⚠ ¡NUEVA VERSIÓN DISPONIBLE! &r&e\n" +
-                          "&cVersión actual: &e" + PLUGIN_VERSION + " &c→ &aNueva: &e" + update.latest_version + "&c\n" +
-                          "&7Descarga: &f" + update.download_url;
-
-        server.getAllPlayers().stream()
-            .filter(player -> player.hasPermission("*"))
-            .forEach(player -> {
-                player.sendMessage(Component.text(""));
-                player.sendMessage(Component.text(message.replace("&", "§")));
-                player.sendMessage(Component.text(""));
-            });
-    }
-
-    /**
-     * Parsea la respuesta de verificación de actualización
-     */
-    private UpdateCheckResult parseUpdateCheck(String json) {
-        UpdateCheckResult result = new UpdateCheckResult();
-        result.has_update = json.contains("\"has_update\":true") || json.contains("\"has_update\": true");
-
-        if (result.has_update) {
-            result.update = new UpdateInfo();
-            result.update.current_version = extractString(json, "current_version");
-            result.update.latest_version = extractString(json, "latest_version");
-            result.update.download_url = extractString(json, "download_url");
-            result.update.patch_notes = extractString(json, "patch_notes");
-        }
-
-        return result;
-    }
-
-    // ============================================
-    // UTILIDADES
-    // ============================================
-
-    private String getLinkUrl(String code) {
-        return "https://furrdownloads.srteb.eu/link/" + code + "?redirect=false";
-    }
-
-    private String getQrCodeUrl(String code) {
-        return "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + getLinkUrl(code);
-    }
-
-    // ============================================
-    // GETTERS PÚBLICOS
-    // ============================================
 
     public boolean isLicensed() {
-        return licensed;
+        Status current = status;
+        return current == Status.VALID || current == Status.GRACE;
     }
 
-    public LicenseInfo getLicenseInfo() {
-        return licenseInfo;
+    /** Titular de la licencia, o null si nunca se verifico. */
+    public String holder() {
+        LicenseInfo info = license;
+        return info == null ? null : info.discordUsername();
     }
 
-    public String getPluginId() {
-        return PLUGIN_ID;
+    public String role() {
+        LicenseInfo info = license;
+        return info == null ? null : info.role();
     }
 
-    public String getPluginVersion() {
-        return PLUGIN_VERSION;
+    private void boot() {
+        hwid = loadHwid();
+        try {
+            apiKey = LicenseFiles.readKey(dataDirectory);
+        } catch (IOException e) {
+            logger.error("No se pudo leer el archivo key: {}", e.getMessage());
+        }
+        if (apiKey == null) {
+            status = Status.UNLICENSED;
+            logger.warn("No hay licencia vinculada: se deniegan los logins hasta completar la vinculacion.");
+            startLinking();
+            return;
+        }
+        LicenseFiles.SavedState saved = LicenseFiles.readState(dataDirectory);
+        if (saved != null) {
+            lastValidAt = saved.lastValidAt();
+            if (LicenseResponses.withinGrace(lastValidAt, System.currentTimeMillis())) {
+                license = saved.license();
+                status = Status.GRACE; // la red no espera al servidor de licencias para abrir
+            }
+        }
+        verify();
     }
 
-    public UpdateInfo getAvailableUpdate() {
-        return availableUpdate;
-    }
-
-    /**
-     * Registra un callback que se ejecutará cuando la licencia sea válida
-     */
-    public void onLicenseValid(Runnable callback) {
-        if (licensed) {
-            callback.run();
+    private void verify() {
+        logger.info("Verificando licencia...");
+        Response response = post("/plugin/verify", json("api_key", apiKey, "hwid", hwid));
+        Verification verification = response.status() == 0
+                ? new Verification(LicenseResponses.Verdict.RETRY, null, "sin respuesta: " + response.error())
+                : LicenseResponses.parseVerify(response.status(), response.body());
+        if (verification.verdict() == LicenseResponses.Verdict.VALID) {
+            onValid(verification.license());
+        } else if (LicenseResponses.shouldDeleteKey(verification)) {
+            onRejected(verification.error());
         } else {
-            licenseValidCallbacks.add(callback);
+            onVerifyFailed(verification.error());
         }
     }
 
-    // ============================================
-    // CLASES INTERNAS
-    // ============================================
-
-    public static class LinkingResponse {
-        public boolean success;
-        public String link_code;
-        public String oauth_url;
-        public String error;
+    private void onValid(LicenseInfo info) {
+        boolean wasValid = status == Status.VALID;
+        license = info;
+        lastValidAt = System.currentTimeMillis();
+        failures = 0;
+        status = Status.VALID;
+        try {
+            LicenseFiles.writeState(dataDirectory, lastValidAt, info);
+        } catch (IOException e) {
+            logger.warn("No se pudo guardar {} ({}): sin el no habra periodo de gracia al reiniciar",
+                    LicenseFiles.STATE_FILE, e.getMessage());
+        }
+        if (!wasValid) {
+            logger.info("Licencia valida: {} | titular: {} | rol: {} | servidores: {}/{} | {}",
+                    info.pluginName(), info.discordUsername(), info.role(), info.activeServers(), info.maxServers(),
+                    info.lifetime() ? "lifetime" : "expira: " + info.expiresAt());
+        }
+        if (!updateChecked) {
+            updateChecked = true;
+            checkForUpdates();
+        }
+        schedule(REVERIFY_EVERY, this::verify);
     }
 
-    public static class LinkingStatusResponse {
-        public String status;
-        public String api_key_encrypted;
-        public String instance_id;
-        public LicenseInfo license;
+    private void onRejected(String error) {
+        logger.error("El servidor de licencias rechazo la clave ({}): se borra y hay que vincular de nuevo.", error);
+        try {
+            LicenseFiles.deleteKeyAndState(dataDirectory);
+        } catch (IOException e) {
+            logger.error("No se pudo borrar el archivo key: {}", e.getMessage());
+        }
+        apiKey = null;
+        license = null;
+        lastValidAt = 0;
+        status = Status.UNLICENSED;
+        startLinking();
     }
 
-    public static class LicenseResponse {
-        public boolean success;
-        public String error;
-        public String message;
-        public LicenseInfo license;
-        public String instance_id;
+    private void onVerifyFailed(String error) {
+        Duration delay = backoff();
+        if (LicenseResponses.withinGrace(lastValidAt, System.currentTimeMillis())) {
+            if (status != Status.GRACE) {
+                logger.warn("Servidor de licencias sin respuesta: periodo de gracia hasta {} (UTC)",
+                        Instant.ofEpochMilli(lastValidAt).plus(LicenseResponses.GRACE_PERIOD));
+            }
+            status = Status.GRACE;
+        } else {
+            if (status == Status.GRACE || status == Status.VALID) {
+                logger.error("Periodo de gracia agotado: se deniegan los logins hasta verificar la licencia.");
+            }
+            status = Status.PENDING;
+        }
+        logger.warn("No se pudo verificar la licencia ({}); reintento en {} s", error, delay.toSeconds());
+        schedule(delay, this::verify);
     }
 
-    public static class LicenseInfo {
-        public String plugin_id;
-        public String plugin_name;
-        public String discord_id;
-        public String discord_username;
-        public String role;
-        public int max_servers;
-        public int active_servers;
-        public boolean is_lifetime;
-        public String expires_at;
+    private void startLinking() {
+        JsonObject serverInfo = json("name", "FurrGuard", "version", BuildConstants.VERSION);
+        serverInfo.addProperty("platform", "velocity");
+        JsonObject body = json("plugin_id", PLUGIN_ID, "hwid", hwid);
+        body.add("server_info", serverInfo);
+        Response response = post("/plugin/link", body);
+        Optional<String> code = LicenseResponses.parseLinkCode(response.status(), response.body());
+        if (code.isEmpty()) {
+            Duration delay = backoff();
+            logger.error("No se pudo iniciar la vinculacion ({}); reintento en {} s", describe(response), delay.toSeconds());
+            schedule(delay, this::startLinking);
+            return;
+        }
+        failures = 0;
+        logger.warn("====================================================================");
+        logger.warn(" VINCULACION REQUERIDA - VERIFICACION CON DISCORD");
+        logger.warn(" Mientras no se vincule, el proxy deniega todos los logins.");
+        logger.warn(" Codigo de vinculacion: {} (caduca en 5 minutos; despues se genera otro)", code.get());
+        logger.warn(" Abre en el navegador: {}{}?redirect=false", LINK_URL, code.get());
+        logger.warn("====================================================================");
+        schedule(LINK_POLL_EVERY, () -> pollLink(code.get(), 1));
     }
 
-    public static class UpdateInfo {
-        public String current_version;
-        public String latest_version;
-        public String download_url;
-        public String patch_notes;
-        public String release_date;
+    private void pollLink(String code, int attempt) {
+        Response response = get("/plugin/link/status/" + code);
+        LinkStatus link = LicenseResponses.parseLinkStatus(response.status(), response.body());
+        if (link.completed()) {
+            try {
+                LicenseFiles.writeKey(dataDirectory, link.encryptedKey(), link.instanceId());
+            } catch (IOException e) {
+                logger.error("No se pudo guardar el archivo key ({}): habra que vincular de nuevo al reiniciar",
+                        e.getMessage());
+            }
+            apiKey = link.encryptedKey();
+            logger.info("Servidor vinculado correctamente.");
+            verify();
+        } else if (link.expired() || attempt >= LINK_POLL_ATTEMPTS) {
+            logger.warn("El codigo de vinculacion ha caducado: se genera uno nuevo.");
+            startLinking();
+        } else {
+            schedule(LINK_POLL_EVERY, () -> pollLink(code, attempt + 1));
+        }
     }
 
-    public static class UpdateCheckResult {
-        public boolean has_update;
-        public UpdateInfo update;
+    private void sendHeartbeat() {
+        String key = apiKey;
+        if (!closed && key != null && isLicensed()) {
+            post("/plugin/heartbeat", json("api_key", key, null, null)); // la respuesta no cambia el estado
+        }
+    }
+
+    private void checkForUpdates() {
+        Response response = post("/plugin/check-version",
+                json("plugin_id", PLUGIN_ID, "current_version", BuildConstants.VERSION));
+        LicenseResponses.parseUpdate(response.status(), response.body()).ifPresent(update ->
+                logger.warn("Nueva version de FurrGuard disponible: {} (actual: {}). Descarga: {}",
+                        update.latestVersion(), BuildConstants.VERSION, update.downloadUrl()));
+    }
+
+    private String loadHwid() {
+        try {
+            return LicenseFiles.loadOrCreateHwid(dataDirectory, this::computeHwid);
+        } catch (IOException e) {
+            logger.warn("No se pudo guardar {} ({}): se recalcula en cada arranque", LicenseFiles.HWID_FILE,
+                    e.getMessage());
+            return computeHwid();
+        }
+    }
+
+    /** Formula de 1.x: solo se usa la primera vez; despues manda el archivo hwid. */
+    private String computeHwid() {
+        InetSocketAddress bind = server.getBoundAddress();
+        return LicenseFiles.sha256Hex(System.getProperty("os.name") + System.getProperty("os.version")
+                + System.getProperty("os.arch") + System.getProperty("java.version")
+                + bind.getHostString() + bind.getPort() + "furrdownloads-hwid-salt-velocity");
+    }
+
+    private Response post(String path, JsonObject body) {
+        return send(HttpRequest.newBuilder(URI.create(API_URL + path))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body.toString())));
+    }
+
+    private Response get(String path) {
+        return send(HttpRequest.newBuilder(URI.create(API_URL + path)).GET());
+    }
+
+    private Response send(HttpRequest.Builder builder) {
+        return transport.apply(builder.timeout(HTTP_TIMEOUT)
+                .header("User-Agent", USER_AGENT)
+                .header("Accept", "application/json")
+                .build());
+    }
+
+    /** Bloqueante a proposito: solo se llama desde tareas del scheduler. */
+    private Response exchange(HttpRequest request) {
+        try {
+            HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+            return new Response(response.statusCode(), response.body(), null);
+        } catch (IOException e) {
+            return new Response(0, null, e.getClass().getSimpleName());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return new Response(0, null, "interrumpido");
+        }
+    }
+
+    private void schedule(Duration delay, Runnable step) {
+        if (closed) {
+            return;
+        }
+        nextStep = server.getScheduler().buildTask(plugin, () -> runStep(step))
+                .delay(delay.toMillis(), TimeUnit.MILLISECONDS)
+                .schedule();
+    }
+
+    private void runStep(Runnable step) {
+        if (closed) {
+            return;
+        }
+        try {
+            step.run();
+        } catch (RuntimeException e) {
+            logger.error("Error inesperado gestionando la licencia; se reintenta", e);
+            Runnable retry = hwid == null ? this::boot : apiKey != null ? this::verify : this::startLinking;
+            schedule(backoff(), retry);
+        }
+    }
+
+    private Duration backoff() {
+        int attempt = Math.min(failures, BACKOFF_SECONDS.length - 1);
+        failures = attempt + 1;
+        double jitter = 0.8 + ThreadLocalRandom.current().nextDouble() * 0.4;
+        return Duration.ofMillis((long) (BACKOFF_SECONDS[attempt] * 1000 * jitter));
+    }
+
+    private static String describe(Response response) {
+        return response.status() == 0 ? "sin respuesta: " + response.error() : "HTTP " + response.status();
+    }
+
+    private static JsonObject json(String key, String value, String key2, String value2) {
+        JsonObject json = new JsonObject();
+        json.addProperty(key, value);
+        if (key2 != null) {
+            json.addProperty(key2, value2);
+        }
+        return json;
+    }
+
+    private static void cancel(ScheduledTask task) {
+        if (task != null) {
+            task.cancel();
+        }
     }
 }

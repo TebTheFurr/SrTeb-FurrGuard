@@ -1,1 +1,3 @@
 rootProject.name = 'FurrGuard'
+
+includeBuild('../libs/furrguard-common')
