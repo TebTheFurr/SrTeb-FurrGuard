@@ -133,4 +133,58 @@ final class AdminSessionTest extends DatabaseTestCase
         self::assertStringContainsString('state=' . $_SESSION['oauth_state'], $url);
         self::assertSame($url, getDiscordLoginUrl(), 'el state se reutiliza dentro de la sesión');
     }
+
+    // ─── Puente de Pterodactyl (sesión por token, docs/API.md §9) ────────────
+
+    /**
+     * @return array{session_id: int, token: string}
+     */
+    private function createTokenSession(string $ip = '203.0.113.9'): array
+    {
+        return adminSessionCreate($this->db, ['discord_id' => self::ADMIN_ID, 'username' => 'Tester', 'avatar' => null], $ip);
+    }
+
+    public function testTokenSessionStoresHashAndValidates(): void
+    {
+        $created = $this->createTokenSession();
+        $row = $this->db->query('SELECT * FROM admin_sessions')->fetch();
+        self::assertSame(hash('sha256', $created['token']), $row['session_token_hash']);
+        self::assertSame('203.0.113.9', $row['ipv4_address'], 'la IP es la del navegador que indica el panel, no la del panel');
+        self::assertSame([], $_SESSION, 'no toca la sesión PHP');
+
+        $result = adminSessionValidateToken($this->db, $created['token']);
+        self::assertNull($result['error']);
+        self::assertSame(['discord_id' => self::ADMIN_ID, 'username' => 'Tester', 'avatar' => null, 'role' => 'manager', 'session_id' => $created['session_id']], $result['user']);
+
+        self::assertSame('session_expired', adminSessionValidateToken($this->db, str_repeat('0', 64))['error'], 'token desconocido');
+        self::assertSame('session_expired', adminSessionValidateToken($this->db, 'no-es-un-token')['error']);
+
+        $this->db->exec('DELETE FROM admin_users WHERE discord_id = ' . $this->db->quote(self::ADMIN_ID));
+        self::assertSame('access_revoked', adminSessionValidateToken($this->db, $created['token'])['error']);
+        self::assertNotNull($this->db->query('SELECT revoked_at FROM admin_sessions')->fetchColumn(), 'sin rol la fila queda revocada');
+        self::assertSame('access_revoked', adminSessionValidateToken($this->db, $created['token'])['error'], 'revocada y sin rol');
+    }
+
+    public function testTokenSessionRevokesPreviousAndExpires(): void
+    {
+        $first = $this->createTokenSession();
+        $second = $this->createTokenSession('2001:db8::7');
+        self::assertSame('session_expired', adminSessionValidateToken($this->db, $first['token'])['error'], 'entrar de nuevo revoca la sesión anterior');
+        self::assertNull(adminSessionValidateToken($this->db, $second['token'])['error']);
+        self::assertSame('2001:db8::7', $this->db->query('SELECT ipv6_address FROM admin_sessions WHERE revoked_at IS NULL')->fetchColumn());
+
+        $this->db->exec('UPDATE admin_sessions SET last_activity_at = NOW() - INTERVAL 7201 SECOND');
+        self::assertSame('session_expired', adminSessionValidateToken($this->db, $second['token'])['error'], 'inactividad');
+        self::assertSame(0, (int) $this->db->query('SELECT COUNT(*) FROM admin_sessions WHERE revoked_at IS NULL')->fetchColumn());
+    }
+
+    public function testBridgeNonceIsSingleUse(): void
+    {
+        $this->db->exec('DELETE FROM panel_nonces');
+        self::assertTrue(panelBridgeConsumeNonce($this->db, 'abcdefghijklmnop'));
+        self::assertFalse(panelBridgeConsumeNonce($this->db, 'abcdefghijklmnop'), 'repetición');
+        self::assertTrue(panelBridgeConsumeNonce($this->db, 'ponmlkjihgfedcba'));
+        $this->db->exec('UPDATE panel_nonces SET created_at = NOW() - INTERVAL 301 SECOND');
+        self::assertTrue(panelBridgeConsumeNonce($this->db, 'abcdefghijklmnop'), 'los nonces caducados se limpian');
+    }
 }

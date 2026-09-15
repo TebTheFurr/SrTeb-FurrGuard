@@ -25,6 +25,9 @@ parameters:
         - DISCORD_CLIENT_SECRET
         - DISCORD_REDIRECT_URI
         - FOUNDER_DISCORD_ID
+        - PTERODACTYL_URL
+        - PTERODACTYL_PANEL_KEY
+        - PTERODACTYL_PANEL_IPS
         - FURRGUARD_STORAGE
         - FURRGUARD_SKIP_DOTENV
     typeAliases:

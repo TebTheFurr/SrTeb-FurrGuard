@@ -82,6 +82,7 @@ en el puerto 5173; el panel reenvía `api.php` y `callback.php` a `http://127.0.
 | [`docs/INSTALACION.md`](docs/INSTALACION.md) | Instalación nueva en Ubuntu 24.04 / Debian 12 sin panel: nginx, PHP-FPM, MariaDB y timers de systemd, y el plugin y los módulos paso a paso |
 | [`docs/INSTALACION_CLOUDPANEL.md`](docs/INSTALACION_CLOUDPANEL.md) | Servidor con CloudPanel: vhost, cron y configuración del plugin y los módulos |
 | [`docs/ACTUALIZACION_2.0.md`](docs/ACTUALIZACION_2.0.md) | Actualizar una instalación 1.x en producción |
+| [`docs/INSTALACION_PTERODACTYL.md`](docs/INSTALACION_PTERODACTYL.md) | Integrar el panel de FurrGuard dentro de un panel Pterodactyl (tema Luna) que corre en otra máquina |
 
 Archivos de `deploy/` que usa la instalación sin panel:
 

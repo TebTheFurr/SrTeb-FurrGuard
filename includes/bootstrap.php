@@ -32,6 +32,10 @@ define('DISCORD_CLIENT_ID', env('DISCORD_CLIENT_ID'));
 define('DISCORD_CLIENT_SECRET', env('DISCORD_CLIENT_SECRET'));
 define('DISCORD_REDIRECT_URI', env('DISCORD_REDIRECT_URI'));
 define('FOUNDER_DISCORD_ID', env('FOUNDER_DISCORD_ID'));
+// Puente con el panel de Pterodactyl (docs/API.md §9). Sin clave o sin URL, api/panel.php es 404.
+define('PTERODACTYL_URL', rtrim(env('PTERODACTYL_URL'), '/'));
+define('PTERODACTYL_PANEL_KEY', env('PTERODACTYL_PANEL_KEY'));
+define('PTERODACTYL_PANEL_IPS', array_values(array_filter(array_map('trim', explode(',', env('PTERODACTYL_PANEL_IPS'))))));
 
 // B1: PHP y MySQL en UTC. Los clientes convierten a Europe/Madrid al mostrar.
 date_default_timezone_set('UTC');

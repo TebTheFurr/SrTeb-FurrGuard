@@ -504,9 +504,65 @@ Eliminadas: `api_key` (texto plano), `webhook_url`, `notify_blocks`.
 
 `APP_ENV` (`production`/`development`), `APP_URL`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`,
 `DB_PASSWORD`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI`,
-`FOUNDER_DISCORD_ID`, `TRUSTED_PROXIES`, `API_RATE_LIMIT_PER_MIN`, `GEOIP_COUNTRY_DB`,
+`FOUNDER_DISCORD_ID`, `PTERODACTYL_URL`, `PTERODACTYL_PANEL_KEY`, `PTERODACTYL_PANEL_IPS` (§9), `TRUSTED_PROXIES`, `API_RATE_LIMIT_PER_MIN`, `GEOIP_COUNTRY_DB`,
 `GEOIP_ASN_DB`, `MAXMIND_ACCOUNT_ID`, `MAXMIND_LICENSE_KEY`, `GEO_PROVIDERS`, `PROXYCHECK_API_KEY`,
 `IPAPI_IS_API_KEY`.
 
 Una variable del entorno real (PHP-FPM, systemd) tiene prioridad sobre `.env`.
 `CORS_ALLOWED_ORIGIN` ya no existe: las APIs de plugin no envían cabeceras CORS.
+
+## 9. Puente con el panel de Pterodactyl — `POST /api/panel.php`
+
+El panel de Pterodactyl (tema Luna, en otra máquina) incrusta el panel de FurrGuard como una página
+propia (`/furrguard`). No reimplementa nada: es un **proxy autenticado** del navegador. Guía de
+instalación: `docs/INSTALACION_PTERODACTYL.md`. Código: `includes/panel_bridge.php`.
+
+```
+Navegador ──(sesión de Pterodactyl)──► Panel (Laravel) ──(HMAC + token)──► FurrGuard /api/panel.php
+```
+
+### 9.1 Autenticación del panel
+
+- Activo solo con `PTERODACTYL_URL` y `PTERODACTYL_PANEL_KEY` (si no, 404). `PTERODACTYL_PANEL_IPS`
+  (opcional) limita las IPs de origen; una IP ajena → 403 `panel_ip`.
+- Cada petición es `POST` con cuerpo JSON `{"action": …, …parámetros}` (máx. 1 MB) y la cabecera
+  `X-FurrGuard-Signature: t=<unix>,n=<nonce>,f=<hmac hex>` donde
+  `f = HMAC-SHA256(clave, "POST\n/api/panel.php\n" + t + "\n" + n + "\n" + sha256hex(cuerpo))`.
+  `n`: 16–64 caracteres `[A-Za-z0-9_-]`, aleatorio por petición.
+- Se exige `|ahora − t| ≤ 120 s` y un nonce no visto en 5 min (`panel_nonces`, migración 0010).
+  Firma inválida o repetida → 401 `panel_signature`; los fallos cuentan 60/min por IP de origen.
+- Sin cookies ni CSRF: no lo llama un navegador.
+- Cabeceras opcionales: `X-FurrGuard-Session: <token>` (sesión del usuario final, obligatoria en
+  todo salvo `oauth_*`), `X-FurrGuard-Client-IP` (IP del navegador: a partir de ahí es «la IP del
+  cliente» para auditoría, sesiones y límites por IP) y `X-FurrGuard-Actor: <id>:<usuario>` del
+  panel (solo se anota al iniciar sesión).
+- Respuestas en el formato del panel (§4.2): `{"success": true, "data": …}` o
+  `{"success": false, "error", "code"}` con el mismo estado HTTP; 429 lleva `Retry-After`.
+
+### 9.2 Inicio de sesión con Discord (puente)
+
+1. El navegador abre `GET <panel>/furrguard/login`. El panel llama a `oauth_start` y recibe
+   `{url, state}`; guarda `state` en su sesión y redirige a `url` (Discord).
+2. Discord vuelve a `GET <panel>/furrguard/callback?code&state` (`PTERODACTYL_URL/furrguard/callback`,
+   registrada en la aplicación de Discord). El panel compara `state` con el guardado (un solo uso,
+   10 min) y llama a `oauth_exchange` con `{state, code}`.
+3. FurrGuard comprueba la firma del `state`, canjea el código con **su** aplicación de Discord y
+   `PTERODACTYL_URL/furrguard/callback`, y busca el rol (`FOUNDER_DISCORD_ID` o `admin_users`):
+   - con rol: crea una fila en `admin_sessions` (revocando las anteriores del usuario, como §5) y
+     responde `{token, expires_in, idle_timeout, user:{discord_id, username, avatar, role},
+     permissions[], can_see_ips, version}`;
+   - sin rol: 403 `no_access` (y traza `login_denied`).
+4. El panel guarda el token en **su sesión de servidor** (el navegador nunca lo ve) y lo manda en
+   `X-FurrGuard-Session` en cada acción. Caducidad: la de §5 (8 h absoluta, 2 h de inactividad);
+   quitar al usuario o cambiar su rol revoca la fila igual que en el panel propio.
+
+| Acción | Sesión | Parámetros | `data` |
+|---|---|---|---|
+| `oauth_start` | no | — | `{url, state}`; 503 `discord_unconfigured` sin aplicación de Discord |
+| `oauth_exchange` | no | `state, code` | ver arriba; 400 `invalid_state`/`invalid_code`, 502 `discord_error`, 403 `no_access`, 429 (10 canjes / 5 min por navegador) |
+| `session` | sí | — | `{user, permissions, can_see_ips, version}` (rol vigente) |
+| `logout` | sí | — | `null` (revoca la fila) |
+| cualquier otra | sí | los de §4.4 | igual que §4.4, con los permisos del rol (§4.3) y el límite de 300/min por usuario |
+
+Un token caducado o revocado responde 401 con `code` ∈ `session_expired`, `access_revoked`,
+`unauthorized`: el panel olvida la sesión y vuelve a mostrar el botón de Discord.

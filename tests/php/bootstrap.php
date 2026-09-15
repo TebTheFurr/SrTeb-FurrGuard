@@ -7,7 +7,18 @@ declare(strict_types=1);
 define('FURRGUARD_SKIP_DOTENV', true);
 define('FURRGUARD_STORAGE', sys_get_temp_dir() . '/furrguard-tests-' . getmypid());
 
-foreach (['APP_ENV' => 'production', 'APP_URL' => 'https://furrguard.test', 'FOUNDER_DISCORD_ID' => '111111111111111111', 'GEO_PROVIDERS' => 'ip-api'] as $key => $value) {
+$testEnv = [
+    'APP_ENV' => 'production',
+    'APP_URL' => 'https://furrguard.test',
+    'FOUNDER_DISCORD_ID' => '111111111111111111',
+    'GEO_PROVIDERS' => 'ip-api',
+    'DISCORD_CLIENT_ID' => '123456789012345678',
+    'DISCORD_CLIENT_SECRET' => 'test-secret',
+    // Puente de Pterodactyl (docs/API.md §9)
+    'PTERODACTYL_URL' => 'https://panel.test',
+    'PTERODACTYL_PANEL_KEY' => str_repeat('ab', 32),
+];
+foreach ($testEnv as $key => $value) {
     putenv("{$key}={$value}");
     $_ENV[$key] = $value;
 }
@@ -21,6 +32,7 @@ require_once dirname(__DIR__, 2) . '/includes/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/database/lib.php';
 // Dominio y API del panel (router.php carga plugin_api.php → detection, bans, players, furrperms, furrsecurity).
 require_once dirname(__DIR__, 2) . '/admin/api/router.php';
+require_once dirname(__DIR__, 2) . '/includes/panel_bridge.php';
 require_once dirname(__DIR__, 2) . '/includes/spa.php';
 require_once __DIR__ . '/Integration/DatabaseTestCase.php';
 require_once __DIR__ . '/Integration/DomainTestCase.php';

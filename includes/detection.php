@@ -329,7 +329,7 @@ function banDisplayName(PDO $db, array $ban, bool $remote): ?string
 /**
  * @param DetectionRules $rules
  * @param array{uuid: ?string, nick: string, ip: string, game_version?: ?string} $player normalizado
- * @return array{decision: array<string, mixed>, geo: array{data: array<string, mixed>, source: string, degraded: bool}}
+ * @return array{decision: array<string, mixed>, geo: array{data: array<string, mixed>, source: string, degraded: bool, method: string}}
  */
 function evaluatePlayer(PDO $db, array $rules, array $player, bool $remote, bool $live): array
 {

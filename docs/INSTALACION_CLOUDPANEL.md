@@ -176,7 +176,7 @@ Sin estas bases FurrGuard funciona igual, pero sin el espejo: el **Resumen** del
 ## 7. nginx (CloudPanel → Sites → tu sitio → Vhost)
 
 Sustituye el contenido por el siguiente. Los `{{…}}` son variables de CloudPanel: no los toques.
-Solo son ejecutables los 7 puntos de entrada PHP (`index.php`, `verify.php`, `admin/index.php`,
+Solo son ejecutables los 8 puntos de entrada PHP (`index.php`, `verify.php`, `admin/index.php`,
 `admin/api.php`, `admin/callback.php`, `api/plugin.php`, `api/furrsecurity.php`); todo lo demás
 (código, configuración, datos) devuelve 404.
 
@@ -239,7 +239,7 @@ server {
   }
 
   # ── Puntos de entrada PHP (únicos ejecutables) ─────────────────────────
-  location ~ ^/(index|verify)\.php$|^/admin/(index|api|callback)\.php$|^/api/(plugin|furrsecurity)\.php$ {
+  location ~ ^/(index|verify)\.php$|^/admin/(index|api|callback)\.php$|^/api/(plugin|furrsecurity|panel)\.php$ {
     include fastcgi_params;
     fastcgi_intercept_errors on;
     fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;

@@ -14,3 +14,6 @@ define('DISCORD_CLIENT_ID', '');
 define('DISCORD_CLIENT_SECRET', '');
 define('DISCORD_REDIRECT_URI', '');
 define('FOUNDER_DISCORD_ID', '');
+define('PTERODACTYL_URL', '');
+define('PTERODACTYL_PANEL_KEY', '');
+define('PTERODACTYL_PANEL_IPS', []);

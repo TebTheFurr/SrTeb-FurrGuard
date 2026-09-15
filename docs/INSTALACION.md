@@ -500,7 +500,7 @@ Qué hace el sitio (los detalles, en los comentarios del archivo):
 
 - **Puerto 80:** sirve los retos de Let's Encrypt y redirige lo demás a
   `https://furrguard.srteb.eu`, con el nombre fijo y nunca con la cabecera `Host` del cliente.
-- **Solo los 7 puntos de entrada PHP** van a PHP-FPM: `index.php`, `verify.php`,
+- **Solo los 8 puntos de entrada PHP** van a PHP-FPM: `index.php`, `verify.php`,
   `admin/index.php`, `admin/api.php`, `admin/callback.php`, `api/plugin.php` y
   `api/furrsecurity.php`.
 - **404** para archivos ocultos (`.env`, `.git`), carpetas internas (`config`, `includes`,

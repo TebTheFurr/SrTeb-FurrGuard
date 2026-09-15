@@ -102,8 +102,29 @@ function adminSessionStart(PDO $db, array $user, string $role): void
     unset($_SESSION[ADMIN_SESSION_OBSOLETE_KEY], $_SESSION['oauth_state']);
     rotateCsrfToken();
 
+    $created = adminSessionCreate($db, $user);
+    $_SESSION[ADMIN_SESSION_KEY] = [
+        'session_id' => $created['session_id'],
+        'token' => $created['token'],
+        'discord_id' => $user['discord_id'],
+        'role' => $role,
+        'regenerated_at' => time(),
+    ];
+}
+
+/**
+ * Crea la fila de `admin_sessions` (revocando antes las sesiones activas del mismo usuario) y
+ * devuelve su id y el token en claro; la BD solo guarda el SHA-256. La usan la sesión PHP del
+ * panel y el puente de Pterodactyl (docs/API.md §9), que guarda el token en su propia sesión.
+ *
+ * @param array{discord_id: string, username: string, avatar: ?string} $user
+ * @param string|null $ip IP del navegador (por defecto la de la petición)
+ * @return array{session_id: int, token: string}
+ */
+function adminSessionCreate(PDO $db, array $user, ?string $ip = null): array
+{
     $token = bin2hex(random_bytes(32));
-    $ip = getClientIp();
+    $ip ??= getClientIp();
     $family = ipFamily($ip);
 
     $db->prepare('UPDATE admin_sessions SET revoked_at = NOW() WHERE discord_id = ? AND revoked_at IS NULL')
@@ -122,12 +143,58 @@ function adminSessionStart(PDO $db, array $user, string $role): void
         ADMIN_SESSION_ABSOLUTE_TTL,
     ]);
 
-    $_SESSION[ADMIN_SESSION_KEY] = [
-        'session_id' => (int) $db->lastInsertId(),
-        'token' => $token,
-        'discord_id' => $user['discord_id'],
-        'role' => $role,
-        'regenerated_at' => time(),
+    return ['session_id' => (int) $db->lastInsertId(), 'token' => $token];
+}
+
+/**
+ * Valida una sesión por su token (puente de Pterodactyl, docs/API.md §9): misma fila, mismas
+ * caducidades y mismo rol vigente que la sesión del panel, pero sin sesión PHP ni comprobación de
+ * IP: el panel de Pterodactyl ya ata su propia sesión al navegador y nunca entrega el token.
+ *
+ * @return array{user: AdminUser|null, error: ?string}
+ */
+function adminSessionValidateToken(PDO $db, string $token): array
+{
+    if (preg_match('/^[0-9a-f]{64}\z/', $token) !== 1) {
+        return ['user' => null, 'error' => 'session_expired'];
+    }
+    $stmt = $db->prepare(
+        'SELECT id, discord_id, discord_username, discord_avatar, revoked_at,
+                (expires_at > NOW() AND last_activity_at > NOW() - INTERVAL ? SECOND) AS alive,
+                (last_activity_at < NOW() - INTERVAL ? SECOND) AS touch_due
+         FROM admin_sessions WHERE session_token_hash = ?'
+    );
+    $stmt->execute([ADMIN_SESSION_IDLE_TTL, ADMIN_SESSION_TOUCH_EVERY, hash('sha256', $token)]);
+    $row = $stmt->fetch();
+    if (!is_array($row)) {
+        return ['user' => null, 'error' => 'session_expired'];
+    }
+    $sessionId = (int) $row['id'];
+    $discordId = (string) $row['discord_id'];
+    $role = getUserRole($db, $discordId);
+    if ($row['revoked_at'] !== null) {
+        return ['user' => null, 'error' => $role === null ? 'access_revoked' : 'session_expired'];
+    }
+    if ((int) $row['alive'] !== 1) {
+        adminSessionRevokeById($db, $sessionId);
+        return ['user' => null, 'error' => 'session_expired'];
+    }
+    if ($role === null) {
+        adminSessionRevokeById($db, $sessionId);
+        return ['user' => null, 'error' => 'access_revoked'];
+    }
+    if ((int) $row['touch_due'] === 1) {
+        $db->prepare('UPDATE admin_sessions SET last_activity_at = NOW() WHERE id = ?')->execute([$sessionId]);
+    }
+    return [
+        'user' => [
+            'discord_id' => $discordId,
+            'username' => $row['discord_username'],
+            'avatar' => $row['discord_avatar'],
+            'role' => $role,
+            'session_id' => $sessionId,
+        ],
+        'error' => null,
     ];
 }
 
