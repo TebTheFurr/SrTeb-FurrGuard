@@ -1,0 +1,33 @@
+# FurrGuard 2.0 — copia diaria de la base de datos (opcional).
+#
+# Vuelca la base furrguard comprimida en /var/backups/furrguard/furrguard-AAAA-MM-DD-HHMM.sql.gz
+# y borra las de más de 14 días (solo si la copia de hoy salió bien). Corre como root: entra en
+# MariaDB por unix_socket, así no hay ninguna contraseña guardada para la copia.
+#
+# Una copia en el mismo disco no protege de perder el servidor: llévala también fuera.
+#
+# Se instala en /etc/systemd/system/ (docs/INSTALACION.md, paso 10). La carpeta de destino
+# tiene que existir antes:  install -d -m 0700 /var/backups/furrguard
+# Probar a mano:  systemctl start furrguard-backup.service && ls -l /var/backups/furrguard
+
+[Unit]
+Description=FurrGuard - copia diaria de la base de datos
+Documentation=file:///var/www/furrguard/docs/INSTALACION.md
+After=mariadb.service
+
+[Service]
+Type=oneshot
+# systemd convierte $$ en $ y %% en %. pipefail: si falla el volcado, falla la unidad y no se
+# conserva un .gz a medias.
+ExecStart=/bin/bash -o pipefail -c 'f=/var/backups/furrguard/furrguard-$$(date +%%F-%%H%%M).sql.gz; mariadb-dump --single-transaction --routines --triggers furrguard | gzip > "$$f.tmp" && mv "$$f.tmp" "$$f" || { rm -f "$$f.tmp"; exit 1; }'
+ExecStartPost=/usr/bin/find /var/backups/furrguard -name furrguard-*.sql.gz -mtime +14 -delete
+TimeoutStartSec=1h
+Nice=10
+UMask=0077
+
+ProtectSystem=strict
+ReadWritePaths=/var/backups/furrguard
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+NoNewPrivileges=yes

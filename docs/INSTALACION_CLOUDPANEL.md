@@ -1,5 +1,9 @@
 # FurrGuard 2.0 — Instalación y despliegue en CloudPanel
 
+> **¿Servidor sin panel?** Para un Ubuntu 24.04 o Debian 12 con nginx, PHP-FPM y MariaDB instalados
+> a mano, usuario de servicio propio y timers de systemd, sigue
+> [`INSTALACION.md`](INSTALACION.md): cubre también el plugin y los módulos paso a paso.
+
 Guía para instalar FurrGuard (web + API) en un VPS con CloudPanel (nginx + PHP-FPM) y configurar el
 plugin y los módulos. El contrato entre la web, el plugin y los módulos está en `docs/API.md`.
 **Si ya tienes una 1.x en producción, sigue `docs/ACTUALIZACION_2.0.md`.**
@@ -64,7 +68,7 @@ rsync -avz --delete \
   --exclude='.git*' --exclude='.env' --exclude='.claude' --exclude='.idea' \
   --exclude='node_modules' --exclude='admin/src' --exclude='public/src' \
   --exclude='shared' --exclude='libs' --exclude='modulos' --exclude='FurrGuard-plugin' \
-  --exclude='docs' --exclude='tests' --exclude='*.md' \
+  --exclude='docs' --exclude='deploy' --exclude='tests' --exclude='*.md' \
   --exclude='storage/sessions/*' --exclude='storage/ratelimit/*' --exclude='storage/geoip/*.mmdb' \
   ./ furrguard@tu-servidor:/home/furrguard/htdocs/furrguard.srteb.eu/
 ```
@@ -211,7 +215,7 @@ server {
 
   # ── Bloqueos ────────────────────────────────────────────────────────────
   location ~ /\.(?!well-known) { deny all; return 404; }
-  location ~ ^/(config|includes|database|bin|storage|vendor|libs|modulos|FurrGuard-plugin|docs|tests|shared)(/|$) { deny all; return 404; }
+  location ~ ^/(config|includes|database|bin|storage|vendor|libs|modulos|FurrGuard-plugin|docs|tests|shared|deploy)(/|$) { deny all; return 404; }
   location ~ ^/(admin|public)/(src|node_modules)(/|$) { deny all; return 404; }
   location ~ \.(sql|tsv|md|json|lock|ya?ml|neon|xml|dist|log|env|bak|old|tmp|sh|bat|gradle|properties|java|ts|vue|mmdb|tsbuildinfo)$ { deny all; return 404; }
 
@@ -445,7 +449,8 @@ a 2.0 usa `docs/ACTUALIZACION_2.0.md`.
 | `503 api_key_not_configured` | Genera la API key en Ajustes |
 | Panel o landing con "falta compilar la interfaz" (503) | Falta `npm run build` en `admin/` o `public/` |
 | 404 en `/admin/assets/` o `/public/assets/` | Revisa los `alias` de nginx |
-| No se puede iniciar sesión en el panel (vuelve al login) | `APP_URL` sin https (la cookie `__Host-` no se guarda) o `DISCORD_REDIRECT_URI` distinta de la del portal |
+| Discord no vuelve al panel o vuelve con error | `DISCORD_REDIRECT_URI` distinta de la del portal de Discord |
+| Cada acción del panel da 403 "Token CSRF inválido" | `APP_URL` no coincide con el origen real (http en vez de https, otro dominio o barra final) |
 | La sesión del panel caduca sola | Cambió tu IP (IPv4, o de red /64 en IPv6), 2 h de inactividad, 8 h desde el login o has entrado desde otro dispositivo |
 | "Token CSRF inválido" en el panel | La pestaña lleva abierta desde antes del último login: recarga |
 | Resumen: espejo MaxMind "missing" / "disabled" | Faltan las `.mmdb` (`php bin/geoip-update.php`, revisa `MAXMIND_*`) o falta `composer install` |

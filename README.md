@@ -25,6 +25,7 @@ Software propietario de **Tebby Services S.L.** (<https://tebby.lgbt>). Versión
 | `FurrGuard-plugin/` | Plugin de Velocity |
 | `modulos/furrsecurity-module/` | FurrSecurity (un jar para Velocity y Paper) |
 | `modulos/furrperms-module/` | FurrPerms (Velocity) |
+| `deploy/` | Archivos de sistema de la instalación sin panel (nginx, PHP-FPM, systemd) y ejemplos de `config.yml` de los plugins; nunca se sirven |
 | `docs/` | Contrato de la API y guías de instalación y actualización |
 
 ## Requisitos
@@ -74,8 +75,26 @@ en el puerto 5173; el panel reenvía `api.php` y `callback.php` a `http://127.0.
 - `modulos/furrsecurity-module/build/libs/FurrSecurity-2.0.0.jar`
 - `modulos/furrperms-module/build/libs/furrperms-module-2.0.0.jar`
 
+## Despliegue
+
+| Guía | Para |
+|---|---|
+| [`docs/INSTALACION.md`](docs/INSTALACION.md) | Instalación nueva en Ubuntu 24.04 / Debian 12 sin panel: nginx, PHP-FPM, MariaDB y timers de systemd, y el plugin y los módulos paso a paso |
+| [`docs/INSTALACION_CLOUDPANEL.md`](docs/INSTALACION_CLOUDPANEL.md) | Servidor con CloudPanel: vhost, cron y configuración del plugin y los módulos |
+| [`docs/ACTUALIZACION_2.0.md`](docs/ACTUALIZACION_2.0.md) | Actualizar una instalación 1.x en producción |
+
+Archivos de `deploy/` que usa la instalación sin panel:
+
+| Archivo | Destino |
+|---|---|
+| `deploy/furrguard-nginx.conf` | `/etc/nginx/sites-available/furrguard` |
+| `deploy/furrguard-php-fpm.conf` | `/etc/php/<versión>/fpm/pool.d/furrguard.conf` |
+| `deploy/furrguard-cleanup.service` · `.timer` | `/etc/systemd/system/`: limpieza cada hora |
+| `deploy/furrguard-geoip.service` · `.timer` | `/etc/systemd/system/`: bases GeoLite2 los martes y viernes |
+| `deploy/furrguard-backup.service` · `.timer` | `/etc/systemd/system/`: copia diaria de la base de datos (opcional) |
+| `deploy/plugins/*.example.yml` | `config.yml` de FurrGuard, FurrPerms y FurrSecurity (Velocity y Paper) |
+
 ## Documentación
 
 - [`docs/API.md`](docs/API.md): contrato v2 entre la web, el plugin, los módulos y las SPAs.
-- [`docs/INSTALACION_CLOUDPANEL.md`](docs/INSTALACION_CLOUDPANEL.md): instalación en CloudPanel, nginx, cron y configuración del plugin y los módulos.
-- [`docs/ACTUALIZACION_2.0.md`](docs/ACTUALIZACION_2.0.md): cómo actualizar una instalación 1.x en producción.
+- Guías de instalación y actualización: ver [Despliegue](#despliegue).

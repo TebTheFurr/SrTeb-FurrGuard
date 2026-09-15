@@ -1,0 +1,15 @@
+# FurrGuard 2.0 — lanza furrguard-backup.service cada día de madrugada (opcional).
+#
+# Instalar:  systemctl enable --now furrguard-backup.timer
+# Ver:       systemctl list-timers 'furrguard-*'
+
+[Unit]
+Description=FurrGuard - copia diaria de la base de datos
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+RandomizedDelaySec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

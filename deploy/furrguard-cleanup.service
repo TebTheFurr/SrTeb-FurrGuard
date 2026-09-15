@@ -1,0 +1,51 @@
+# FurrGuard 2.0 — limpieza periódica (bin/cleanup.php).
+#
+# Borra cachés caducadas, sesiones del panel, enlaces y sesiones antiguas de FurrSecurity,
+# intentos fallidos, archivos de límites de peticiones y lo que marque la retención del panel
+# (retention_*_days). La lanza furrguard-cleanup.timer cada hora.
+#
+# Se instala en /etc/systemd/system/ (docs/INSTALACION.md, paso 10).
+# Probar a mano:  systemctl start furrguard-cleanup.service
+#                 journalctl -u furrguard-cleanup.service -n 20 --no-pager
+
+[Unit]
+Description=FurrGuard - limpieza periódica
+Documentation=file:///var/www/furrguard/docs/INSTALACION.md
+After=mariadb.service
+
+[Service]
+Type=oneshot
+# Como el pool de PHP-FPM: lee .env (grupo furrguard) y el código, sin poder escribirlo.
+User=furrguard
+Group=furrguard
+WorkingDirectory=/var/www/furrguard
+ExecStart=/usr/bin/php /var/www/furrguard/bin/cleanup.php
+# Borra por lotes y un GET_LOCK impide dos a la vez: si se corta, la siguiente sigue donde iba.
+TimeoutStartSec=30min
+Nice=10
+UMask=0077
+
+# ── Sandbox ─────────────────────────────────────────────────────────────────────────────
+# Todo en solo lectura salvo storage/ratelimit (archivos de límites caducados). Conectar al
+# socket de MariaDB (/run/mysqld) funciona igual con el sistema en solo lectura.
+ProtectSystem=strict
+ReadWritePaths=/var/www/furrguard/storage/ratelimit
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+RestrictSUIDSGID=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+# AF_INET por si DB_HOST es 127.0.0.1 en vez del socket.
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+# Sin MemoryDenyWriteExecute a propósito: el JIT de PCRE de PHP necesita memoria ejecutable.

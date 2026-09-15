@@ -1,0 +1,44 @@
+# FurrSecurity 2.0 en VELOCITY. Ejemplo de plugins/furrsecurity/config.yml
+# (docs/INSTALACION.md, paso 16). Mismas claves y valores por defecto que el config.yml que crea
+# el módulo; solo cambia api.key. El proxy es quien da el enlace, avisa y expulsa.
+#
+# Sustituye furrguard.srteb.eu por tu dominio y TU_API_KEY por la clave del panel. Con TU_API_KEY
+# el staff queda bloqueado. Tras editarlo: /fsec reload en la consola del proxy.
+
+# false: el módulo no bloquea a nadie (solo quedan los comandos /fsec)
+enabled: true
+
+# Solo tiene efecto en Paper: en Velocity se ignora. Déjalo en false.
+proxy-mode: false
+
+api:
+  # La API de FurrSecurity (no la de plugins)
+  url: "https://furrguard.srteb.eu/api/furrsecurity.php"
+  # Clave del panel (Ajustes → API key de los plugins). Con la de ejemplo el staff queda bloqueado.
+  key: "TU_API_KEY"
+
+# ---------------------------------------------------------------------------------------------
+# Valores iniciales. En cuanto responde la API mandan los del panel (Ajustes → FurrSecurity),
+# que se vuelven a leer cada minuto. La duración de la sesión, la caducidad del enlace, los
+# intentos fallidos y la URL de verificación solo existen en el panel.
+# ---------------------------------------------------------------------------------------------
+
+# Segundos antes de caducar la sesión en que se avisa al jugador
+alert-times: [3600, 1800, 300, 240, 180, 120, 60, 30]
+
+# Desde cuántos segundos antes de caducar se ofrece verificar de nuevo sin esperar
+early-verify-time: 300
+
+# Qué se bloquea mientras el jugador no verifica. En Velocity cuentan commands y server-switch;
+# el movimiento, el inventario y el chat los bloquea FurrSecurity en cada Paper.
+lock:
+  movement: true
+  commands: true
+  inventory: true
+  server-switch: true
+  # Sin equivalente en el panel. En Velocity no hace nada: no puede cortar el chat de clientes
+  # 1.19.1+ sin expulsarlos.
+  chat: true
+
+notify-admins: true
+admin-permission: "furrsecurity.notify"

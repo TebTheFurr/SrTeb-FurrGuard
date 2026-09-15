@@ -1,0 +1,47 @@
+# FurrSecurity 2.0 en PAPER. Ejemplo de plugins/FurrSecurity/config.yml de cada backend
+# (docs/INSTALACION.md, paso 16). Mismas claves y valores por defecto que el config.yml que crea
+# el módulo; cambian proxy-mode y api.key.
+#
+# Sustituye furrguard.srteb.eu por tu dominio y TU_API_KEY por la clave del panel. Con TU_API_KEY
+# el staff queda bloqueado. Tras editarlo: /fsec reload en la consola de este servidor.
+
+# false: el módulo no bloquea a nadie (solo quedan los comandos /fsec)
+enabled: true
+
+# true: este Paper está detrás de un Velocity que también lleva FurrSecurity. Bloquea y espera a
+# que el jugador verifique en el proxy; no genera enlaces, no expulsa y no avisa de desconexiones.
+# false: solo si este Paper no tiene un Velocity con FurrSecurity delante.
+# El modo proxy necesita player-info-forwarding-mode = "modern" en Velocity: sin él, Paper ve la
+# IP del proxy y el jugador no se desbloquea nunca.
+proxy-mode: true
+
+api:
+  # La API de FurrSecurity (no la de plugins)
+  url: "https://furrguard.srteb.eu/api/furrsecurity.php"
+  # Clave del panel (Ajustes → API key de los plugins). Con la de ejemplo el staff queda bloqueado.
+  key: "TU_API_KEY"
+
+# ---------------------------------------------------------------------------------------------
+# Valores iniciales. En cuanto responde la API mandan los del panel (Ajustes → FurrSecurity),
+# que se vuelven a leer cada minuto. La duración de la sesión, la caducidad del enlace, los
+# intentos fallidos y la URL de verificación solo existen en el panel.
+# ---------------------------------------------------------------------------------------------
+
+# Segundos antes de caducar la sesión en que se avisa al jugador (en modo proxy avisa el proxy)
+alert-times: [3600, 1800, 300, 240, 180, 120, 60, 30]
+
+# Desde cuántos segundos antes de caducar se ofrece verificar de nuevo sin esperar
+early-verify-time: 300
+
+# Qué se bloquea mientras el jugador no verifica. Romper, colocar, interactuar y recibir o hacer
+# daño se bloquean siempre.
+lock:
+  movement: true
+  commands: true
+  inventory: true
+  server-switch: true
+  # Sin equivalente en el panel: solo se configura aquí, y solo tiene efecto en Paper.
+  chat: true
+
+notify-admins: true
+admin-permission: "furrsecurity.notify"

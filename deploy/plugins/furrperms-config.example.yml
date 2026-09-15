@@ -1,0 +1,30 @@
+# FurrPerms 2.0 — módulo de Velocity. Ejemplo de plugins/furrperms-module/config.yml
+# (docs/INSTALACION.md, paso 15). Mismas claves y valores por defecto que el config.yml que crea
+# el módulo; solo cambia api.key.
+#
+# Sustituye furrguard.srteb.eu por tu dominio y TU_API_KEY por la misma clave que el plugin
+# FurrGuard. Con TU_API_KEY se deniegan todos los comandos protegidos.
+# FurrPerms no tiene comando de recarga: tras editarlo, reinicia el proxy.
+
+# false: los comandos de permisos quedan SIN proteger
+enabled: true
+
+# Registra en consola cada decisión (nunca los argumentos de los comandos)
+debug: false
+
+api:
+  # La misma API que el plugin FurrGuard (no la de FurrSecurity)
+  url: "https://furrguard.srteb.eu/api/plugin.php"
+  # Clave del panel (Ajustes → API key de los plugins)
+  key: "TU_API_KEY"
+
+commands:
+  # Se SUMAN a la lista integrada, que ya cubre todos los alias de LuckPerms (servidor, Bungee y
+  # Velocity), op, deop y PermissionsEx, con o sin namespace y dentro de execute … run / sudo.
+  # Ejemplo: protected: [whitelist, ban]
+  protected: []
+
+# Avisos a los jugadores con el permiso furrperms.notify (y a la consola)
+notifications:
+  blocked: true
+  allowed: true

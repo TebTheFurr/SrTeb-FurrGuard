@@ -1,0 +1,53 @@
+# FurrGuard 2.0 — descarga de GeoLite2-Country y GeoLite2-ASN (bin/geoip-update.php).
+#
+# Necesita MAXMIND_ACCOUNT_ID y MAXMIND_LICENSE_KEY en .env. Verifica el SHA-256 que publica
+# MaxMind y sustituye cada .mmdb de forma atómica en storage/geoip. La lanza
+# furrguard-geoip.timer los martes y viernes, los días en que MaxMind publica GeoLite2.
+#
+# Tiene que correr como furrguard: una base descargada como root quedaría ilegible para PHP-FPM
+# y el panel marcaría el espejo como «missing».
+#
+# Se instala en /etc/systemd/system/ (docs/INSTALACION.md, paso 10).
+# Probar a mano:  systemctl start furrguard-geoip.service
+#                 journalctl -u furrguard-geoip.service -n 20 --no-pager
+
+[Unit]
+Description=FurrGuard - bases GeoLite2 de MaxMind
+Documentation=file:///var/www/furrguard/docs/INSTALACION.md
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=furrguard
+Group=furrguard
+WorkingDirectory=/var/www/furrguard
+ExecStart=/usr/bin/php /var/www/furrguard/bin/geoip-update.php
+# Cuatro descargas con un máximo de 300 s cada una.
+TimeoutStartSec=30min
+Nice=10
+UMask=0027
+
+# ── Sandbox ─────────────────────────────────────────────────────────────────────────────
+# Solo escribe en storage/geoip (temporales y .mmdb). Sale a internet por https: MaxMind
+# redirige las descargas a su almacenamiento en Cloudflare R2.
+ProtectSystem=strict
+ReadWritePaths=/var/www/furrguard/storage/geoip
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+RestrictSUIDSGID=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+# Sin MemoryDenyWriteExecute a propósito: el JIT de PCRE de PHP necesita memoria ejecutable.

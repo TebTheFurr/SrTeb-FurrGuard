@@ -1,0 +1,16 @@
+# FurrGuard 2.0 — lanza furrguard-cleanup.service cada hora, en el minuto 17.
+#
+# Instalar:  systemctl enable --now furrguard-cleanup.timer
+# Ver:       systemctl list-timers 'furrguard-*'
+
+[Unit]
+Description=FurrGuard - limpieza cada hora
+
+[Timer]
+OnCalendar=*-*-* *:17:00
+RandomizedDelaySec=2min
+# Si el servidor estaba apagado a la hora prevista, se ejecuta al arrancar.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

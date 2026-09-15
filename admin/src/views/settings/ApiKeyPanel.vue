@@ -62,7 +62,7 @@ async function regenerate(): Promise<void> {
           <span class="texto">Cópiala ahora: es la única vez que se muestra. Si la pierdes tendrás que regenerarla.</span>
         </div>
         <CopyField v-if="revealed" :value="revealed" label="la API key" />
-        <p class="faint">Ponla en la configuración del plugin (<code>api-key</code>) y de los módulos, y reinícialos.</p>
+        <p class="faint">Ponla en <code>api.key</code> del <code>config.yml</code> del plugin y de los módulos, y reinícialos.</p>
       </div>
       <footer class="modal-pie">
         <button type="button" class="btn primary" autofocus @click="revealed = null">Ya la he guardado</button>

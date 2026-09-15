@@ -7,7 +7,7 @@ Options -Indexes
     RewriteEngine On
 
     # Carpetas internas: nunca se sirven
-    RewriteRule ^(config|includes|database|bin|storage|vendor|libs|modulos|FurrGuard-plugin|docs|tests|shared)(/|$) - [F,L]
+    RewriteRule ^(config|includes|database|bin|storage|vendor|libs|modulos|FurrGuard-plugin|docs|tests|shared|deploy)(/|$) - [F,L]
 
     # Archivos y carpetas ocultos (.env, .git, .claude…) salvo .well-known
     RewriteRule (^|/)\.(?!well-known/) - [F,L]

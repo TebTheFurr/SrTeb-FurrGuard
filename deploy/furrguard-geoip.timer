@@ -1,0 +1,16 @@
+# FurrGuard 2.0 — lanza furrguard-geoip.service los martes y viernes de madrugada.
+#
+# Instalar:  systemctl enable --now furrguard-geoip.timer
+# Ver:       systemctl list-timers 'furrguard-*'
+
+[Unit]
+Description=FurrGuard - bases GeoLite2 dos veces por semana
+
+[Timer]
+OnCalendar=Tue,Fri *-*-* 04:43:00
+# Reparte la hora para no llegar a MaxMind a la vez que todos los demás.
+RandomizedDelaySec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

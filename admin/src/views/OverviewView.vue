@@ -78,6 +78,8 @@ const notices = computed(() => {
   }
   if (health.geo_mirror === 'missing') {
     list.push({ tone: 'warn', icon: IconMap, title: 'Falta el espejo MaxMind', text: 'Configura GEOIP_COUNTRY_DB y GEOIP_ASN_DB o ejecuta bin/geoip-update.php.' })
+  } else if (health.geo_mirror === 'disabled') {
+    list.push({ tone: 'warn', icon: IconMap, title: 'Espejo MaxMind desactivado', text: 'Falta el lector de MaxMind: ejecuta composer install --no-dev en el servidor.' })
   }
   return list
 })

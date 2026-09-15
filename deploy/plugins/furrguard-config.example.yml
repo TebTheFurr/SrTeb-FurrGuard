@@ -1,0 +1,50 @@
+# ═══════════════════════════════════════════════════════════════════════════════════════
+# FurrGuard 2.0 — plugin de Velocity. Ejemplo de plugins/furrguard/config.yml
+# (docs/INSTALACION.md, paso 14). Mismas claves y valores por defecto que el config.yml
+# que crea el plugin; solo cambian api.url y api.key.
+#
+# Sustituye furrguard.srteb.eu por tu dominio y TU_API_KEY por la clave del panel
+# (Ajustes → API key de los plugins). Con TU_API_KEY el plugin da la configuración por no
+# válida y deniega todos los logins: es a propósito.
+# Tras editarlo: /fg reload (si tiene errores, se mantiene la configuración anterior).
+# ═══════════════════════════════════════════════════════════════════════════════════════
+
+# false: el proxy deja entrar a todos sin comprobar nada
+enabled: true
+# Registra acción, estado y tiempo de cada llamada a la API (nunca cuerpos ni la clave)
+debug: false
+
+api:
+  # Endpoint de plugins del panel. Obligatorio https://
+  url: "https://furrguard.srteb.eu/api/plugin.php"
+  # Clave generada en el panel: Ajustes → API key de los plugins
+  key: "TU_API_KEY"
+  # Plazo total de cada petición, reintentos incluidos (ms, máximo 25000)
+  timeout: 8000
+  # Plazo para abrir la conexión (ms)
+  connect-timeout: 5000
+  # Solo desarrollo: permite http:// (la clave viajaría sin cifrar)
+  allow-insecure-http: false
+  # Qué hacer con un login cuando la API no da una decisión (red, timeout, 5xx, 429 o JSON inválido):
+  #   deny  → se deniega y el jugador ve «error de verificación» (recomendado)
+  #   allow → entra sin comprobar
+  # Una clave rechazada (401/403) o una configuración incorrecta deniegan siempre.
+  failure-policy: deny
+  # Cada cuántos segundos se consultan los cambios del panel (1-300)
+  poll-interval: 5
+
+cache:
+  # Guarda las respuestas correctas de la API para no repetir la consulta si el jugador reconecta.
+  # Se vacía sola al cambiar algo en el panel y con /fg reload.
+  enabled: true
+  # Segundos
+  duration: 300
+
+license:
+  # Enlace que ve el jugador si el plugin no tiene licencia
+  discord-url: "discord.gg/srteb"
+
+notifications:
+  # Países (ISO 3166-1) que no disparan el aviso «no hispanohablante» (ajuste notify_hispanic del
+  # panel). Si añades NO, ON o YES, ponlos entre comillas: sin ellas YAML los lee como booleanos.
+  hispanic-countries: [ES, MX, AR, CO, PE, VE, CL, EC, GT, CU, BO, DO, HN, PY, SV, NI, CR, PA, UY, GQ]
