@@ -46,6 +46,12 @@ backups/
 # GeoLite2 databases are downloaded on the server, not versioned
 *.mmdb
 
+# Runtime data (sessions, rate limits, GeoIP): keep the folders, never the contents
+/storage/**
+!/storage/**/
+!/storage/.htaccess
+!/storage/**/.gitkeep
+
 # Logs
 logs/
 

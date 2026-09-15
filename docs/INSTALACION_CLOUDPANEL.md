@@ -1,174 +1,147 @@
-# FurrGuard - Guia de Instalacion en CloudPanel
+# FurrGuard 2.0 — Instalación y despliegue en CloudPanel
 
-> Guia completa para desplegar FurrGuard en un servidor gestionado con CloudPanel.
-
----
-
-## Requisitos Previos
-
-| Requisito | Version | Notas |
-|-----------|---------|-------|
-| CloudPanel | 2.x+ | Panel de gestion del servidor |
-| PHP | 8.1+ | Extensiones: pdo_mysql, json, mbstring, openssl, curl |
-| MySQL / MariaDB | 5.7+ / 10.3+ | Base de datos |
-| Node.js | 18+ | Solo para compilar el frontend Vue |
-| npm | 9+ | Viene con Node.js |
-| Compositor | Servidor VPS | CloudPanel solo funciona en VPS dedicados |
+Guía completa para instalar o actualizar FurrGuard (web + API) en un VPS con CloudPanel
+(nginx + PHP-FPM). El contrato entre la web, el plugin y los módulos está en `docs/API.md`.
 
 ---
 
-## 1. Crear Site en CloudPanel
+## 1. Requisitos
 
-1. Accede a **CloudPanel** (`https://tu-servidor:8443`)
-2. Ve a **Sites** > **Add Site** > **Create a Custom Site**
-3. Configura:
-   - **Domain:** `furrguard.srteb.eu` (o tu dominio)
-   - **Document Root:** dejalo por defecto (`/home/furrguard/htdocs/furrguard.srteb.eu/public`)
-   - **PHP Version:** 8.2 (o la mas reciente disponible)
-4. CloudPanel creara el usuario y la estructura de directorios.
-
-> **Nota sobre el document root:** CloudPanel crea por defecto un directorio `public/` como document root del site. FurrGuard tambien tiene un directorio `public/` (el frontend Vue de la landing page + verify). **No confundas ambos** — en el paso 7 sobreescribimos el `root` de Nginx para apuntar a `/home/furrguard/htdocs/furrguard.srteb.eu/` (la raiz del proyecto), no al `public/` de CloudPanel. El `public/` del proyecto contiene el frontend compilado que se sirve via alias en Nginx. Los archivos sensibles (`.env`, `config/`, `includes/`) quedan protegidos con reglas de ubicacion en el vhost.
-
----
-
-## 2. Crear Base de Datos
-
-1. En CloudPanel, ve a **Databases** > **Add Database**
-2. Configura:
-   - **Name:** `furrguard`
-   - **Username:** `furrguard_user`
-   - **Password:** Genera una contraseña segura (guardala para el `.env`)
-3. Anota las credenciales, las necesitaras en el paso 5.
+| Pieza | Versión | Notas |
+|---|---|---|
+| CloudPanel | 2.x | nginx + PHP-FPM |
+| PHP | 8.2 o superior | extensiones `pdo_mysql`, `mbstring`, `curl`, `openssl`, `phar`, `zip` |
+| Composer | 2.x | dependencias PHP (lector MaxMind) |
+| MariaDB / MySQL | 10.3+ / 5.7+ | producción probada en MariaDB 10.11 |
+| Node.js | 20 LTS o superior | solo para compilar los frontends |
+| Cuenta MaxMind | gratuita | licencia GeoLite2 para el espejo local de geolocalización (recomendado) |
+| Java | 17 o superior | solo para compilar el plugin y los módulos |
 
 ---
 
-## 3. Subir Archivos al Servidor
+## 2. Site y base de datos
 
-### Opcion A: Desde tu maquina local con rsync
+1. CloudPanel → **Sites → Add Site → Create a PHP Site**: dominio (`furrguard.srteb.eu`), PHP 8.2+.
+2. CloudPanel → **Databases → Add Database**: nombre, usuario y contraseña segura.
+
+---
+
+## 3. Código
+
+La opción recomendada es clonar en el servidor y compilar allí.
 
 ```bash
-# Construir los frontends ANTES de subir
-cd admin && npm install && npm run build && cd ..
-cd public && npm install && npm run build && cd ..
+ssh furrguard@tu-servidor
+cd /home/furrguard/htdocs/furrguard.srteb.eu
+git clone https://github.com/grinchhorizon/SrTeb-FurrGuard.git .
 
-# Subir al directorio del site (NO a /public/)
-# El vhost de Nginx apunta root a /home/furrguard/htdocs/furrguard.srteb.eu/
+composer install --no-dev --optimize-autoloader
+(cd admin  && npm ci && npm run build)
+(cd public && npm ci && npm run build)
+```
+
+> `npm ci` usa el `package-lock.json` exacto; no uses `npm install` en el servidor.
+
+**Alternativa (subir desde tu equipo con rsync):** compila en local y sube solo lo necesario.
+
+```bash
+composer install --no-dev --optimize-autoloader
+(cd admin && npm ci && npm run build) && (cd public && npm ci && npm run build)
+
 rsync -avz --delete \
-  --exclude='.git' \
-  --exclude='.env' \
-  --exclude='node_modules' \
-  --exclude='admin/node_modules' \
-  --exclude='admin/src' \
-  --exclude='public/node_modules' \
-  --exclude='public/src' \
-  --exclude='.idea' \
-  --exclude='.claude' \
-  --exclude='docs' \
+  --exclude='.git*' --exclude='.env' --exclude='.claude' --exclude='.idea' \
+  --exclude='node_modules' --exclude='admin/src' --exclude='public/src' \
+  --exclude='shared' --exclude='libs' --exclude='modulos' --exclude='FurrGuard-plugin' \
+  --exclude='docs' --exclude='tests' --exclude='*.md' \
+  --exclude='storage/sessions/*' --exclude='storage/ratelimit/*' --exclude='storage/geoip/*.mmdb' \
   ./ furrguard@tu-servidor:/home/furrguard/htdocs/furrguard.srteb.eu/
 ```
 
-### Opcion B: Git clone en el servidor
-
-```bash
-# SSH al servidor
-ssh furrguard@tu-servidor
-
-cd /home/furrguard/srteb.eu
-
-# Clonar el repositorio
-git clone https://github.com/tu-usuario/FurrGuard.git .
-
-# Compilar los frontends en el servidor (necesitas Node.js - ver paso 4)
-cd admin && npm install && npm run build && cd ..
-cd public && npm install && npm run build && cd ..
-```
+> Nunca subas volcados `.sql` de producción al servidor web.
 
 ---
 
-## 4. Instalar Node.js (si compilas en el servidor)
-
-Solo necesario si compilas el frontend directamente en el servidor.
+## 4. Configuración (`.env`)
 
 ```bash
-# SSH al servidor
-ssh furrguard@tu-servidor
-
-# Instalar Node.js 20 via NodeSource
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
-
-# Verificar
-node --version   # v20.x
-npm --version    # 10.x
-
-# Compilar frontends
-cd /home/furrguard/htdocs/furrguard.srteb.eu/admin
-npm install
-npm run build
-
-cd /home/furrguard/htdocs/furrguard.srteb.eu/public
-npm install
-npm run build
+cp .env.example .env
+nano .env
+chmod 600 .env
 ```
 
-El resultado estara en `admin/dist/` y `public/dist/` (archivos JS/CSS optimizados).
-
----
-
-## 5. Configurar Variables de Entorno
-
-Crea el archivo `.env` en la raiz del proyecto:
-
-```bash
-nano /home/furrguard/htdocs/furrguard.srteb.eu/.env
-```
-
-Contenido (ajusta los valores):
+Variables mínimas (todas documentadas en `.env.example` y en `docs/API.md` §8):
 
 ```env
-# Discord OAuth2
-DISCORD_CLIENT_ID=tu_client_id
-DISCORD_CLIENT_SECRET=tu_client_secret
-DISCORD_REDIRECT_URI=https://furrguard.srteb.eu/admin/callback.php
-FOUNDER_DISCORD_ID=tu_discord_id
+APP_ENV=production
+APP_URL=https://furrguard.srteb.eu
 
-# Base de datos
 DB_HOST=localhost
+DB_PORT=3306
 DB_NAME=furrguard
 DB_USERNAME=furrguard_user
-DB_PASSWORD=tu_password_seguro
+DB_PASSWORD=...
 
-# Seguridad
-CORS_ALLOWED_ORIGIN=https://furrguard.srteb.eu
+DISCORD_CLIENT_ID=...
+DISCORD_CLIENT_SECRET=...
+DISCORD_REDIRECT_URI=https://furrguard.srteb.eu/admin/callback.php
+FOUNDER_DISCORD_ID=...
+
+# Solo si hay un proxy inverso propio delante (Cloudflare se detecta solo)
 TRUSTED_PROXIES=
+
+API_RATE_LIMIT_PER_MIN=6000
+
+GEOIP_COUNTRY_DB=storage/geoip/GeoLite2-Country.mmdb
+GEOIP_ASN_DB=storage/geoip/GeoLite2-ASN.mmdb
+MAXMIND_ACCOUNT_ID=...
+MAXMIND_LICENSE_KEY=...
 ```
 
-**Proteger el archivo `.env`:**
+`storage/` debe ser escribible por el usuario de PHP (sesiones, límites de peticiones y bases GeoIP):
 
 ```bash
-chmod 600 /home/furrguard/htdocs/furrguard.srteb.eu/.env
-chown furrguard:furrguard /home/furrguard/htdocs/furrguard.srteb.eu/.env
+chown -R furrguard:furrguard storage
+chmod -R u+rwX,go-rwx storage
 ```
 
 ---
 
-## 6. Importar Base de Datos
+## 5. Base de datos: migraciones
+
+Instalación nueva y actualización usan **el mismo comando** (es idempotente):
 
 ```bash
-# SSH al servidor
-mysql -u furrguard_user -p furrguard < /home/furrguard/htdocs/furrguard.srteb.eu/install.sql
+php bin/migrate.php            # aplica las migraciones pendientes
+php bin/migrate.php --status   # lista aplicadas y pendientes
 ```
 
-O desde CloudPanel: **Databases** > Click en la BD > **Import** > sube `install.sql`.
+> **Antes de migrar una instalación existente, haz copia de la base de datos**
+> (CloudPanel → Databases → Export, o `mysqldump`). La migración normaliza UUID e IP de
+> whitelist/blacklist, convierte la API key a hash y elimina columnas y tablas obsoletas.
+
+Ya no existe `install.sql` ni los `.sql` de los módulos: todo está en `database/migrations/`.
 
 ---
 
-## 7. Configurar Nginx (CloudPanel)
+## 6. Geolocalización: espejo MaxMind
 
-CloudPanel usa Nginx con un formato de vhost especifico. Los placeholders entre `{{corchetes}}` son variables internas de CloudPanel que se rellenan automaticamente — **no los modifiques**.
+FurrGuard consulta ip-api.com (proxy, hosting, red móvil, ISP) y además una copia local de
+**GeoLite2-Country** y **GeoLite2-ASN**. Si ip-api cae o agota su cuota, los bloqueos por país,
+continente, ASN y proveedor siguen funcionando.
 
-1. En CloudPanel, ve a **Sites** > tu sitio > **Nginx Configuration**
-2. Reemplaza **todo** el contenido con:
+1. Crea una cuenta gratuita en <https://www.maxmind.com/en/geolite2/signup> y genera una license key.
+2. Pon `MAXMIND_ACCOUNT_ID` y `MAXMIND_LICENSE_KEY` en `.env`.
+3. Descarga las bases: `php bin/geoip-update.php`.
+
+Sin estas bases FurrGuard funciona igual, pero sin el espejo (el panel lo indica en el resumen).
+
+---
+
+## 7. nginx (CloudPanel → Sites → tu sitio → Vhost)
+
+Sustituye el contenido por el siguiente. Los `{{…}}` son variables de CloudPanel: no los toques.
+Solo son ejecutables los 7 puntos de entrada PHP; todo lo demás (código, configuración, datos) se
+bloquea.
 
 ```nginx
 server {
@@ -183,9 +156,8 @@ server {
   {{ssl_certificate_key}}
   {{ssl_certificate}}
   server_name furrguard.srteb.eu;
-  # FurrGuard: sobreescribimos {{root}} porque el proyecto no usa subdirectorio public/
   root /home/furrguard/htdocs/furrguard.srteb.eu;
-  index index.php index.html;
+  index index.php;
 
   {{nginx_access_log}}
   {{nginx_error_log}}
@@ -201,120 +173,38 @@ server {
 
   {{settings}}
 
-  # Security headers
-  add_header X-Frame-Options "SAMEORIGIN" always;
+  # Cabeceras base. PHP añade la CSP con nonce. No uses add_header dentro de las location
+  # de abajo: nginx dejaría de heredar estas.
   add_header X-Content-Type-Options "nosniff" always;
-  add_header X-XSS-Protection "1; mode=block" always;
   add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
-  # Gzip compression
   gzip on;
-  gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript image/svg+xml;
+  gzip_types text/plain text/css application/json application/javascript text/xml application/xml image/svg+xml;
   gzip_min_length 256;
   gzip_vary on;
 
-  # ============================================================
-  # FurrGuard — Security: bloquear archivos y directorios sensibles
-  # ============================================================
+  # ── Bloqueos ────────────────────────────────────────────────────────────
+  location ~ /\.(?!well-known) { deny all; return 404; }
+  location ~ ^/(config|includes|database|bin|storage|vendor|libs|modulos|FurrGuard-plugin|docs|tests|shared)(/|$) { deny all; return 404; }
+  location ~ ^/(admin|public)/(src|node_modules)(/|$) { deny all; return 404; }
+  location ~ \.(sql|tsv|md|json|lock|ya?ml|neon|xml|dist|log|env|bak|old|tmp|sh|bat|gradle|properties|java|ts|vue|mmdb|tsbuildinfo)$ { deny all; return 404; }
 
-  # Bloquear dotfiles (.env, .git, .htaccess, .idea)
-  location ~ /\.(env|git|htaccess|idea) {
-    deny all;
-    return 404;
-  }
-
-  # Bloquear extensiones sensibles
-  location ~ \.(sql|log|bak|old|tmp)$ {
-    deny all;
-    return 404;
-  }
-
-  # Bloquear acceso directo a config/ e includes/
-  location ~ ^/(config|includes)/ {
-    deny all;
-    return 404;
-  }
-
-  # Bloquear config.php e install.sql directamente
-  location ~ ^/(config\.php|install\.sql)$ {
-    deny all;
-    return 404;
-  }
-
-  # Bloquear directorios de desarrollo del admin
-  location ~ ^/admin/(node_modules|src)/ {
-    deny all;
-    return 404;
-  }
-
-  # Bloquear directorios de desarrollo del public frontend
-  location ~ ^/public/(node_modules|src)/ {
-    deny all;
-    return 404;
-  }
-
-  # ============================================================
-  # FurrGuard — Frontend assets compilados por Vite (cache largo)
-  # El HTML compilado referencia /{admin,public}/assets/... pero
-  # los archivos estan en {admin,public}/dist/assets/. Usamos alias.
-  # ============================================================
-
-  # ^~ evita que el regex de static assets capture estos ficheros antes
+  # ── Assets compilados por Vite ─────────────────────────────────────────
   location ^~ /admin/assets/ {
     alias /home/furrguard/htdocs/furrguard.srteb.eu/admin/dist/assets/;
     expires 1y;
-    add_header Cache-Control "public, immutable";
-    add_header Access-Control-Allow-Origin "*";
     access_log off;
   }
-
-  # Landing page + verify page assets compilados por Vite
   location ^~ /public/assets/ {
     alias /home/furrguard/htdocs/furrguard.srteb.eu/public/dist/assets/;
     expires 1y;
-    add_header Cache-Control "public, immutable";
-    add_header Access-Control-Allow-Origin "*";
     access_log off;
   }
 
-  # ============================================================
-  # FurrGuard — Admin panel (Vue SPA)
-  # ============================================================
-
-  # Archivos PHP del admin → PHP-FPM directo
-  location ~ ^/admin/(api|callback)\.php$ {
+  # ── Puntos de entrada PHP (únicos ejecutables) ─────────────────────────
+  location ~ ^/(index|verify)\.php$|^/admin/(index|api|callback)\.php$|^/api/(plugin|furrsecurity)\.php$ {
     include fastcgi_params;
     fastcgi_intercept_errors on;
-    fastcgi_index index.php;
-    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-    try_files $uri =404;
-    fastcgi_read_timeout 60;
-    fastcgi_pass 127.0.0.1:{{php_fpm_port}};
-    fastcgi_param PHP_VALUE "{{php_settings}}";
-  }
-
-  # Admin SPA catch-all → index.php (Vue Router hash mode)
-  location /admin/ {
-    try_files $uri $uri/ /admin/index.php?$query_string;
-  }
-
-  # ============================================================
-  # FurrGuard — Pagina principal (Vue SPA via index.php) + API del plugin
-  # ============================================================
-
-  # Landing page + verify page → index.php / verify.php
-  location / {
-    try_files $uri $uri/ /index.php?$query_string;
-  }
-
-  # ============================================================
-  # FurrGuard — PHP general via FastCGI
-  # ============================================================
-
-  location ~ \.php$ {
-    include fastcgi_params;
-    fastcgi_intercept_errors on;
-    fastcgi_index index.php;
     fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
     try_files $uri =404;
     fastcgi_read_timeout 60;
@@ -322,417 +212,127 @@ server {
     fastcgi_pass 127.0.0.1:{{php_fpm_port}};
     fastcgi_param PHP_VALUE "{{php_settings}}";
   }
+  location ~ \.php$ { deny all; return 404; }
 
-  # ============================================================
-  # FurrGuard — Static assets
-  # ============================================================
-
-  location ~* ^.+\.(css|js|jpg|jpeg|gif|png|ico|gz|svg|svgz|ttf|otf|woff|woff2|eot|mp4|ogg|ogv|webm|webp|zip|swf|map|mjs)$ {
-    add_header Access-Control-Allow-Origin "*";
-    expires max;
-    access_log off;
-    try_files $uri =404;
+  # ── Rutas de los SPA ───────────────────────────────────────────────────
+  location = /admin {
+    return 301 /admin/;
   }
-
-  location ~ /\.(ht|svn|git) {
-    deny all;
-  }
-
-  if (-f $request_filename) {
-    break;
-  }
-}
-
-# ==============================================================
-# Backend port 8080 (usado internamente por CloudPanel)
-# ==============================================================
-
-server {
-  listen 8080;
-  listen [::]:8080;
-  server_name furrguard.srteb.eu;
-  root /home/furrguard/htdocs/furrguard.srteb.eu;
-
-  include /etc/nginx/global_settings;
-
-  index index.php index.html;
-
-  # Security: bloquear archivos sensibles
-  location ~ /\.(env|git|htaccess|idea) {
-    deny all;
-    return 404;
-  }
-
-  location ~ \.(sql|log|bak|old|tmp)$ {
-    deny all;
-    return 404;
-  }
-
-  location ~ ^/(config|includes)/ {
-    deny all;
-    return 404;
-  }
-
-  location ~ ^/admin/(node_modules|src)/ {
-    deny all;
-    return 404;
-  }
-
-  location ~ ^/public/(node_modules|src)/ {
-    deny all;
-    return 404;
-  }
-
-  # Vite assets (cache largo)
-  # ^~ evita que el regex de static assets capture estos ficheros antes
-  location ^~ /admin/assets/ {
-    alias /home/furrguard/htdocs/furrguard.srteb.eu/admin/dist/assets/;
-    expires 1y;
-    access_log off;
-  }
-
-  # Landing page + verify page assets
-  location ^~ /public/assets/ {
-    alias /home/furrguard/htdocs/furrguard.srteb.eu/public/dist/assets/;
-    expires 1y;
-    access_log off;
-  }
-
-  # Admin SPA
   location /admin/ {
-    try_files $uri $uri/ /admin/index.php?$args;
+    try_files $uri /admin/index.php?$query_string;
   }
-
-  # General routing
   location / {
-    try_files $uri $uri/ /index.php?$args;
-  }
-
-  # PHP via FastCGI
-  location ~ \.php$ {
-    include fastcgi_params;
-    fastcgi_intercept_errors on;
-    fastcgi_index index.php;
-    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-    try_files $uri =404;
-    fastcgi_read_timeout 3600;
-    fastcgi_send_timeout 3600;
-    fastcgi_param HTTPS "on";
-    fastcgi_param SERVER_PORT 443;
-    fastcgi_pass 127.0.0.1:{{php_fpm_port}};
-    fastcgi_param PHP_VALUE "{{php_settings}}";
-  }
-
-  location ~ /\.(ht|svn|git) {
-    deny all;
-  }
-
-  if (-f $request_filename) {
-    break;
+    try_files $uri /index.php?$query_string;
   }
 }
 ```
 
-3. Click **Save**. CloudPanel validara y recargara Nginx automaticamente.
+> **Bloque del puerto 8080:** CloudPanel lo añade para Varnish. Si no usas Varnish en este sitio,
+> elimínalo. Si lo usas, cambia `listen 8080` por `listen 127.0.0.1:8080` y copia los mismos bloqueos.
 
 ---
 
-## 8. Configurar SSL (Let's Encrypt)
+## 8. SSL y Discord
 
-CloudPanel lo gestiona automaticamente:
-
-1. Ve a **Sites** > tu sitio > **SSL/TLS**
-2. Click **Add Certificate** > **Let's Encrypt**
-3. Activa **Force HTTPS**
-4. CloudPanel renovara los certificados automaticamente.
+- CloudPanel → **SSL/TLS → Let's Encrypt** y activa **Force HTTPS**.
+- Discord Developer Portal → tu aplicación → **OAuth2 → Redirects**, añade:
+  - `https://furrguard.srteb.eu/admin/callback.php` (panel)
+  - `https://furrguard.srteb.eu/verify.php` (verificación de staff)
 
 ---
 
-## 9. Configurar Discord OAuth2
+## 9. Tareas programadas (cron)
 
-1. Ve a [Discord Developer Portal](https://discord.com/developers/applications)
-2. Selecciona tu aplicacion (o crea una nueva)
-3. En **OAuth2** > **General**:
-   - **Redirects:** Anade estas dos URLs:
-     - `https://furrguard.srteb.eu/admin/callback.php` (panel admin)
-     - `https://furrguard.srteb.eu/verify.php` (verificacion de jugadores)
-4. Copia el **Client ID** y **Client Secret** al `.env`
+CloudPanel → **Cron Jobs** (usuario del sitio):
 
----
-
-## 10. Verificar Permisos de Archivos
-
-```bash
-# SSH al servidor
-ssh furrguard@tu-servidor
-
-cd /home/furrguard/htdocs/furrguard.srteb.eu
-
-# Propietario correcto
-chown -R furrguard:furrguard .
-
-# Permisos generales
-find . -type d -exec chmod 755 {} \;
-find . -type f -exec chmod 644 {} \;
-
-# .env solo legible por el propietario
-chmod 600 .env
-
-# Directorio temporal para rate limiting (debe ser escribible)
-mkdir -p /tmp/furrguard_ratelimit
-chmod 700 /tmp/furrguard_ratelimit
-chown furrguard:furrguard /tmp/furrguard_ratelimit
+```cron
+# Limpieza de cachés, sesiones, tokens y retención configurada: cada hora
+17 * * * * php /home/furrguard/htdocs/furrguard.srteb.eu/bin/cleanup.php > /dev/null 2>&1
+# Bases GeoLite2 (MaxMind publica actualizaciones dos veces por semana)
+43 4 * * 2,5 php /home/furrguard/htdocs/furrguard.srteb.eu/bin/geoip-update.php > /dev/null 2>&1
 ```
 
 ---
 
-## 11. Probar la Instalacion
+## 10. Primer arranque
 
-### Verificar PHP
-
-```bash
-curl -I https://furrguard.srteb.eu/admin/api.php
-# Debe devolver HTTP 200 o 401 (no 500)
-```
-
-### Verificar Frontend
-
-1. Abre `https://furrguard.srteb.eu/admin/` en el navegador
-2. Debe mostrar la pagina de login con Discord
-3. Click "Iniciar sesion con Discord" y verifica que redirige correctamente
-
-### Verificar Landing Page
-
-1. Abre `https://furrguard.srteb.eu/` en el navegador
-2. Debe mostrar la landing page de FurrGuard con animaciones y secciones
-3. Verifica que el menu movil funciona (en viewport < 768px)
-4. Verifica que los enlaces de navegacion hacen scroll suave
-
-### Verificar Pagina de Verificacion
-
-1. Abre `https://furrguard.srteb.eu/verify.php` sin token
-2. Debe mostrar una tarjeta de error: "Token no proporcionado"
-3. Abre `https://furrguard.srteb.eu/verify.php?token=invalido` con token invalido
-4. Debe mostrar: "Token invalido"
-
-### Verificar API del Plugin (Minecraft)
-
-```bash
-# Desde tu maquina o el servidor
-curl -X POST https://furrguard.srteb.eu/api/plugin.php \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: TU_API_KEY" \
-  -d '{"action":"get_settings"}'
-# Debe devolver JSON con success:true
-```
-
-### Verificar Base de Datos
-
-```bash
-mysql -u furrguard_user -p -e "SHOW TABLES;" furrguard
-# Debe mostrar: players, player_nicks, player_ips, whitelist, blacklist, settings, etc.
-```
+1. Abre `https://furrguard.srteb.eu/admin/` e inicia sesión con Discord con la cuenta de `FOUNDER_DISCORD_ID`.
+2. **Ajustes → API key → Generar.** Copia la clave: solo se muestra una vez. Mientras no exista,
+   la API de plugins responde `503 api_key_not_configured`.
+3. Configura el plugin y los módulos con esa clave (§11).
+4. Revisa en **Resumen** el estado de la API key, ip-api y el espejo MaxMind.
 
 ---
 
-## 12. Configurar el Plugin de Minecraft
+## 11. Plugin Velocity y módulos
 
-En tu servidor Velocity:
+Se compilan desde el monorepo (necesitas Java 17+):
 
-1. Compila el plugin: `cd FurrGuard-plugin && ./gradlew shadowJar`
-2. Copia `build/libs/FurrGuard-1.0.0.jar` a la carpeta `plugins/` de Velocity
-3. Inicia el servidor para generar `plugins/FurrGuard/config.yml`
-4. Edita la config:
+```bash
+cd FurrGuard-plugin && ./gradlew build          # → build/libs/FurrGuard-<versión>.jar
+cd modulos/furrperms-module && ./gradlew build     # → build/libs/furrperms-module-<versión>.jar
+cd modulos/furrsecurity-module && ./gradlew build  # → build/libs/FurrSecurity-<versión>.jar
+```
+
+- **FurrGuard** y **FurrPerms** van en `plugins/` de Velocity.
+- **FurrSecurity** es un único jar para Velocity y Paper: ponlo en el proxy y en cada backend.
+
+`config.yml` de cada uno:
 
 ```yaml
 api:
-  url: "https://furrguard.srteb.eu/api/plugin.php"
-  key: "TU_API_KEY"  # La misma que generaste en la base de datos
+  url: "https://furrguard.srteb.eu/api/plugin.php"      # FurrSecurity: /api/furrsecurity.php
+  key: "fg_…"                                          # la clave generada en el panel
 ```
 
-5. Reinicia Velocity.
+> Todos fallan en cerrado si la API no responde (FurrGuard lo permite configurar). Tras un cambio
+> de clave, `/fg reload` en el proxy.
 
 ---
 
-## Estructura de Archivos en Produccion
-
-```
-/home/furrguard/htdocs/furrguard.srteb.eu/
-├── .env                          # Variables de entorno (chmod 600)
-├── .gitignore
-├── .htaccess                     # (No funciona en Nginx, ignorar)
-├── CLAUDE.md
-├── config.php                    # Config principal
-├── index.php                     # Pagina principal
-├── install.sql                   # Schema SQL
-├── verify.php                    # Script de verificacion
-│
-├── config/
-│   ├── database.php              # Conexion BD (singleton PDO)
-│   └── env.php                   # Cargador de .env
-│
-├── includes/
-│   ├── functions.php             # Helpers compartidos
-│   └── security.php              # Seguridad, rate limit, CSP
-│
-├── api/
-│   └── plugin.php                # API para el plugin Minecraft
-│
-├── admin/
-│   ├── .gitignore
-│   ├── .htaccess                 # (No funciona en Nginx, ignorar)
-│   ├── index.php                 # Entrada del panel admin (Vue SPA)
-│   ├── index.html                # Entrada para Vite build
-│   ├── api.php                   # API del panel admin
-│   ├── callback.php              # Callback Discord OAuth2
-│   ├── package.json              # Dependencias Node.js
-│   ├── vite.config.ts            # Config de Vite (base: '/admin/')
-│   ├── dist/                     # Frontend compilado (npm run build)
-│   │   ├── assets/
-│   │   │   ├── index-[hash].js
-│   │   │   ├── index-[hash].css
-│   │   │   └── vendor chunks...
-│   │   └── index.html
-│   └── src/                      # Codigo fuente Vue (no necesario en prod)
-│
-├── public/
-│   ├── .gitignore
-│   ├── index.html                # Entrada para Vite build
-│   ├── package.json              # Dependencias Node.js
-│   ├── vite.config.ts            # Config de Vite (base: '/public/')
-│   ├── dist/                     # Frontend compilado (npm run build)
-│   │   ├── assets/
-│   │   │   ├── index-[hash].js   # Router + app
-│   │   │   ├── index-[hash].css  # Tailwind v4
-│   │   │   ├── vue-[hash].js     # Vue + Vue Router
-│   │   │   ├── gsap-[hash].js    # GSAP animations
-│   │   │   ├── icons-[hash].js   # Lucide icons
-│   │   │   ├── LandingView-[hash].js
-│   │   │   └── VerifyView-[hash].js
-│   │   └── index.html
-│   └── src/                      # Codigo fuente Vue (no necesario en prod)
-│       ├── main.ts               # Bootstrap (createApp + router)
-│       ├── App.vue               # GSAP route transitions
-│       ├── style.css             # Tailwind v4 @theme
-│       ├── router/index.ts       # Hash routes: / → Landing, /verify → Verify
-│       ├── views/
-│       │   ├── LandingView.vue   # Landing page orchestrator
-│       │   └── VerifyView.vue    # Verify page state router
-│       ├── components/
-│       │   ├── landing/          # Header, Hero, Features, Architecture, Protection, CTA, Footer
-│       │   └── verify/           # VerifyCard, VerifyError, VerifySuccess
-│       └── composables/          # useScrollEffects, useCardEffects
-│
-├── FurrGuard-plugin/             # Codigo fuente del plugin (no necesario en prod)
-│   ├── build.gradle
-│   └── src/
-│
-└── modulos/                      # Modulos adicionales del plugin
-    └── furrperms-module/
-```
-
----
-
-## Comandos Utiles
+## 12. Comprobaciones
 
 ```bash
-# Recompilar frontend admin tras cambios
-cd /home/furrguard/htdocs/furrguard.srteb.eu/admin
-npm install && npm run build
+# API sin clave → 401; con clave → JSON
+curl -s -o /dev/null -w '%{http_code}\n' -X POST 'https://furrguard.srteb.eu/api/plugin.php?action=get_settings'
+curl -s -X POST -H 'X-API-Key: fg_…' 'https://furrguard.srteb.eu/api/plugin.php?action=get_settings'
 
-# Recompilar frontend public (landing + verify) tras cambios
-cd /home/furrguard/htdocs/furrguard.srteb.eu/public
-npm install && npm run build
-
-# Reiniciar Nginx
-sudo systemctl restart nginx
-
-# Ver logs de Nginx
-tail -f /var/log/nginx/furrguard.srteb.eu.error.log
-tail -f /var/log/nginx/furrguard.srteb.eu.access.log
-
-# Ver logs de PHP
-tail -f /var/log/php8.2-fpm/error.log
-
-# Verificar estado de servicios
-sudo systemctl status nginx
-sudo systemctl status php8.2-fpm
-
-# Limpiar archivos de rate limit expirados
-php /home/furrguard/htdocs/furrguard.srteb.eu/verify.php
+# Nada interno es accesible → 404
+for p in .env config.php includes/security.php database/migrations storage/ docs/API.md \
+         composer.json admin/package.json FurrGuard-plugin/build.gradle; do
+  printf '%-34s ' "$p"; curl -s -o /dev/null -w '%{http_code}\n' "https://furrguard.srteb.eu/$p"
+done
 ```
 
----
-
-## Solucion de Problemas
-
-### Error 502 Bad Gateway
-
-- PHP-FPM no esta corriendo: `sudo systemctl start php8.2-fpm`
-- Socket incorrecto en Nginx: verifica `/etc/nginx/conf.d/upstreams.conf`
-
-### La pagina de admin muestra pantalla en blanco
-
-- Verifica que `admin/dist/` existe y contiene los assets compilados
-- Ejecuta `cd admin && npm run build`
-- Revisa los logs de Nginx para errores 404 en `/admin/dist/`
-
-### La landing page muestra pantalla en blanco
-
-- Verifica que `public/dist/` existe y contiene los assets compilados
-- Ejecuta `cd public && npm run build`
-- Revisa los logs de Nginx para errores 404 en `/public/dist/`
-- Verifica que `index.php` puede leer `public/dist/index.html` (permisos)
-
-### Error de conexion a base de datos
-
-- Verifica las credenciales en `.env`
-- Confirma que MySQL esta corriendo: `sudo systemctl status mysql`
-- Prueba la conexion: `mysql -u furrguard_user -p -h localhost furrguard`
-
-### Discord OAuth2 no redirige
-
-- Verifica `DISCORD_REDIRECT_URI` en `.env` coincida con la URL configurada en Discord Developer Portal
-- Debe ser exactamente: `https://furrguard.srteb.eu/admin/callback.php`
-
-### CSP bloquea el frontend
-
-- En produccion, la CSP es estricta (nonce-based)
-- Si ves errores en consola del navegador tipo "refused to load", verifica que Nginx esta sirviendo correctamente los assets
-- Los scripts inline en `index.php` (admin y landing) usan nonce CSP que se genera dinamicamente
-- Verifica que Nginx sirve los assets desde `/admin/dist/` y `/public/dist/`
-
-### Assets 404 en produccion
-
-- **Admin:** Verifica que Vite compilo con `base: '/admin/'`, assets en `admin/dist/assets/`
-- **Public:** Verifica que Vite compilo con `base: '/public/'`, assets en `public/dist/assets/`
-- Revisa la configuracion Nginx: las secciones `location ^~ /admin/assets/` y `location ^~ /public/assets/` deben estar antes que el catch-all
+- `https://furrguard.srteb.eu/` → landing.
+- `https://furrguard.srteb.eu/verify.php` sin token → error "Token no proporcionado".
+- Cabecera `Content-Security-Policy` con `nonce-…` en `/admin/`.
 
 ---
 
-## Actualizaciones
+## 13. Actualizar
 
 ```bash
-# SSH al servidor
 cd /home/furrguard/htdocs/furrguard.srteb.eu
-
-# Obtener ultimos cambios
-git pull origin master
-
-# Recompilar frontends (si hubo cambios en src/)
-cd admin && npm install && npm run build && cd ..
-cd public && npm install && npm run build && cd ..
-
-# Si hubo cambios en la base de datos, aplicar migraciones
-# mysql -u furrguard_user -p furrguard < migrations/nueva_migracion.sql
+# 1) copia de seguridad de la base de datos
+git pull
+composer install --no-dev --optimize-autoloader
+(cd admin && npm ci && npm run build) && (cd public && npm ci && npm run build)
+php bin/migrate.php
 ```
+
+Si PHP-FPM tiene OPcache con `validate_timestamps=0`, reinícialo desde CloudPanel.
 
 ---
 
-## Seguridad Adicional (Recomendado)
+## 14. Problemas frecuentes
 
-1. **Firewall:** Solo abre puertos 80, 443 y el del servidor Minecraft
-2. **Fail2Ban:** CloudPanel lo instala por defecto
-3. **Backups automaticos:** Configura en CloudPanel > **Backups**
-4. **Monitoreo:** Revisa los logs periodicamente
-5. **Actualizar API Key:** Genera una nueva clave desde el panel admin y actualiza el plugin
+| Síntoma | Causa y solución |
+|---|---|
+| El plugin expulsa con "Error de verificación" | API caída, clave incorrecta o sin clave: revisa `/fg status` y el Resumen del panel |
+| `503 api_key_not_configured` | Genera la API key en Ajustes |
+| Panel en blanco / 404 en `/admin/assets/` | Falta `npm run build` en `admin/` o el alias de nginx |
+| "Token CSRF inválido" en el panel | La pestaña lleva abierta desde antes del último login: recarga |
+| Resumen: espejo MaxMind "missing" | Faltan las `.mmdb`: `php bin/geoip-update.php` y revisa `MAXMIND_*` |
+| Resumen: ip-api "limited" | Cuota gratuita agotada: el espejo MaxMind cubre país, continente y ASN |
+| Discord OAuth no vuelve | `DISCORD_REDIRECT_URI` y los redirects del portal deben coincidir exactamente |

@@ -1,11 +1,15 @@
+# Panel (Apache). El .htaccess de una subcarpeta sustituye las reglas de reescritura de la raíz.
 RewriteEngine On
 
-# PHP files pass through normally
-RewriteRule ^(api|callback)\.php$ - [L]
+# Código fuente y configuración del SPA
+RewriteRule ^(src|node_modules)(/|$) - [F,L]
 
-# Built assets
-RewriteRule ^dist/ - [L]
+# Assets compilados por Vite (el HTML los pide en /admin/assets/)
+RewriteRule ^assets/(.*)$ dist/assets/$1 [L]
 
-# Everything else -> index.php (Vue SPA entry)
+# Endpoints PHP del panel
+RewriteRule ^(api|callback|index)\.php$ - [L]
+
+# Resto de rutas del SPA (modo historial) → index.php
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^(.*)$ index.php [QSA,L]
+RewriteRule ^ index.php [L]

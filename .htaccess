@@ -1,38 +1,37 @@
-# FurrGuard Security Configuration
+# FurrGuard — equivalente Apache de la configuración nginx de docs/INSTALACION_CLOUDPANEL.md.
+# La instalación soportada es nginx; esto evita exponer código si alguien lo sirve con Apache.
 
-# Disable directory listing
 Options -Indexes
 
-# Deny access to sensitive files
-<FilesMatch "\.(sql|md|json|yml|yaml|log|env|bak|old|tmp)$">
-    Require all denied
-</FilesMatch>
-
-# Block access to config files directly
-<FilesMatch "^(config\.php|install\.sql|CLAUDE\.md|composer\.json|composer\.lock)$">
-    Require all denied
-</FilesMatch>
-
-# Block access to includes and config directories
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Block direct access to includes/
-    RewriteRule ^includes/ - [F,L]
+    # Carpetas internas: nunca se sirven
+    RewriteRule ^(config|includes|database|bin|storage|vendor|libs|modulos|FurrGuard-plugin|docs|tests|shared)(/|$) - [F,L]
 
-    # Block direct access to config/
-    RewriteRule ^config/ - [F,L]
+    # Archivos y carpetas ocultos (.env, .git, .claude…) salvo .well-known
+    RewriteRule (^|/)\.(?!well-known/) - [F,L]
+
+    # Assets compilados por Vite
+    RewriteRule ^public/assets/(.*)$ public/dist/assets/$1 [L]
+
+    # Landing: rutas inexistentes → index.php
+    RewriteCond %{REQUEST_URI} !^/admin/
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [L]
 </IfModule>
 
-# Prevent PHP execution in upload directories (if any exist)
-<IfModule mod_php.c>
-    php_flag engine off
-</IfModule>
+# Fuentes, configuración y datos que no deben descargarse aunque estén dentro de public/ o admin/
+<FilesMatch "\.(sql|tsv|md|json|lock|ya?ml|neon|xml|dist|log|env|bak|old|tmp|sh|bat|gradle|properties|java|ts|vue|mmdb|tsbuildinfo)$">
+    Require all denied
+</FilesMatch>
+<FilesMatch "^config\.php$">
+    Require all denied
+</FilesMatch>
 
-# Security headers (backup in case PHP headers fail)
 <IfModule mod_headers.c>
     Header always set X-Content-Type-Options "nosniff"
     Header always set X-Frame-Options "DENY"
-    Header always set X-XSS-Protection "1; mode=block"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>

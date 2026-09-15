@@ -133,8 +133,8 @@ Mismas reglas de autenticación y límites que §1.1.
 | `player_disconnect` | `uuid`, `nick`, `locked` 0/1 | `{"success":true}` |
 | `reset_session` | `uuid`, `nick` | `{"success":true,"sessions_expired":int}` |
 | `record_failed_attempt` | `uuid`, `nick`, `ip` | `{"success":true,"failed_attempts":int,"blacklisted":bool}` |
-| `get_settings` | — | todas las claves `furrsecurity_*` (§7) |
-| `get_messages` | — | objeto plano con claves `furrsecurity_*` |
+| `get_settings` | — | todas las claves de ajustes `furrsecurity_*` (§7) |
+| `get_messages` | — | objeto plano con las claves de mensajes `furr_security_*` |
 
 Reglas:
 
@@ -150,6 +150,12 @@ Reglas:
   nick y la IP como hijas del baneo por UUID.
 - **Los clientes fallan en cerrado:** cualquier error HTTP, timeout o JSON inválido en
   `check_status` significa "bloquear y reintentar", nunca "dejar pasar".
+- **Prefijos:** los *ajustes* de FurrSecurity usan `furrsecurity_` (tabla `settings`) y sus
+  *mensajes* usan `furr_security_` (tabla `messages`; son las 25 claves que ya usan el módulo y el
+  panel). Las antiguas claves de mensajes `furrsecurity_*` no llegaban nunca al módulo y se
+  eliminan en la migración. En SQL, filtra con `LIKE 'furr\_security\_%'` (el `_` es comodín).
+- **Mensajes del resto de piezas:** FurrGuard usa `prefix`, `kick_*`, `notify_*`, `command_*`,
+  `player_*`, `whitelist_*`, `blacklist_*`… y FurrPerms `fur_perms_*`.
 
 ## 3. Verificación web — `/verify.php`
 
