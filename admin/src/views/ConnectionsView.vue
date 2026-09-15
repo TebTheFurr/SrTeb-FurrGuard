@@ -1,191 +1,136 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useConnectionsStore } from '@/stores/connections'
-import { CONNECTION_FILTERS } from '@/lib/constants'
-import FilterTabs from '@/components/shared/FilterTabs.vue'
-import SearchInput from '@/components/shared/SearchInput.vue'
-import DataTable from '@/components/shared/DataTable.vue'
-import PaginationBar from '@/components/shared/PaginationBar.vue'
-import PlayerCell from '@/components/shared/PlayerCell.vue'
-import IPCell from '@/components/shared/IPCell.vue'
-import StatusBadge from '@/components/shared/StatusBadge.vue'
-import ConnectionModal from '@/components/modals/ConnectionModal.vue'
-import { Activity } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import IconPlug from '~icons/pixelarticons/plug'
+import IconReload from '~icons/pixelarticons/reload'
+import type { ConnectionRow } from '@/api/types'
+import { useDetail } from '@/composables/useDetail'
+import { usePagedList } from '@/composables/usePagedList'
+import { formatDateTime, timeAgo } from '@/lib/dates'
+import { isOn } from '@/lib/format'
+import { DETECTIONS, reasonLabel } from '@/lib/labels'
+import { useSession } from '@/stores/session'
+import AppDialog from '@/components/ui/AppDialog.vue'
+import CountryTag from '@/components/ui/CountryTag.vue'
+import FilterTabs from '@/components/ui/FilterTabs.vue'
+import IpText from '@/components/ui/IpText.vue'
+import ListFrame from '@/components/ui/ListFrame.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import SearchBox from '@/components/ui/SearchBox.vue'
+import StatusChip from '@/components/ui/StatusChip.vue'
 
-const store = useConnectionsStore()
+const FILTERS = [
+  { value: 'all', label: 'Todas' },
+  { value: 'allowed', label: 'Permitidas' },
+  { value: 'blocked', label: 'Bloqueadas' },
+  { value: 'proxy', label: 'Proxy' },
+  { value: 'vpn', label: 'VPN' },
+  { value: 'hosting', label: 'Hosting' },
+  { value: 'mobile', label: 'Móvil' },
+] as const
 
-let currentPage = 1
-let currentFilter = 'all'
-let currentSearch = ''
+const session = useSession()
+const list = usePagedList<ConnectionRow, { filter: string; search: string }>({
+  action: 'get_connections',
+  filters: { filter: 'all', search: '' },
+  allowed: { filter: FILTERS.map((f) => f.value) },
+})
 
-const showDetailModal = ref(false)
-const selectedConnectionId = ref<number | null>(null)
+const selected = ref<ConnectionRow | null>(null)
+const detail = useDetail<{ connection: ConnectionRow }>()
+const connection = computed(() => detail.data.value?.connection ?? null)
 
-const columns = [
-  { key: 'nick', label: 'Jugador' },
-  { key: 'ip', label: 'IP' },
-  { key: 'status', label: 'Estado' },
-  { key: 'flags', label: 'Flags' },
-  { key: 'created_at', label: 'Fecha' },
-]
-
-function fetchData() {
-  store.fetchConnections(currentPage, currentFilter, currentSearch)
+function open(row: ConnectionRow): void {
+  selected.value = row
+  void detail.load('get_connection_detail', { id: row.id })
 }
 
-onMounted(fetchData)
-
-function onFilterChange(filter: string) {
-  currentFilter = filter
-  currentPage = 1
-  fetchData()
+function close(): void {
+  detail.cancel()
+  selected.value = null
 }
 
-function onSearchChange(search: string) {
-  currentSearch = search
-  currentPage = 1
-  fetchData()
-}
-
-function onPageChange(page: number) {
-  currentPage = page
-  fetchData()
-}
-
-function onRowClick(row: Record<string, unknown>) {
-  selectedConnectionId.value = (row as any).id as number
-  showDetailModal.value = true
-}
-
-function onModalClose() {
-  showDetailModal.value = false
-  selectedConnectionId.value = null
-}
-
-function formatDate(dateStr: string): string {
-  if (!dateStr) return '-'
-  return new Date(dateStr).toLocaleString('es-ES', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
+const detectionsOf = (row: ConnectionRow) => DETECTIONS.filter((d) => isOn(row[d.key]))
 </script>
 
 <template>
-  <div class="page-container">
-    <!-- Page header -->
-    <div class="section-header">
-      <div class="flex items-center gap-3">
-        <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20">
-          <Activity :size="20" class="text-purple-400" />
+  <div>
+    <PageHeader title="Conexiones" :icon="IconPlug" desc="Cada intento de entrada con su geolocalización y el resultado de las reglas." />
+
+    <ListFrame :list="list" label="Lista de conexiones" :empty-icon="IconPlug" empty-title="No hay conexiones con este filtro">
+      <template #toolbar>
+        <FilterTabs v-model="list.filters.filter" label="Filtrar conexiones" :options="FILTERS" />
+        <SearchBox v-model="list.filters.search" label="Buscar conexiones" placeholder="Nick, UUID o IP…" />
+      </template>
+
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th scope="col">Fecha</th>
+            <th scope="col">Jugador</th>
+            <th v-if="session.canSeeIps" scope="col">IP</th>
+            <th scope="col">País</th>
+            <th scope="col">Detección</th>
+            <th scope="col">Resultado</th>
+            <th scope="col" class="acciones"><span class="sr-only">Acciones</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in list.items" :key="row.id" :class="{ bloqueada: isOn(row.blocked) }">
+            <td class="nowrap" :title="formatDateTime(row.created_at)">{{ timeAgo(row.created_at) }}</td>
+            <td>
+              <RouterLink v-if="session.can('players')" class="enlace-fila" :to="{ name: 'player', params: { uuid: row.uuid } }">{{ row.nick }}</RouterLink>
+              <span v-else>{{ row.nick }}</span>
+            </td>
+            <td v-if="session.canSeeIps"><IpText :ip="row.ip" /></td>
+            <td><CountryTag :code="row.country_code" :name="row.country" /></td>
+            <td>
+              <span class="chips">
+                <StatusChip v-for="d in detectionsOf(row)" :key="d.key" :label="d.label" :icon="d.icon" tone="warn" />
+                <span v-if="!detectionsOf(row).length" class="faint">—</span>
+              </span>
+            </td>
+            <td><StatusChip v-bind="reasonLabel(isOn(row.blocked) ? row.block_reason : 'allowed')" /></td>
+            <td class="acciones">
+              <button type="button" class="btn sm" :aria-label="`Ver detalle de la conexión de ${row.nick}`" @click="open(row)">Detalle</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </ListFrame>
+
+    <AppDialog :open="selected !== null" :icon="IconPlug" wide title="Detalle de la conexión" :sub="selected ? `${selected.nick} · ${formatDateTime(selected.created_at)}` : ''" @close="close">
+      <div class="modal-cuerpo">
+        <p v-if="detail.loading.value" class="faint" aria-busy="true">Cargando…</p>
+        <div v-else-if="detail.error.value" class="aviso down" role="alert">
+          <span class="texto">{{ detail.error.value }}</span>
+          <button v-if="selected" type="button" class="btn sm" @click="open(selected)"><IconReload aria-hidden="true" /> Reintentar</button>
         </div>
-        <div>
-          <h1 class="text-2xl font-display font-bold gradient-text">Conexiones</h1>
-          <p class="text-sm text-text-muted mt-0.5">Historial de conexiones al servidor</p>
-        </div>
+        <dl v-else-if="connection" class="detalles">
+          <div class="detalle"><dt class="label">Jugador</dt><dd class="valor">{{ connection.nick }}</dd></div>
+          <div class="detalle"><dt class="label">UUID</dt><dd class="valor mono">{{ connection.uuid }}</dd></div>
+          <div v-if="session.canSeeIps" class="detalle"><dt class="label">IP</dt><dd class="valor"><IpText :ip="connection.ip" /></dd></div>
+          <div class="detalle"><dt class="label">País</dt><dd class="valor"><CountryTag :code="connection.country_code" :name="connection.country" show-name /></dd></div>
+          <div class="detalle"><dt class="label">Región / ciudad</dt><dd class="valor">{{ [connection.region, connection.city].filter(Boolean).join(' · ') || '—' }}</dd></div>
+          <div class="detalle"><dt class="label">ISP</dt><dd class="valor">{{ connection.isp || '—' }}</dd></div>
+          <div class="detalle"><dt class="label">Organización</dt><dd class="valor">{{ connection.org || '—' }}</dd></div>
+          <div class="detalle"><dt class="label">AS</dt><dd class="valor mono">{{ connection.asn || '—' }} {{ connection.asname || '' }}</dd></div>
+          <div class="detalle"><dt class="label">Versión</dt><dd class="valor mono">{{ connection.game_version || '—' }}</dd></div>
+          <div class="detalle"><dt class="label">Zona horaria</dt><dd class="valor">{{ connection.timezone || '—' }}</dd></div>
+          <div class="detalle"><dt class="label">Detección</dt><dd class="valor chips">
+            <StatusChip v-for="d in detectionsOf(connection)" :key="d.key" :label="d.label" :icon="d.icon" tone="warn" />
+            <span v-if="!detectionsOf(connection).length" class="faint">Nada sospechoso</span>
+          </dd></div>
+          <div class="detalle"><dt class="label">Resultado</dt><dd class="valor"><StatusChip v-bind="reasonLabel(isOn(connection.blocked) ? connection.block_reason : 'allowed')" /></dd></div>
+        </dl>
       </div>
-    </div>
-
-    <!-- Filters and search -->
-    <div class="glass-card p-4">
-      <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-        <FilterTabs
-          :filters="CONNECTION_FILTERS"
-          :model-value="currentFilter"
-          @update:model-value="onFilterChange"
-        />
-        <div class="w-full sm:w-72 sm:ml-auto">
-          <SearchInput
-            :model-value="currentSearch"
-            placeholder="Buscar jugador, UUID, IP..."
-            @update:model-value="onSearchChange"
-          />
-        </div>
-      </div>
-    </div>
-
-    <!-- Connections table -->
-    <div class="glass-card overflow-hidden">
-      <DataTable
-        :columns="columns"
-        :rows="store.connections as unknown as Record<string, unknown>[]"
-        :loading="store.loading"
-        empty-message="No se encontraron conexiones"
-        @row-click="onRowClick"
-      >
-        <template #cell-nick="{ row }">
-          <PlayerCell :uuid="(row as any).uuid" :nick="(row as any).nick" />
-        </template>
-
-        <template #cell-ip="{ row }">
-          <IPCell
-            :ip="(row as any).ip"
-            :country-code="(row as any).country_code"
-            :isp="(row as any).isp"
-          />
-        </template>
-
-        <template #cell-status="{ row }">
-          <StatusBadge
-            :status="(row as any).blocked ? 'Bloqueado' : 'Permitido'"
-            :variant="(row as any).blocked ? 'danger' : 'success'"
-          />
-        </template>
-
-        <template #cell-flags="{ row }">
-          <div class="flex items-center gap-1.5">
-            <span
-              v-if="(row as any).is_proxy"
-              class="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/20"
-            >
-              Proxy
-            </span>
-            <span
-              v-if="(row as any).is_vpn"
-              class="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-red-500/15 text-red-400 border border-red-500/20"
-            >
-              VPN
-            </span>
-            <span
-              v-if="(row as any).is_hosting"
-              class="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-pink-500/15 text-pink-400 border border-pink-500/20"
-            >
-              Hosting
-            </span>
-            <span
-              v-if="!(row as any).is_proxy && !(row as any).is_vpn && !(row as any).is_hosting"
-              class="text-text-tertiary text-xs"
-            >
-              -
-            </span>
-          </div>
-        </template>
-
-        <template #cell-created_at="{ row }">
-          <span class="text-xs text-text-muted font-mono">
-            {{ formatDate((row as any).created_at) }}
-          </span>
-        </template>
-      </DataTable>
-    </div>
-
-    <!-- Pagination -->
-    <PaginationBar
-      v-if="store.pagination"
-      :current-page="store.pagination.current_page"
-      :total-pages="store.pagination.total_pages"
-      :total="store.pagination.total"
-      @page-change="onPageChange"
-    />
-
-    <!-- Connection detail modal -->
-    <ConnectionModal
-      v-model="showDetailModal"
-      :connection-id="selectedConnectionId"
-      @close="onModalClose"
-    />
+      <footer class="modal-pie">
+        <RouterLink v-if="connection && session.can('players')" class="btn" :to="{ name: 'player', params: { uuid: connection.uuid } }">Ver jugador</RouterLink>
+        <button type="button" class="btn primary" @click="close">Cerrar</button>
+      </footer>
+    </AppDialog>
   </div>
 </template>
+
+<style scoped>
+dl, dd { margin: 0; }
+</style>

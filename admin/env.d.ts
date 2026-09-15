@@ -1,22 +1,21 @@
 /// <reference types="vite/client" />
 
-declare module '*.vue' {
-  import type { DefineComponent } from 'vue'
-  const component: DefineComponent<{}, {}, any>
-  export default component
-}
-
-declare const __APP_VERSION__: string
-
-interface Window {
-  __FURRGUARD_USER__?: {
+/** Lo que admin/index.php inyecta antes de cargar el SPA (docs/API.md §4.1). */
+interface FurrGuardBoot {
+  version: string
+  csrfToken: string
+  loginUrl: string
+  loginError: string | null
+  user: null | {
     discord_id: string
     username: string
     avatar: string | null
     role: 'founder' | 'owner' | 'manager' | 'sradmin' | 'admin'
-    session_token: string
-    expires_at: string
   }
-  __ROLE_PERMISSIONS__?: Record<string, string[]>
-  __DISCORD_LOGIN_URL__?: string
+  permissions: string[]
+  canSeeIps: boolean
+}
+
+interface Window {
+  __FURRGUARD__?: FurrGuardBoot
 }

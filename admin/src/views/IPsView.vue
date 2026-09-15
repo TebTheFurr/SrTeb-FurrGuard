@@ -1,167 +1,126 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useIPsStore } from '@/stores/ips'
-import SearchInput from '@/components/shared/SearchInput.vue'
-import DataTable from '@/components/shared/DataTable.vue'
-import PaginationBar from '@/components/shared/PaginationBar.vue'
-import CountryFlag from '@/components/shared/CountryFlag.vue'
-import StatusBadge from '@/components/shared/StatusBadge.vue'
-import IPModal from '@/components/modals/IPModal.vue'
-import { Globe } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import IconCancel from '~icons/pixelarticons/cancel'
+import IconChecklist from '~icons/pixelarticons/checklist'
+import IconGlobe from '~icons/pixelarticons/globe'
+import IconReload from '~icons/pixelarticons/reload'
+import type { IpDetail, IpRow } from '@/api/types'
+import { useDetail } from '@/composables/useDetail'
+import { usePagedList } from '@/composables/usePagedList'
+import { formatDateTime, timeAgo } from '@/lib/dates'
+import { formatNumber, isOn } from '@/lib/format'
+import { useSession } from '@/stores/session'
+import AppDialog from '@/components/ui/AppDialog.vue'
+import CountryTag from '@/components/ui/CountryTag.vue'
+import IpText from '@/components/ui/IpText.vue'
+import ListFrame from '@/components/ui/ListFrame.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import PlayerHead from '@/components/ui/PlayerHead.vue'
+import SearchBox from '@/components/ui/SearchBox.vue'
 
-const store = useIPsStore()
+const session = useSession()
+const list = usePagedList<IpRow, { search: string }>({ action: 'get_ips', filters: { search: '' } })
 
-let currentPage = 1
-let currentSearch = ''
+const selected = ref<IpRow | null>(null)
+const detail = useDetail<IpDetail>()
+/** `ip` puede venir como objeto con los datos o solo como texto: se completa con la fila. */
+const info = computed<IpRow | null>(() => {
+  const raw = detail.data.value?.ip
+  return raw && typeof raw === 'object' ? { ...selected.value, ...raw } : selected.value
+})
 
-const showDetailModal = ref(false)
-const selectedIP = ref('')
-
-const columns = [
-  { key: 'ip', label: 'IP' },
-  { key: 'country', label: 'Pais' },
-  { key: 'isp', label: 'ISP' },
-  { key: 'connection_count', label: 'Conexiones' },
-  { key: 'player_count', label: 'Jugadores' },
-  { key: 'status', label: 'Estado' },
-  { key: 'first_seen', label: 'Primera vista' },
-]
-
-function fetchData() {
-  store.fetchIPs(currentPage, currentSearch)
+function open(row: IpRow): void {
+  selected.value = row
+  void detail.load('get_ip_detail', { ip: row.ip })
 }
 
-onMounted(fetchData)
-
-function onSearchChange(search: string) {
-  currentSearch = search
-  currentPage = 1
-  fetchData()
-}
-
-function onPageChange(page: number) {
-  currentPage = page
-  fetchData()
-}
-
-function onRowClick(row: Record<string, unknown>) {
-  selectedIP.value = (row as any).ip as string
-  showDetailModal.value = true
-}
-
-function onModalClose() {
-  showDetailModal.value = false
-  selectedIP.value = ''
-}
-
-function formatDate(dateStr: string): string {
-  if (!dateStr) return '-'
-  return new Date(dateStr).toLocaleString('es-ES', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+function close(): void {
+  detail.cancel()
+  selected.value = null
 }
 </script>
 
 <template>
-  <div class="page-container">
-    <!-- Page header -->
-    <div class="section-header">
-      <div class="flex items-center gap-3">
-        <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
-          <Globe :size="20" class="text-cyan-400" />
+  <div>
+    <PageHeader title="IPs" :icon="IconGlobe" desc="Direcciones vistas en la red, con cuántos jugadores y conexiones comparten cada una." />
+
+    <ListFrame :list="list" label="Lista de IPs" :empty-icon="IconGlobe" empty-title="No hay IPs que mostrar">
+      <template #toolbar>
+        <SearchBox v-model="list.filters.search" label="Buscar IPs" placeholder="IP o parte de ella…" />
+      </template>
+
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th scope="col">IP</th>
+            <th scope="col">País</th>
+            <th scope="col">ISP</th>
+            <th scope="col">AS</th>
+            <th scope="col" class="der">Jugadores</th>
+            <th scope="col" class="der">Conexiones</th>
+            <th scope="col">Listas</th>
+            <th scope="col">Primera vez</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(row, index) in list.items" :key="row.ip ?? index">
+            <td>
+              <button type="button" class="enlace-fila" aria-label="Ver jugadores de esta IP" @click="open(row)"><IpText :ip="row.ip" /></button>
+            </td>
+            <td><CountryTag :code="row.country_code" :name="row.country" /></td>
+            <td class="celda-texto truncate">{{ row.isp || '—' }}</td>
+            <td class="mono">{{ row.asn || '—' }}</td>
+            <td class="der num">{{ formatNumber(row.player_count) }}</td>
+            <td class="der num">{{ formatNumber(row.connection_count) }}</td>
+            <td>
+              <span class="chips">
+                <span v-if="isOn(row.is_whitelisted)" class="chip accent"><IconChecklist aria-hidden="true" />WL</span>
+                <span v-if="isOn(row.is_blacklisted)" class="chip down"><IconCancel aria-hidden="true" />BL</span>
+                <span v-if="!isOn(row.is_whitelisted) && !isOn(row.is_blacklisted)" class="faint">—</span>
+              </span>
+            </td>
+            <td class="nowrap" :title="formatDateTime(row.first_seen)">{{ timeAgo(row.first_seen) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </ListFrame>
+
+    <AppDialog :open="selected !== null" :icon="IconGlobe" title="Detalle de la IP" @close="close">
+      <div class="modal-cuerpo">
+        <dl v-if="info" class="detalles">
+          <div class="detalle"><dt class="label">IP</dt><dd class="valor"><IpText :ip="info.ip" /></dd></div>
+          <div class="detalle"><dt class="label">País</dt><dd class="valor"><CountryTag :code="info.country_code" :name="info.country" show-name /></dd></div>
+          <div class="detalle"><dt class="label">ISP</dt><dd class="valor">{{ info.isp || '—' }}</dd></div>
+          <div class="detalle"><dt class="label">AS</dt><dd class="valor mono">{{ info.asn || '—' }}</dd></div>
+        </dl>
+        <p v-if="detail.loading.value" class="faint" aria-busy="true">Cargando jugadores…</p>
+        <div v-else-if="detail.error.value" class="aviso down" role="alert">
+          <span class="texto">{{ detail.error.value }}</span>
+          <button v-if="selected" type="button" class="btn sm" @click="open(selected)"><IconReload aria-hidden="true" /> Reintentar</button>
         </div>
-        <div>
-          <h1 class="text-2xl font-display font-bold gradient-text">Direcciones IP</h1>
-          <p class="text-sm text-text-muted mt-0.5">Historial de direcciones IP vistas en el servidor</p>
-        </div>
+        <template v-else-if="detail.data.value">
+          <h3>Jugadores que la han usado</h3>
+          <p v-if="!detail.data.value.players.length" class="faint">Ningún jugador registrado.</p>
+          <ul v-else class="jugadores">
+            <li v-for="player in detail.data.value.players" :key="player.uuid">
+              <PlayerHead :id="player.uuid" :name="player.nick" />
+              <RouterLink v-if="session.can('players')" class="enlace-fila" :to="{ name: 'player', params: { uuid: player.uuid } }">{{ player.nick }}</RouterLink>
+              <span v-else>{{ player.nick }}</span>
+              <span class="faint">{{ timeAgo(player.last_used) }}</span>
+            </li>
+          </ul>
+        </template>
       </div>
-      <div class="w-full sm:w-72">
-        <SearchInput
-          :model-value="currentSearch"
-          placeholder="Buscar IP..."
-          @update:model-value="onSearchChange"
-        />
-      </div>
-    </div>
-
-    <!-- IPs table -->
-    <div class="glass-card overflow-hidden">
-      <DataTable
-        :columns="columns"
-        :rows="store.ips as unknown as Record<string, unknown>[]"
-        :loading="store.loading"
-        empty-message="No se encontraron IPs"
-        @row-click="onRowClick"
-      >
-        <template #cell-ip="{ row }">
-          <span class="text-sm text-text-primary font-mono font-medium">{{ (row as any).ip }}</span>
-        </template>
-
-        <template #cell-country="{ row }">
-          <div class="flex items-center gap-2">
-            <CountryFlag :code="(row as any).country_code ?? ''" />
-            <span class="text-sm text-text-secondary">{{ (row as any).country ?? '-' }}</span>
-          </div>
-        </template>
-
-        <template #cell-isp="{ row }">
-          <span class="text-sm text-text-secondary">{{ (row as any).isp ?? '-' }}</span>
-        </template>
-
-        <template #cell-connection_count="{ row }">
-          <span class="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-md text-sm text-text-secondary font-mono bg-dark-700/50">
-            {{ (row as any).connection_count ?? 0 }}
-          </span>
-        </template>
-
-        <template #cell-player_count="{ row }">
-          <span class="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-md text-sm text-text-secondary font-mono bg-dark-700/50">
-            {{ (row as any).player_count ?? 0 }}
-          </span>
-        </template>
-
-        <template #cell-status="{ row }">
-          <div class="flex items-center gap-1.5">
-            <StatusBadge
-              v-if="(row as any).is_blacklisted"
-              status="Blacklist"
-              variant="danger"
-            />
-            <StatusBadge
-              v-else-if="(row as any).is_whitelisted"
-              status="Whitelist"
-              variant="success"
-            />
-            <span v-else class="text-xs text-text-tertiary">-</span>
-          </div>
-        </template>
-
-        <template #cell-first_seen="{ row }">
-          <span class="text-xs text-text-muted font-mono">
-            {{ formatDate((row as any).first_seen) }}
-          </span>
-        </template>
-      </DataTable>
-    </div>
-
-    <!-- Pagination -->
-    <PaginationBar
-      v-if="store.pagination"
-      :current-page="store.pagination.current_page"
-      :total-pages="store.pagination.total_pages"
-      :total="store.pagination.total"
-      @page-change="onPageChange"
-    />
-
-    <!-- IP detail modal -->
-    <IPModal
-      v-model="showDetailModal"
-      :ip="selectedIP"
-      @close="onModalClose"
-    />
+      <footer class="modal-pie">
+        <button type="button" class="btn primary" @click="close">Cerrar</button>
+      </footer>
+    </AppDialog>
   </div>
 </template>
+
+<style scoped>
+dl, dd { margin: 0; }
+.jugadores { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.jugadores li { display: flex; align-items: center; gap: 10px; font-size: var(--text-sm); }
+.jugadores .faint { margin-left: auto; font-size: var(--text-xs); }
+</style>

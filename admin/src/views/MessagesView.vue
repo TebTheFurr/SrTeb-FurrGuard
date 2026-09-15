@@ -1,457 +1,238 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
-import { useMessagesStore } from '@/stores/messages'
-import { useToast } from '@/composables/useToast'
-import LoadingSkeleton from '@/components/shared/LoadingSkeleton.vue'
-import { Save, Palette, Variable } from 'lucide-vue-next'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
+import IconBraces from '~icons/pixelarticons/braces'
+import IconColors from '~icons/pixelarticons/colors-swatch'
+import IconMessageText from '~icons/pixelarticons/message-text'
+import IconReload from '~icons/pixelarticons/reload'
+import IconSave from '~icons/pixelarticons/save'
+import { api, isAbortError } from '@/api/client'
+import { confirmAction } from '@/lib/confirm'
+import { MC_COLOR_NAMES, MC_COLORS, MC_FORMATS } from '@/lib/mc'
+import { toast, toastError } from '@/lib/toast'
+import EmptyState from '@/components/ui/EmptyState.vue'
+import FilterTabs from '@/components/ui/FilterTabs.vue'
+import McText from '@/components/ui/McText.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import SearchBox from '@/components/ui/SearchBox.vue'
 
-const store = useMessagesStore()
-const toast = useToast()
+type Group = 'furrguard' | 'furrperms' | 'furrsecurity'
 
-const editingMessages = ref<Record<string, string>>({})
+/** Prefijos de docs/API.md §2: los mensajes de FurrSecurity usan `furr_security_` (con guion bajo). */
+const groupOf = (key: string): Group => (key.startsWith('fur_perms_') ? 'furrperms' : key.startsWith('furr_security_') ? 'furrsecurity' : 'furrguard')
 
-// Minecraft color codes
-const COLOR_CODES = [
-  { code: '\u00A70', label: '\u00A70\u2588\u2588', title: 'Black (\u00A70)' },
-  { code: '\u00A71', label: '\u00A71\u2588\u2588', title: 'Dark Blue (\u00A71)' },
-  { code: '\u00A72', label: '\u00A72\u2588\u2588', title: 'Dark Green (\u00A72)' },
-  { code: '\u00A73', label: '\u00A73\u2588\u2588', title: 'Dark Aqua (\u00A73)' },
-  { code: '\u00A74', label: '\u00A74\u2588\u2588', title: 'Dark Red (\u00A74)' },
-  { code: '\u00A75', label: '\u00A75\u2588\u2588', title: 'Dark Purple (\u00A75)' },
-  { code: '\u00A76', label: '\u00A76\u2588\u2588', title: 'Gold (\u00A76)' },
-  { code: '\u00A77', label: '\u00A77\u2588\u2588', title: 'Gray (\u00A77)' },
-  { code: '\u00A78', label: '\u00A78\u2588\u2588', title: 'Dark Gray (\u00A78)' },
-  { code: '\u00A79', label: '\u00A79\u2588\u2588', title: 'Blue (\u00A79)' },
-  { code: '\u00A7a', label: '\u00A7a\u2588\u2588', title: 'Green (\u00A7a)' },
-  { code: '\u00A7b', label: '\u00A7b\u2588\u2588', title: 'Aqua (\u00A7b)' },
-  { code: '\u00A7c', label: '\u00A7c\u2588\u2588', title: 'Red (\u00A7c)' },
-  { code: '\u00A7d', label: '\u00A7d\u2588\u2588', title: 'Light Purple (\u00A7d)' },
-  { code: '\u00A7e', label: '\u00A7e\u2588\u2588', title: 'Yellow (\u00A7e)' },
-  { code: '\u00A7f', label: '\u00A7f\u2588\u2588', title: 'White (\u00A7f)' },
-]
-
-const FORMAT_CODES = [
-  { code: '\u00A7l', label: 'B', title: 'Bold (\u00A7l)' },
-  { code: '\u00A7m', label: 'S', title: 'Strikethrough (\u00A7m)' },
-  { code: '\u00A7n', label: 'U', title: 'Underline (\u00A7n)' },
-  { code: '\u00A7o', label: 'I', title: 'Italic (\u00A7o)' },
-  { code: '\u00A7r', label: 'R', title: 'Reset (\u00A7r)' },
-]
-
-// Variables available for message keys
-const VARIABLES: Record<string, string[]> = {
-  kick: ['{server_name}', '{discord}', '{id}', '{player}', '{ip}', '{reason}', '{country}', '{country_code}', '{isp}', '{continent}', '{time_remaining}', '{ban_id}'],
-  notify: ['{player}', '{ip}', '{country}', '{country_code}', '{isp}', '{continent}', '{ban_id}', '{command}', '{details}', '{reason}'],
-  command: ['{usage}', '{type}', '{value}', '{player}'],
-  other: ['{player}', '{type}', '{value}', '{country}', '{country_code}', '{current_country}', '{historical_country}', '{continent}', '{verify_url}'],
-  fur_perms: ['{player}', '{command}'],
-  furr_security: ['{player}', '{url}', '{time}', '{key}', '{value}'],
+/** Variables orientativas por módulo: no se valida qué clave admite cuál. */
+const VARIABLES: Record<Group, string[]> = {
+  furrguard: ['{player}', '{reason}', '{id}', '{ban_id}', '{time_remaining}', '{server_name}', '{discord}', '{ip}', '{country}',
+    '{country_code}', '{continent}', '{isp}', '{type}', '{value}', '{usage}', '{historical_country}', '{current_country}'],
+  furrperms: ['{player}', '{command}', '{reason}'],
+  furrsecurity: ['{player}', '{url}', '{verify_url}', '{time}', '{time_remaining}', '{discord}', '{key}', '{value}'],
 }
 
-// Message categories with labels and key prefixes
-const MESSAGE_CATEGORIES = [
-  {
-    id: 'kick',
-    label: 'Kick Messages',
-    icon: 'ShieldOff',
-    description: 'Mensajes mostrados al expulsar jugadores',
-  },
-  {
-    id: 'notify',
-    label: 'Notificaciones',
-    icon: 'Bell',
-    description: 'Notificaciones enviadas a administradores',
-  },
-  {
-    id: 'command',
-    label: 'Comandos',
-    icon: 'Terminal',
-    description: 'Respuestas de comandos del plugin',
-  },
-  {
-    id: 'other',
-    label: 'Otros',
-    icon: 'FileText',
-    description: 'Prefijo y otros mensajes',
-  },
-  {
-    id: 'fur_perms',
-    label: 'FurrPerms',
-    icon: 'Lock',
-    description: 'Mensajes del modulo FurrPerms (bloqueo de comandos)',
-  },
-  {
-    id: 'furr_security',
-    label: 'FurrSecurity',
-    icon: 'ShieldCheck',
-    description: 'Mensajes del modulo FurrSecurity (verificacion de staff)',
-  },
-]
+const original = shallowRef<Record<string, string>>({})
+const draft = reactive<Record<string, string>>({})
+const status = ref<'loading' | 'error' | 'ready'>('loading')
+const loadError = ref('')
+const saving = ref(false)
+const group = ref<Group>('furrguard')
+const filter = ref('')
+const focus = ref<{ key: string; start: number; end: number } | null>(null)
+let controller: AbortController | null = null
 
-const expandedCategories = ref<Set<string>>(new Set())
-
-const groupedMessages = computed(() => {
-  const groups: Record<string, Array<{ key: string; value: string }>> = {
-    kick: [],
-    notify: [],
-    command: [],
-    other: [],
-    fur_perms: [],
-    furr_security: [],
+async function load(): Promise<void> {
+  controller?.abort()
+  const current = new AbortController()
+  controller = current
+  status.value = 'loading'
+  try {
+    const data = await api<{ messages: Record<string, string> }>('get_messages', {}, { signal: current.signal })
+    const messages = Object.fromEntries(Object.entries(data?.messages ?? {}).map(([k, v]) => [k, String(v ?? '')]))
+    original.value = messages
+    for (const key of Object.keys(draft)) delete draft[key]
+    Object.assign(draft, messages)
+    status.value = 'ready'
+  } catch (e) {
+    if (isAbortError(e)) return
+    loadError.value = e instanceof Error ? e.message : 'No se pudieron cargar los mensajes.'
+    status.value = 'error'
   }
+}
 
-  for (const [key, value] of Object.entries(editingMessages.value)) {
-    if (key.startsWith('fur_perms_')) {
-      groups.fur_perms.push({ key, value })
-    } else if (key.startsWith('furr_security_')) {
-      groups.furr_security.push({ key, value })
-    } else if (key.startsWith('kick_')) {
-      groups.kick.push({ key, value })
-    } else if (key.startsWith('notify_')) {
-      groups.notify.push({ key, value })
-    } else if (
-      key.startsWith('whitelist_') ||
-      key.startsWith('blacklist_') ||
-      key.startsWith('player_') ||
-      key.startsWith('no_permission') ||
-      key.startsWith('reload_') ||
-      key.startsWith('command_') ||
-      key.startsWith('invalid_')
-    ) {
-      groups.command.push({ key, value })
-    } else {
-      groups.other.push({ key, value })
-    }
-  }
+onMounted(load)
+onBeforeUnmount(() => controller?.abort())
 
-  return groups
+const changedKeys = computed(() => Object.keys(original.value).filter((key) => draft[key] !== original.value[key]))
+
+const groups = computed(() => {
+  const counts: Record<Group, number> = { furrguard: 0, furrperms: 0, furrsecurity: 0 }
+  for (const key of Object.keys(original.value)) counts[groupOf(key)]++
+  return [
+    { value: 'furrguard' as const, label: 'FurrGuard', count: counts.furrguard },
+    { value: 'furrperms' as const, label: 'FurrPerms', count: counts.furrperms },
+    { value: 'furrsecurity' as const, label: 'FurrSecurity', count: counts.furrsecurity },
+  ]
 })
 
-function getVariablesForCategory(categoryId: string): string[] {
-  const vars = VARIABLES[categoryId] ?? VARIABLES.other
-  return [...new Set(vars)]
+const visibleKeys = computed(() => {
+  const term = filter.value.trim().toLowerCase()
+  return Object.keys(original.value)
+    .filter((key) => groupOf(key) === group.value)
+    .filter((key) => !term || key.includes(term) || (draft[key] ?? '').toLowerCase().includes(term))
+    .sort()
+})
+
+function labelOf(key: string): string {
+  const text = key.replace(/^(fur_perms_|furr_security_)/, '').replace(/^kick_/, 'expulsión · ').replace(/^notify_/, 'aviso · ').replace(/_/g, ' ')
+  return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
-function toggleCategory(id: string) {
-  const s = new Set(expandedCategories.value)
-  if (s.has(id)) {
-    s.delete(id)
-  } else {
-    s.add(id)
+function remember(key: string, event: Event): void {
+  const el = event.target as HTMLTextAreaElement
+  focus.value = { key, start: el.selectionStart, end: el.selectionEnd }
+}
+
+/** Inserta en el mensaje que tenía el foco, en la posición del cursor. */
+async function insert(snippet: string): Promise<void> {
+  const target = focus.value
+  if (!target || !visibleKeys.value.includes(target.key)) {
+    toast('Pulsa primero dentro del mensaje donde quieres insertar.', 'info')
+    return
   }
-  expandedCategories.value = s
+  const value = draft[target.key] ?? ''
+  draft[target.key] = value.slice(0, target.start) + snippet + value.slice(target.end)
+  const caret = target.start + snippet.length
+  focus.value = { key: target.key, start: caret, end: caret }
+  await nextTick()
+  const el = document.getElementById(`msg-${target.key}`) as HTMLTextAreaElement | null
+  el?.focus()
+  el?.setSelectionRange(caret, caret)
 }
 
-function messageLabel(key: string): string {
-  const labels: Record<string, string> = {
-    prefix: 'Prefijo del Plugin',
-    kick_proxy: 'Kick - Proxy',
-    kick_vpn: 'Kick - VPN',
-    kick_hosting: 'Kick - Hosting',
-    kick_mobile: 'Kick - Red Movil',
-    kick_blacklisted: 'Kick - Blacklist',
-    kick_blocked_provider: 'Kick - Proveedor Bloqueado',
-    kick_blocked_country: 'Kick - Pais Bloqueado',
-    kick_blocked_continent: 'Kick - Continente Bloqueado',
-    kick_compromised_account: 'Kick - Cuenta Comprometida',
-    kick_default: 'Kick - Default (Sin razon especifica)',
-    kick_api_error: 'Kick - Error de API',
-    kick_timeout: 'Kick - Timeout',
-    kick_interrupted: 'Kick - Interrumpido',
-    kick_execution_error: 'Kick - Error de Ejecucion',
-    kick_completion_error: 'Kick - Error de Completitud',
-    kick_unknown_error: 'Kick - Error Desconocido',
-    whitelist_added: 'Whitelist Anadida',
-    whitelist_removed: 'Whitelist Eliminada',
-    blacklist_added: 'Blacklist Anadida',
-    blacklist_removed: 'Blacklist Eliminada',
-    player_allowed: 'Jugador Permitido',
-    player_blocked: 'Jugador Bloqueado',
-    no_permission: 'Sin Permisos',
-    reload_success: 'Recarga Exitosa',
-    command_usage: 'Uso de Comando',
-    player_not_found: 'Jugador No Encontrado',
-    invalid_type: 'Tipo Invalido',
-    notify_proxy_blocked: 'Proxy Bloqueado',
-    notify_vpn_blocked: 'VPN Bloqueada',
-    notify_hosting_blocked: 'Hosting Bloqueado',
-    notify_provider_blocked: 'Proveedor Bloqueado',
-    notify_country_blocked: 'Pais Bloqueado',
-    notify_continent_blocked: 'Continente Bloqueado',
-    notify_compromised_account: 'Cuenta Comprometida',
-    notify_blacklisted: 'Blacklist',
-    notify_whitelisted: 'Whitelist',
-    notify_player_join: 'Jugador Conecto (Hispano)',
-    notify_non_hispanic_join: 'Jugador Conecto (No Hispano)',
-    notify_player_disconnect: 'Jugador Desconecto',
-    notify_settings_updated: 'Config Actualizada',
-    notify_providers_updated: 'Proveedores Actualizados',
-    notify_player_kicked: 'Jugador Expulsado',
-    // FurrPerms
-    fur_perms_no_permission: 'Sin Permisos (FurrPerms)',
-    fur_perms_command_blocked: 'Comando Bloqueado',
-    fur_perms_logged: 'Intento Registrado',
-    fur_perms_notify_blocked: 'Notificar - Comando Bloqueado',
-    fur_perms_notify_allowed: 'Notificar - Comando Permitido',
-    // FurrSecurity
-    furr_security_prefix: 'Prefijo del Plugin',
-    furr_security_verification_required: 'Verificacion Requerida',
-    furr_security_verification_link: 'Link de Verificacion',
-    furr_security_verification_proxy_mode: 'Verificacion en Proxy',
-    furr_security_verification_success: 'Verificacion Exitosa',
-    furr_security_verification_failed: 'Verificacion Fallida',
-    furr_security_session_expired: 'Sesion Expirada',
-    furr_security_session_expiring: 'Sesion Expirando',
-    furr_security_not_staff: 'No es Staff',
-    furr_security_already_verified: 'Ya Verificado',
-    furr_security_locked_movement: 'Bloqueado - Movimiento',
-    furr_security_locked_command: 'Bloqueado - Comandos',
-    furr_security_locked_inventory: 'Bloqueado - Inventario',
-    furr_security_locked_chat: 'Bloqueado - Chat',
-    furr_security_locked_server_switch: 'Bloqueado - Cambio de Servidor',
-    furr_security_admin_notification: 'Notificacion Admin',
-    furr_security_reload_success: 'Recarga Exitosa',
-    furr_security_no_permission: 'Sin Permisos',
-    furr_security_player_not_found: 'Jugador No Encontrado',
-    furr_security_stats_header: 'Header Estadisticas',
-    furr_security_stats_line: 'Linea Estadisticas',
-    furr_security_kick_unverified: 'Kick - No Verificado',
-    furr_security_kick_blacklisted: 'Kick - Blacklist Seguridad',
-    furr_security_verification_timeout: 'Link Expirado',
-    furr_security_auto_blacklisted: 'Auto-Blacklist (3 intentos)',
-  }
-  return labels[key] ?? key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-}
-
-function onMessageInput(key: string, value: string) {
-  editingMessages.value = { ...editingMessages.value, [key]: value }
-  store.markDirty()
-}
-
-function insertCode(key: string, code: string) {
-  const textarea = document.querySelector<HTMLTextAreaElement>(`[data-key="${key}"]`)
-  if (!textarea) return
-
-  const start = textarea.selectionStart
-  const end = textarea.selectionEnd
-  const current = editingMessages.value[key] ?? ''
-  const updated = current.slice(0, start) + code + current.slice(end)
-  editingMessages.value = { ...editingMessages.value, [key]: updated }
-  store.markDirty()
-
-  nextTick(() => {
-    textarea.focus()
-    const pos = start + code.length
-    textarea.setSelectionRange(pos, pos)
-  })
-}
-
-function insertVariable(key: string, variable: string) {
-  insertCode(key, variable)
-}
-
-function previewMessage(raw: string): string {
-  const mcColorMap: Record<string, string> = {
-    '\u00A70': '#000000',
-    '\u00A71': '#0000AA',
-    '\u00A72': '#00AA00',
-    '\u00A73': '#00AAAA',
-    '\u00A74': '#AA0000',
-    '\u00A75': '#AA00AA',
-    '\u00A76': '#FFAA00',
-    '\u00A77': '#AAAAAA',
-    '\u00A78': '#555555',
-    '\u00A79': '#5555FF',
-    '\u00A7a': '#55FF55',
-    '\u00A7b': '#55FFFF',
-    '\u00A7c': '#FF5555',
-    '\u00A7d': '#FF55FF',
-    '\u00A7e': '#FFFF55',
-    '\u00A7f': '#FFFFFF',
-  }
-
-  let html = raw
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-
-  // Reset
-  html = html.replace(/\u00A7r/g, '</span>')
-
-  // Format codes
-  html = html.replace(/\u00A7l([^]*?)(?=\u00A7|$)/g, '<strong>$1</strong>')
-  html = html.replace(/\u00A7n([^]*?)(?=\u00A7|$)/g, '<u>$1</u>')
-  html = html.replace(/\u00A7m([^]*?)(?=\u00A7|$)/g, '<del>$1</del>')
-  html = html.replace(/\u00A7o([^]*?)(?=\u00A7|$)/g, '<em>$1</em>')
-
-  // Color codes
-  for (const [code, color] of Object.entries(mcColorMap)) {
-    const escaped = code.replace(/\u00A7/g, '\u00A7')
-    html = html.split(escaped).join(`<span style="color:${color}">`)
-  }
-
-  return html
-}
-
-async function handleSave() {
-  const success = await store.save(editingMessages.value)
-  if (success) {
-    toast.success('Mensajes guardados', 'Los mensajes se han actualizado correctamente')
-  } else {
-    toast.error('Error al guardar', store.error ?? 'No se pudieron guardar los mensajes')
+async function save(): Promise<void> {
+  const keys = changedKeys.value
+  if (!keys.length) return
+  saving.value = true
+  try {
+    await api('save_messages', { messages: Object.fromEntries(keys.map((key) => [key, draft[key] ?? ''])) })
+    original.value = { ...original.value, ...Object.fromEntries(keys.map((key) => [key, draft[key] ?? ''])) }
+    toast(keys.length === 1 ? 'Mensaje guardado.' : `${keys.length} mensajes guardados.`, 'ok')
+  } catch (e) {
+    toastError(e, 'No se pudieron guardar los mensajes.')
+  } finally {
+    saving.value = false
   }
 }
 
-onMounted(async () => {
-  await store.fetch()
-  editingMessages.value = { ...store.messages }
-  // Expand all categories by default
-  expandedCategories.value = new Set(MESSAGE_CATEGORIES.map((c) => c.id))
+function discard(): void {
+  Object.assign(draft, original.value)
+}
+
+onBeforeRouteLeave(async () => {
+  if (!changedKeys.value.length) return true
+  return confirmAction({ title: 'Cambios sin guardar', message: 'Hay mensajes modificados. Si sales ahora se perderán.', confirmText: 'Salir sin guardar', danger: true })
 })
 </script>
 
 <template>
-  <div class="page-container">
-    <!-- Page header -->
-    <div class="section-header">
-      <div>
-        <h1 class="text-2xl font-display font-bold gradient-text">Mensajes</h1>
-        <p class="text-sm text-text-muted mt-1">Configura los mensajes del plugin en Minecraft</p>
-      </div>
-      <button
-        class="glass-button inline-flex items-center gap-2 px-5 py-2.5 text-sm disabled:opacity-40 hover:shadow-[0_8px_30px_rgba(139,92,246,0.5)]"
-        :disabled="!store.dirty || store.loading"
-        @click="handleSave"
-      >
-        <Save :size="16" />
-        {{ store.loading ? 'Guardando...' : 'Guardar cambios' }}
-      </button>
+  <div>
+    <PageHeader title="Mensajes" :icon="IconMessageText" desc="Textos que muestran el plugin y los módulos. Admiten códigos de color & y §." />
+
+    <EmptyState v-if="status === 'error'" tone="error" title="No se pudieron cargar los mensajes" :text="loadError">
+      <button type="button" class="btn" @click="load"><IconReload aria-hidden="true" /> Reintentar</button>
+    </EmptyState>
+    <div v-else-if="status === 'loading'" class="panel carga" aria-busy="true">
+      <span class="sr-only">Cargando…</span><span v-for="n in 4" :key="n" class="esqueleto" />
     </div>
 
-    <!-- Loading state -->
-    <LoadingSkeleton v-if="store.loading && Object.keys(editingMessages).length === 0" :rows="6" />
-
-    <!-- Message categories -->
-    <div v-else class="space-y-4 stagger-children">
-      <div
-        v-for="category in MESSAGE_CATEGORIES"
-        :key="category.id"
-        class="glass-card overflow-hidden"
-      >
-        <!-- Category header -->
-        <button
-          class="w-full flex items-center justify-between px-5 py-4 hover:bg-hover transition-colors"
-          @click="toggleCategory(category.id)"
-        >
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center opacity-80">
-              <span class="text-white text-xs font-bold">{{ category.label.charAt(0) }}</span>
-            </div>
-            <div class="text-left">
-              <span class="text-sm font-semibold text-text-primary">{{ category.label }}</span>
-              <span class="ml-2 text-xs text-text-muted">({{ groupedMessages[category.id]?.length ?? 0 }} mensajes)</span>
-            </div>
-          </div>
-          <svg
-            class="w-4 h-4 text-text-muted transition-transform duration-300"
-            :class="{ 'rotate-180': expandedCategories.has(category.id) }"
-            fill="none" stroke="currentColor" viewBox="0 0 24 24"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-
-        <!-- Category body -->
-        <div v-if="expandedCategories.has(category.id)" class="border-t border-glass-border-subtle">
-          <div class="px-5 pt-4 pb-2">
-            <p class="text-xs text-text-muted mb-3">{{ category.description }}</p>
-
-            <!-- Variable buttons -->
-            <div class="flex flex-wrap items-center gap-1.5 mb-4">
-              <div class="flex items-center gap-1 text-xs text-text-tertiary mr-1">
-                <Variable :size="12" />
-                <span>Variables:</span>
-              </div>
-              <button
-                v-for="v in getVariablesForCategory(category.id)"
-                :key="v"
-                class="px-2 py-0.5 rounded-md text-xs font-mono bg-dark-800/80 text-cyan-400 border border-glass-border-subtle hover:bg-dark-700 hover:border-cyan-500/30 transition-all duration-200"
-                @click="insertVariable(groupedMessages[category.id]?.[0]?.key ?? '', v)"
-              >
-                {{ v }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Messages list -->
-          <div class="divide-y divide-glass-border-subtle">
-            <div
-              v-for="msg in groupedMessages[category.id]"
-              :key="msg.key"
-              class="px-5 py-4 hover:bg-hover/50 transition-colors"
-            >
-              <div class="flex items-start justify-between gap-3 mb-3">
-                <div>
-                  <span class="text-sm font-medium text-text-primary">{{ messageLabel(msg.key) }}</span>
-                  <span class="ml-2 text-xs text-text-tertiary font-mono bg-dark-800/60 px-1.5 py-0.5 rounded">{{ msg.key }}</span>
-                </div>
-              </div>
-
-              <!-- Color code toolbar -->
-              <div class="flex items-center gap-1 mb-3 flex-wrap">
-                <span class="text-xs text-text-tertiary flex items-center gap-1 mr-1">
-                  <Palette :size="12" />
-                </span>
-                <button
-                  v-for="color in COLOR_CODES"
-                  :key="color.code"
-                  class="w-6 h-6 rounded-md text-xs font-bold flex items-center justify-center border border-glass-border-subtle hover:scale-110 hover:border-glass-border-strong transition-all duration-200"
-                  :title="color.title"
-                  @click="insertCode(msg.key, color.code)"
-                >
-                  <span class="font-sans" style="font-size: 10px">{{ color.label.slice(-2) }}</span>
-                </button>
-                <div class="w-px h-5 bg-glass-border-subtle mx-1" />
-                <button
-                  v-for="fmt in FORMAT_CODES"
-                  :key="fmt.code"
-                  class="w-6 h-6 rounded-md text-xs font-bold flex items-center justify-center bg-dark-800/80 text-text-secondary border border-glass-border-subtle hover:bg-dark-700 hover:border-glass-border-strong transition-all duration-200"
-                  :title="fmt.title"
-                  @click="insertCode(msg.key, fmt.code)"
-                >
-                  {{ fmt.label }}
-                </button>
-              </div>
-
-              <!-- Editor + Preview side by side on larger screens -->
-              <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <!-- Textarea -->
-                <textarea
-                  :data-key="msg.key"
-                  :value="editingMessages[msg.key] ?? ''"
-                  rows="3"
-                  class="w-full px-3 py-2.5 rounded-xl bg-dark-800/60 border border-glass-border-subtle text-text-primary text-sm font-mono focus:outline-none focus:border-purple-500/50 focus:shadow-[0_0_12px_rgba(139,92,246,0.1)] resize-y transition-all duration-200 placeholder:text-text-tertiary"
-                  @input="onMessageInput(msg.key, ($event.target as HTMLTextAreaElement).value)"
-                />
-
-                <!-- Preview panel -->
-                <div class="rounded-xl bg-dark-950/60 border border-glass-border-subtle p-3 min-h-[4.5rem]">
-                  <div class="text-[10px] text-text-tertiary uppercase tracking-wider mb-1.5 font-semibold">Vista previa</div>
-                  <div
-                    class="text-sm font-mono leading-relaxed whitespace-pre-wrap break-words"
-                    v-html="previewMessage(editingMessages[msg.key] ?? '')"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+    <template v-else>
+      <div class="panel barra-mensajes">
+        <div class="filtros-mensajes">
+          <FilterTabs v-model="group" label="Módulo" :options="groups" />
+          <SearchBox v-model="filter" label="Filtrar mensajes" placeholder="Clave o texto…" />
         </div>
+        <div class="herramientas" role="toolbar" aria-label="Insertar en el mensaje seleccionado">
+          <span class="grupo-herramientas">
+            <IconColors aria-hidden="true" class="tenue" />
+            <button
+              v-for="code in Object.keys(MC_COLORS)"
+              :key="code"
+              type="button"
+              class="muestra"
+              :class="`mc-${code}`"
+              :title="`${MC_COLOR_NAMES[code]} (&${code})`"
+              :aria-label="`Color ${MC_COLOR_NAMES[code]}, código &${code}`"
+              @mousedown.prevent
+              @click="insert(`&${code}`)"
+            />
+          </span>
+          <span class="grupo-herramientas">
+            <button v-for="format in MC_FORMATS" :key="format.code" type="button" class="btn sm" :title="`${format.label} (&${format.code})`" @mousedown.prevent @click="insert(`&${format.code}`)">
+              &amp;{{ format.code }}<span class="sr-only"> {{ format.label }}</span>
+            </button>
+          </span>
+          <span class="grupo-herramientas">
+            <IconBraces aria-hidden="true" class="tenue" />
+            <button v-for="variable in VARIABLES[group]" :key="variable" type="button" class="btn sm mono" @mousedown.prevent @click="insert(variable)">{{ variable }}</button>
+          </span>
+        </div>
+        <p class="faint pista">{{ focus ? `Insertando en ${focus.key}` : 'Pulsa dentro de un mensaje y usa los botones para insertar colores o variables.' }}</p>
       </div>
-    </div>
 
-    <!-- Error display -->
-    <p v-if="store.error && !store.loading" class="text-red-400 text-sm text-center py-2">
-      {{ store.error }}
-    </p>
+      <EmptyState v-if="!visibleKeys.length" :icon="IconMessageText" title="Ningún mensaje coincide" />
+      <div v-else class="mensajes">
+        <section v-for="key in visibleKeys" :key="key" class="panel mensaje" :class="{ cambiado: draft[key] !== original[key] }">
+          <div class="mensaje-cab">
+            <label :for="`msg-${key}`"><b>{{ labelOf(key) }}</b> <code>{{ key }}</code></label>
+            <button v-if="draft[key] !== original[key]" type="button" class="btn ghost sm" @click="draft[key] = original[key] ?? ''">Restaurar</button>
+          </div>
+          <div class="mensaje-cuerpo">
+            <textarea
+              :id="`msg-${key}`"
+              v-model="draft[key]"
+              class="textarea mono"
+              rows="3"
+              spellcheck="false"
+              @focus="remember(key, $event)"
+              @select="remember(key, $event)"
+              @keyup="remember(key, $event)"
+              @click="remember(key, $event)"
+              @input="remember(key, $event)"
+            />
+            <McText :text="draft[key] ?? ''" aria-label="Vista previa" />
+          </div>
+        </section>
+      </div>
+
+      <div v-if="changedKeys.length" class="barra-guardar" role="region" aria-label="Cambios sin guardar">
+        <span class="texto">{{ changedKeys.length === 1 ? '1 mensaje modificado' : `${changedKeys.length} mensajes modificados` }}</span>
+        <button type="button" class="btn ghost" :disabled="saving" @click="discard">Descartar</button>
+        <button type="button" class="btn primary" :aria-busy="saving" :disabled="saving" @click="save"><IconSave aria-hidden="true" /> Guardar</button>
+      </div>
+    </template>
   </div>
 </template>
+
+<style scoped>
+.carga { display: grid; gap: 14px; padding: 22px; }
+.barra-mensajes { position: sticky; top: calc(var(--topbar) + 8px); z-index: 10; padding: 12px 16px; display: grid; gap: 10px; background: color-mix(in srgb, var(--surface) 96%, transparent); backdrop-filter: blur(8px); }
+.filtros-mensajes { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.filtros-mensajes :deep(.pestanas) { border-bottom: 0; }
+.filtros-mensajes :deep(.buscador) { flex: 0 1 280px; }
+.herramientas { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.grupo-herramientas { display: inline-flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.tenue { color: var(--ink-3); }
+.muestra { width: 20px; height: 20px; border-radius: 4px; border: 1px solid var(--rule-3); }
+.muestra:hover { transform: scale(1.12); }
+.pista { font-size: var(--text-xs); }
+.mc-0 { background: #000000; } .mc-1 { background: #0000aa; } .mc-2 { background: #00aa00; } .mc-3 { background: #00aaaa; }
+.mc-4 { background: #aa0000; } .mc-5 { background: #aa00aa; } .mc-6 { background: #ffaa00; } .mc-7 { background: #aaaaaa; }
+.mc-8 { background: #555555; } .mc-9 { background: #5555ff; } .mc-a { background: #55ff55; } .mc-b { background: #55ffff; }
+.mc-c { background: #ff5555; } .mc-d { background: #ff55ff; } .mc-e { background: #ffff55; } .mc-f { background: #ffffff; }
+.mensajes { display: grid; gap: 12px; margin-top: 14px; }
+.mensaje { padding: 12px 16px; }
+.mensaje.cambiado { box-shadow: inset 3px 0 0 var(--accent); }
+.mensaje-cab { display: flex; align-items: center; gap: 10px; justify-content: space-between; margin-bottom: 8px; font-size: var(--text-sm); }
+.mensaje-cab code { font-size: 10.5px; }
+.mensaje-cuerpo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 900px) { .mensaje-cuerpo { grid-template-columns: minmax(0, 1fr); } }
+</style>
