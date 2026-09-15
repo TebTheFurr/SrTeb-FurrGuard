@@ -1,0 +1,22 @@
+# FurrPerms - proteccion de los comandos de permisos (LuckPerms, op/deop, PermissionsEx)
+
+# false: los comandos de permisos quedan SIN proteger
+enabled: true
+
+# Registra en consola cada decision (nunca los argumentos de los comandos)
+debug: false
+
+api:
+  url: "https://furrguard.srteb.eu/api/plugin.php"
+  # Genera la clave en el panel (Ajustes). Con la de ejemplo se deniegan todos los comandos protegidos.
+  key: "YOUR_FURRGUARD_API_KEY_HERE"
+
+commands:
+  # Se SUMAN a la lista integrada, que ya cubre todos los alias de LuckPerms (servidor, Bungee y
+  # Velocity), op, deop y PermissionsEx, con o sin namespace y dentro de execute ... run / sudo.
+  protected: []
+
+# Avisos a los jugadores con el permiso furrperms.notify (y a la consola)
+notifications:
+  blocked: true
+  allowed: true

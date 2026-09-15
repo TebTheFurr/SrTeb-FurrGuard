@@ -1,226 +1,89 @@
 package org.grinch.furrsecurity.manager;
 
 import org.grinch.furrsecurity.FurrSecurity;
-import org.grinch.furrsecurity.api.ApiClient;
+import org.grinch.furrsecurity.platform.PlatformHandler.TaskHandle;
+import org.grinch.furrsecurity.util.Messages;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledFuture;
 
-/**
- * Manages session timers and countdown alerts
- */
-public class SessionManager {
+/** Avisos y caducidad de la sesion verificada de cada jugador. Las llamadas llegan ya serializadas por jugador. */
+final class SessionManager {
 
-    private final FurrSecurity plugin;
-    private final Map<UUID, Long> sessionExpiries = new ConcurrentHashMap<>();
-    private final Map<UUID, Map<Long, ScheduledFuture<?>>> alertTasks = new ConcurrentHashMap<>();
-    private final Map<UUID, ScheduledFuture<?>> expiryTasks = new ConcurrentHashMap<>();
+    private static final long SAME_EXPIRY_TOLERANCE_MILLIS = 5_000;
 
-    public SessionManager(FurrSecurity plugin) {
-        this.plugin = plugin;
+    private final FurrSecurity core;
+    private final VerificationManager verifier;
+    private final Map<UUID, Session> sessions = new ConcurrentHashMap<>();
+
+    SessionManager(FurrSecurity core, VerificationManager verifier) {
+        this.core = core;
+        this.verifier = verifier;
     }
 
     /**
-     * Start a session for a player
+     * Idempotente: si ya hay una sesion con la misma caducidad (±5 s) no reprograma nada, asi un cambio
+     * de servidor no duplica avisos. Con 0 segundos o menos la sesion caduca ya.
      */
-    public void startSession(UUID uuid) {
-        // Get session info from API
-        plugin.getApiClient().getSession(uuid.toString()).thenAccept(session -> {
-            if (session.hasSession) {
-                // Validate session time - must be at least 60 seconds
-                if (session.timeRemaining < 60) {
-                    plugin.getLogger().warning("Session time too short for " + uuid + ": " + session.timeRemaining + "s - skipping session scheduling");
-                    return;
-                }
-
-                long expiryTime = System.currentTimeMillis() / 1000 + session.timeRemaining;
-                sessionExpiries.put(uuid, expiryTime);
-
-                // Schedule alerts
-                scheduleAlerts(uuid, session.timeRemaining);
-
-                // Reduced logging - only log once per session start
-                String nick = plugin.getPlatformHandler().getPlayerName(uuid);
-                plugin.getLogger().info("Session started for " + (nick != null ? nick : uuid) + " (" + session.timeRemaining + "s)");
-            }
-        });
-    }
-
-    /**
-     * End a session for a player
-     */
-    public void endSession(UUID uuid) {
-        sessionExpiries.remove(uuid);
-        cancelAlerts(uuid);
-
-        ScheduledFuture<?> expiryTask = expiryTasks.remove(uuid);
-        if (expiryTask != null) {
-            expiryTask.cancel(false);
+    void start(UUID uuid, long remainingSeconds) {
+        if (remainingSeconds <= 0) {
+            cancel(uuid);
+            verifier.onSessionExpired(uuid);
+            return;
         }
-    }
-
-    /**
-     * Get remaining time for a session
-     */
-    public long getRemainingTime(UUID uuid) {
-        Long expiry = sessionExpiries.get(uuid);
-        if (expiry == null) return 0;
-        return Math.max(0, expiry - System.currentTimeMillis() / 1000);
-    }
-
-    /**
-     * Check if player has an active session
-     */
-    public boolean hasActiveSession(UUID uuid) {
-        return getRemainingTime(uuid) > 0;
-    }
-
-    /**
-     * Schedule countdown alerts for a session
-     */
-    private void scheduleAlerts(UUID uuid, long durationSeconds) {
-        // Cancel existing alerts
-        cancelAlerts(uuid);
-
-        Map<Long, ScheduledFuture<?>> tasks = new ConcurrentHashMap<>();
-        alertTasks.put(uuid, tasks);
-
-        // Schedule alerts at configured times
-        for (long alertTime : plugin.getConfig().getAlertTimes()) {
-            if (alertTime < durationSeconds) {
-                long delaySeconds = durationSeconds - alertTime;
-                long delayTicks = delaySeconds * 20; // 20 ticks per second
-
-                ScheduledFuture<?> task = scheduleAlert(uuid, alertTime, delayTicks);
-                if (task != null) {
-                    tasks.put(alertTime, task);
+        long expiresAt = System.currentTimeMillis() + remainingSeconds * 1000;
+        Session current = sessions.get(uuid);
+        if (current != null && Math.abs(current.expiresAtMillis() - expiresAt) < SAME_EXPIRY_TOLERANCE_MILLIS) {
+            return;
+        }
+        cancel(uuid);
+        List<TaskHandle> tasks = new ArrayList<>();
+        if (!core.isProxyMode()) { // detras de un proxy con FurrSecurity, avisa el proxy
+            for (long secondsLeft : core.settings().alertTimes()) {
+                if (secondsLeft < remainingSeconds) {
+                    tasks.add(core.platform().schedule(() -> alert(uuid, secondsLeft),
+                            (remainingSeconds - secondsLeft) * 1000));
                 }
             }
         }
+        tasks.add(core.platform().schedule(() -> expire(uuid, expiresAt), remainingSeconds * 1000));
+        sessions.put(uuid, new Session(expiresAt, List.copyOf(tasks)));
+    }
 
-        // Schedule expiry task
-        long expiryTicks = durationSeconds * 20;
-        ScheduledFuture<?> expiryTask = scheduleExpiry(uuid, expiryTicks);
-        if (expiryTask != null) {
-            expiryTasks.put(uuid, expiryTask);
+    long remainingSeconds(UUID uuid) {
+        Session session = sessions.get(uuid);
+        return session == null ? -1 : Math.max(0, (session.expiresAtMillis() - System.currentTimeMillis()) / 1000);
+    }
+
+    void cancel(UUID uuid) {
+        Session session = sessions.remove(uuid);
+        if (session != null) {
+            session.tasks().forEach(TaskHandle::cancel);
         }
     }
 
-    /**
-     * Schedule a single alert
-     */
-    private ScheduledFuture<?> scheduleAlert(UUID uuid, long alertTime, long delayTicks) {
-        // We'll use a simple approach with the platform handler
-        // In a real implementation, you'd use a ScheduledExecutorService
-        Runnable alertTask = () -> {
-            if (!hasActiveSession(uuid)) return;
-
-            String timeStr = plugin.getMessageUtil().formatTime(alertTime);
-            Map<String, String> placeholders = Map.of("time", timeStr);
-
-            plugin.getPlatformHandler().sendMessage(uuid,
-                    plugin.getMessageUtil().prefixed("session_expiring", placeholders));
-
-            // At 5 minutes, show verification link again
-            if (alertTime <= plugin.getConfig().getEarlyVerifyTime()) {
-                showEarlyVerifyLink(uuid);
-            }
-        };
-
-        // Schedule using platform handler (simplified - real impl would use executor)
-        plugin.getPlatformHandler().runSyncLater(alertTask, delayTicks);
-        return null; // Return actual ScheduledFuture in real implementation
+    void cancelAll() {
+        List.copyOf(sessions.keySet()).forEach(this::cancel);
     }
 
-    /**
-     * Schedule the session expiry task
-     */
-    private ScheduledFuture<?> scheduleExpiry(UUID uuid, long delayTicks) {
-        // Don't schedule if delay is too short (less than 30 seconds)
-        if (delayTicks < 600) { // 30 seconds * 20 ticks
-            plugin.getLogger().warning("Skipping expiry task for " + uuid + " - delay too short: " + (delayTicks / 20) + "s");
-            return null;
-        }
-
-        Runnable expiryTask = () -> {
-            if (!hasActiveSession(uuid)) return;
-
-            // Check if player is still online
-            if (!plugin.getPlatformHandler().isPlayerOnline(uuid)) {
-                return;
-            }
-
-            plugin.getPlatformHandler().sendMessage(uuid,
-                    plugin.getMessageUtil().prefixed("session_expired"));
-
-            // Lock player and require re-verification
-            String nick = plugin.getPlatformHandler().getPlayerName(uuid);
-            String ip = plugin.getPlatformHandler().getPlayerIP(uuid);
-
-            sessionExpiries.remove(uuid);
-            plugin.getVerificationManager().startVerification(uuid, nick, ip);
-        };
-
-        plugin.getPlatformHandler().runSyncLater(expiryTask, delayTicks);
-        return null;
-    }
-
-    /**
-     * Show early verification link
-     */
-    private void showEarlyVerifyLink(UUID uuid) {
-        String token = plugin.getPlayerLockManager().getPendingToken(uuid);
-        if (token == null) {
-            // Generate new token for early verification
-            String nick = plugin.getPlatformHandler().getPlayerName(uuid);
-            String ip = plugin.getPlatformHandler().getPlayerIP(uuid);
-
-            plugin.getApiClient().generateToken(uuid.toString(), nick, ip)
-                    .thenAccept(result -> {
-                        if (result.success) {
-                            plugin.getPlayerLockManager().setPendingToken(uuid, result.token);
-                            Map<String, String> placeholders = Map.of("url", result.verifyUrl);
-                            plugin.getPlatformHandler().sendMessage(uuid,
-                                    plugin.getMessageUtil().prefixed("verification_link", placeholders));
-                        }
-                    });
-        } else {
-            String verifyUrl = plugin.getConfig().getVerifyUrl() + "?token=" + token;
-            Map<String, String> placeholders = Map.of("url", verifyUrl);
-            plugin.getPlatformHandler().sendMessage(uuid,
-                    plugin.getMessageUtil().prefixed("verification_link", placeholders));
+    private void alert(UUID uuid, long secondsLeft) {
+        String time = Messages.formatTime(secondsLeft);
+        core.platform().sendMessage(uuid, core.messages().prefixed("session_expiring", "time", time, "time_remaining", time));
+        if (secondsLeft <= core.settings().earlyVerifySeconds()) {
+            verifier.offerEarlyVerification(uuid);
         }
     }
 
-    /**
-     * Cancel all alerts for a player
-     */
-    private void cancelAlerts(UUID uuid) {
-        Map<Long, ScheduledFuture<?>> tasks = alertTasks.remove(uuid);
-        if (tasks != null) {
-            tasks.values().forEach(task -> {
-                if (task != null) {
-                    task.cancel(false);
-                }
-            });
+    private void expire(UUID uuid, long expiresAt) {
+        Session session = sessions.get(uuid);
+        if (session != null && session.expiresAtMillis() == expiresAt && sessions.remove(uuid, session)) {
+            verifier.onSessionExpired(uuid);
         }
     }
 
-    /**
-     * Shutdown all sessions
-     */
-    public void shutdown() {
-        sessionExpiries.clear();
-        alertTasks.values().forEach(tasks ->
-                tasks.values().forEach(task -> {
-                    if (task != null) task.cancel(false);
-                }));
-        alertTasks.clear();
-        expiryTasks.values().forEach(task -> {
-            if (task != null) task.cancel(false);
-        });
-        expiryTasks.clear();
+    private record Session(long expiresAtMillis, List<TaskHandle> tasks) {
     }
 }

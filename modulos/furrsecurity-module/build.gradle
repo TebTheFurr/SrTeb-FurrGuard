@@ -1,88 +1,78 @@
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-}
-
 plugins {
     id 'java'
-    id 'eclipse'
-    id 'org.jetbrains.gradle.plugin.idea-ext' version '1.1.8'
-    id 'com.gradleup.shadow' version '8.3.8'
-    id 'xyz.jpenilla.run-velocity' version '2.3.1'
+    id 'com.gradleup.shadow' version '9.4.0'
 }
 
 group = 'org.grinch'
-version = '1.0.0'
+version = '2.0.0'
 
 repositories {
     mavenCentral()
     maven {
-        name = "papermc-repo"
-        url = "https://repo.papermc.io/repository/maven-public/"
+        name = 'papermc'
+        url = 'https://repo.papermc.io/repository/maven-public/'
     }
 }
 
-dependencies {
-    // Velocity (compileOnly)
-    compileOnly 'com.velocitypowered:velocity-api:3.4.0-SNAPSHOT'
-    annotationProcessor 'com.velocitypowered:velocity-api:3.4.0-SNAPSHOT'
+def adventureVersion = '4.20.0' // la de Paper 1.21.4, la plataforma mas antigua soportada
+def pluginVersion = version.toString()
 
-    // Paper (compileOnly) - for multi-platform support
+dependencies {
+    implementation 'org.grinch.furrguard:furrguard-common:2.0.0' // trae Gson y SnakeYAML
+
+    compileOnly 'com.velocitypowered:velocity-api:3.4.0'
+    annotationProcessor 'com.velocitypowered:velocity-api:3.4.0'
     compileOnly 'io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT'
 
-    // Shared
-    implementation 'com.google.code.gson:gson:2.10.1'
-    implementation 'org.yaml:snakeyaml:2.2'
+    testImplementation "net.kyori:adventure-api:$adventureVersion"
+    testImplementation "net.kyori:adventure-text-serializer-legacy:$adventureVersion"
+    testImplementation "net.kyori:adventure-text-serializer-plain:$adventureVersion"
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
-def targetJavaVersion = 21
-java {
-    toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
-}
+// Paper 1.21.4 exige Java 21. -PtoolchainVersion=26 compila y prueba con otro JDK.
+java.toolchain.languageVersion = JavaLanguageVersion.of((findProperty('toolchainVersion') ?: '21') as int)
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-    options.release.set(targetJavaVersion)
+    options.release.set(21)
+    options.compilerArgs.addAll(['-Xlint:deprecation', '-Xlint:unchecked'])
 }
 
-shadowJar {
+def generateBuildConstants = tasks.register('generateBuildConstants', Copy) {
+    inputs.property('version', pluginVersion)
+    from 'src/main/templates'
+    into layout.buildDirectory.dir('generated/sources/templates')
+    expand version: pluginVersion
+}
+sourceSets.main.java.srcDir(generateBuildConstants)
+
+tasks.named('processResources') {
+    inputs.property('version', pluginVersion)
+    filesMatching('plugin.yml') {
+        expand version: pluginVersion
+    }
+}
+
+// Solo se distribuye el jar sombreado (mismo nombre, sin clasificador)
+tasks.named('jar') {
+    enabled = false
+}
+
+tasks.named('shadowJar') {
     archiveClassifier.set('')
+    relocate 'org.grinch.furrguard.common', 'org.grinch.furrsecurity.libs.common'
     relocate 'com.google.gson', 'org.grinch.furrsecurity.libs.gson'
     relocate 'org.yaml.snakeyaml', 'org.grinch.furrsecurity.libs.snakeyaml'
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    exclude 'META-INF/maven/**', 'META-INF/versions/*/module-info.class', 'module-info.class'
 }
 
-tasks.processResources {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    filesMatching('velocity-plugin.json') {
-        expand 'version': project.version
-    }
-    filesMatching('plugin.yml') {
-        expand 'version': project.version
-    }
+tasks.named('assemble') {
+    dependsOn 'shadowJar'
 }
 
-tasks.jar {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+tasks.named('test') {
+    useJUnitPlatform()
 }
-
-tasks {
-    runVelocity {
-        velocityVersion("3.4.0-SNAPSHOT")
-    }
-}
-
-def templateSource = file('src/main/templates')
-def templateDest = layout.buildDirectory.dir('generated/sources/templates')
-def generateTemplates = tasks.register('generateTemplates', Copy) { task ->
-    def props = ['version': project.version]
-    task.inputs.properties props
-    task.from templateSource
-    task.into templateDest
-    task.expand props
-}
-
-sourceSets.main.java.srcDir(generateTemplates.map { it.outputs })
-project.idea.project.settings.taskTriggers.afterSync generateTemplates
-project.eclipse.synchronizationTasks(generateTemplates)

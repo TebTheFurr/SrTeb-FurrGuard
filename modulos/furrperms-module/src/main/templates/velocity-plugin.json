@@ -1,9 +1,0 @@
-{
-  "id": "furrperms-module",
-  "name": "FurrPerms Module",
-  "version": "${version}",
-  "description": "Módulo de protección de comandos sensibles para FurrGuard",
-  "authors": ["GrinchHorizon"],
-  "dependencies": [],
-  "main": "org.grinch.furrpermsModule.FurrpermsModule"
-}

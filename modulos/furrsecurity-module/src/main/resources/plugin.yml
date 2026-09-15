@@ -1,28 +1,25 @@
 name: FurrSecurity
-version: ${version}
+version: '${version}'
 main: org.grinch.furrsecurity.paper.FurrSecurityPaper
 api-version: '1.21'
-description: Staff Verification System for Minecraft
+description: Verificacion de identidad del staff con Discord
 author: GrinchHorizon
 website: https://srteb.eu
 
 commands:
   furrsecurity:
-    description: Main FurrSecurity command
-    usage: /<command> [reload|status|verify|check|unlock|stats|help]
+    description: Administracion de FurrSecurity
+    usage: /<command> [reload|status|check|reset|help]
     aliases: [fsec, fs]
     permission: furrsecurity.admin
 
 permissions:
   furrsecurity.admin:
-    description: Admin permission for FurrSecurity
+    description: Usar /furrsecurity
     default: op
   furrsecurity.staff:
-    description: Marks player as staff requiring verification
+    description: Marca al jugador como staff que debe verificar su identidad
     default: false
   furrsecurity.notify:
-    description: Receive notifications about verification requests
+    description: Recibe avisos de verificaciones pendientes
     default: op
-  furrsecurity.bypass:
-    description: Bypass verification requirement
-    default: false

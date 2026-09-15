@@ -1,184 +1,213 @@
 package org.grinch.furrsecurity;
 
-import org.grinch.furrsecurity.api.ApiClient;
-import org.grinch.furrsecurity.command.FurrSecurityCommand;
-import org.grinch.furrsecurity.config.Config;
-import org.grinch.furrsecurity.manager.PlayerLockManager;
-import org.grinch.furrsecurity.manager.SessionManager;
+import org.grinch.furrguard.common.config.YamlConfig;
+import org.grinch.furrguard.common.http.ApiClient;
+import org.grinch.furrguard.common.http.ApiClientConfig;
+import org.grinch.furrguard.common.http.ApiResult;
+import org.grinch.furrguard.common.http.ApiResult.Success;
+import org.grinch.furrguard.common.json.Json;
+import org.grinch.furrguard.common.log.PluginLogger;
+import org.grinch.furrsecurity.api.Api;
+import org.grinch.furrsecurity.api.Replies;
+import org.grinch.furrsecurity.config.Settings;
 import org.grinch.furrsecurity.manager.VerificationManager;
-import org.grinch.furrsecurity.platform.Platform;
 import org.grinch.furrsecurity.platform.PlatformHandler;
-import org.grinch.furrsecurity.util.MessageUtil;
+import org.grinch.furrsecurity.platform.PlatformHandler.TaskHandle;
+import org.grinch.furrsecurity.util.Messages;
 
-import java.util.logging.Logger;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
 
 /**
- * FurrSecurity - Staff Verification System
- * Multi-platform plugin supporting Velocity and Paper
- *
- * @author GrinchHorizon
- * @version 1.0.0
+ * Nucleo de FurrSecurity, comun a Velocity y Paper: configuracion, cliente de la API, ajustes, mensajes,
+ * lista de staff y verificacion. Obliga al staff a verificar su identidad con Discord y falla en cerrado.
  */
-public class FurrSecurity {
+public final class FurrSecurity {
 
-    private static FurrSecurity instance;
-    private final Logger logger;
-    private final Object plugin;
-    private final Object server;
-    private Platform platform;
-    private PlatformHandler platformHandler;
+    static final String CONFIG_FILE = "config.yml";
+    static final String DEFAULT_API_URL = "https://furrguard.srteb.eu/api/furrsecurity.php";
+    static final long SYNC_MILLIS = 60_000;
 
-    private Config config;
-    private ApiClient apiClient;
-    private PlayerLockManager playerLockManager;
-    private VerificationManager verificationManager;
-    private SessionManager sessionManager;
-    private MessageUtil messageUtil;
+    private final PluginLogger logger;
+    private final Path configPath;
+    private final PlatformHandler platform;
+    private final Function<ApiClientConfig, Api> apiFactory;
 
-    /**
-     * Constructor for Velocity (with server reference)
-     */
-    public FurrSecurity(Object plugin, Logger logger, Object server) {
-        instance = this;
-        this.plugin = plugin;
+    private volatile YamlConfig config = YamlConfig.empty();
+    private volatile Api api = Api.unavailable("FurrSecurity aun no ha arrancado");
+    private volatile List<String> apiProblems = List.of();
+    private volatile Settings localSettings = Settings.fromYaml(YamlConfig.empty());
+    private volatile Map<String, String> remoteSettings;
+    private volatile Settings settings = localSettings;
+    private volatile Messages messages = Messages.defaults();
+    private volatile Set<String> staff = Set.of();
+    private volatile Boolean syncHealthy;
+    private final VerificationManager verifier;
+    private TaskHandle syncTask;
+
+    public FurrSecurity(PluginLogger logger, Path dataDirectory, PlatformHandler platform) {
+        this(logger, dataDirectory, platform, apiConfig -> Api.of(new ApiClient(apiConfig)));
+    }
+
+    public FurrSecurity(PluginLogger logger, Path dataDirectory, PlatformHandler platform,
+                        Function<ApiClientConfig, Api> apiFactory) {
         this.logger = logger;
-        this.server = server;
-
-        // Detect platform
-        this.platform = detectPlatform();
-        this.logger.info("Detected platform: " + this.platform.name());
-
-        // Create platform-specific handler
-        this.platformHandler = this.platform.createHandler(this, plugin, server);
+        this.configPath = dataDirectory.resolve(CONFIG_FILE);
+        this.platform = platform;
+        this.apiFactory = apiFactory;
+        this.verifier = new VerificationManager(this); // nunca nulo: un evento temprano bloquea y reintenta
     }
 
-    /**
-     * Constructor for Paper (without server reference, not needed)
-     */
-    public FurrSecurity(Object plugin, Logger logger) {
-        this(plugin, logger, null);
-    }
-
-    /**
-     * Detect the current platform by checking class availability
-     */
-    private Platform detectPlatform() {
-        try {
-            Class.forName("com.velocitypowered.api.proxy.ProxyServer");
-            return Platform.VELOCITY;
-        } catch (ClassNotFoundException e) {
-            return Platform.PAPER;
+    /** Nada bloqueante: la lista de staff, los ajustes y los mensajes llegan en segundo plano. */
+    public void enable() {
+        YamlConfig.LoadResult loaded = YamlConfig.load(configPath, FurrSecurity.class.getClassLoader(), CONFIG_FILE);
+        if (!loaded.ok()) {
+            logger.error("config.yml no valido (" + loaded.error() + "): se usan los valores por defecto y el staff"
+                    + " quedara bloqueado hasta corregirlo y ejecutar /fsec reload");
         }
+        config = loaded.config();
+        applyConfig();
+        verifier.retryPendingNow(); // quien entrase antes de arrancar fallo con el cliente provisional
+        platform.runOnMain(verifier::adoptOnlinePlayers);
+        syncTask = platform.repeat(this::sync, 0, SYNC_MILLIS);
+        logger.info("FurrSecurity " + BuildConstants.VERSION + " activo en " + platform.name()
+                + (isProxyMode() ? " (modo proxy)" : "") + (isEnabled() ? "" : " - DESACTIVADO en config.yml"));
     }
 
     /**
-     * Initialize the plugin
+     * Relee config.yml, reconstruye el cliente (URL y clave) y vuelve a pedir staff, ajustes y mensajes.
+     * Si config.yml no es valido se conserva la configuracion anterior.
+     *
+     * @return problemas para mostrar al administrador; vacia si todo fue bien
      */
-    public void onEnable() {
-        try {
-            // Load configuration
-            this.config = new Config(this);
-            this.config.load();
-
-            // Initialize utilities
-            this.messageUtil = new MessageUtil(this);
-
-            // Initialize API client
-            this.apiClient = new ApiClient(this);
-
-            // Load messages from API (overrides defaults)
-            this.messageUtil.loadApiMessages();
-
-            // Initialize managers
-            this.playerLockManager = new PlayerLockManager(this);
-            this.verificationManager = new VerificationManager(this);
-            this.sessionManager = new SessionManager(this);
-
-            // Initialize platform-specific components
-            this.platformHandler.initialize();
-
-            // Register commands
-            registerCommands();
-
-            this.logger.info("FurrSecurity v" + getVersion() + " enabled successfully!");
-        } catch (Exception e) {
-            this.logger.severe("Failed to enable FurrSecurity: " + e.getMessage());
-            e.printStackTrace();
+    public List<String> reload() {
+        YamlConfig.LoadResult loaded = YamlConfig.load(configPath, FurrSecurity.class.getClassLoader(), CONFIG_FILE);
+        if (!loaded.ok()) {
+            return List.of("config.yml no valido, se mantiene el anterior: " + loaded.error());
         }
+        config = loaded.config();
+        applyConfig();
+        verifier.retryPendingNow();
+        sync();
+        return apiProblems;
     }
 
-    /**
-     * Shutdown the plugin
-     */
-    public void onDisable() {
-        try {
-            if (this.sessionManager != null) {
-                this.sessionManager.shutdown();
-            }
-            if (this.platformHandler != null) {
-                this.platformHandler.shutdown();
-            }
-            this.logger.info("FurrSecurity disabled.");
-        } catch (Exception e) {
-            this.logger.severe("Error during shutdown: " + e.getMessage());
+    public void disable() {
+        if (syncTask != null) {
+            syncTask.cancel();
         }
+        verifier.shutdown();
+        api.close();
     }
 
-    /**
-     * Register plugin commands
-     */
-    private void registerCommands() {
-        FurrSecurityCommand command = new FurrSecurityCommand(this);
-        this.platformHandler.registerCommand(command);
-    }
+    // ---- consultas ----
 
-    // Getters
-
-    public static FurrSecurity getInstance() {
-        return instance;
-    }
-
-    public Logger getLogger() {
+    public PluginLogger logger() {
         return logger;
     }
 
-    public Platform getPlatform() {
+    public PlatformHandler platform() {
         return platform;
     }
 
-    public PlatformHandler getPlatformHandler() {
-        return platformHandler;
+    public Api api() {
+        return api;
     }
 
-    public Config getConfig() {
-        return config;
+    public Settings settings() {
+        return settings;
     }
 
-    public ApiClient getApiClient() {
-        return apiClient;
+    public Messages messages() {
+        return messages;
     }
 
-    public PlayerLockManager getPlayerLockManager() {
-        return playerLockManager;
+    public VerificationManager verifier() {
+        return verifier;
     }
 
-    public VerificationManager getVerificationManager() {
-        return verificationManager;
+    public boolean isEnabled() {
+        return config.bool("enabled", true);
     }
 
-    public SessionManager getSessionManager() {
-        return sessionManager;
+    /** Paper detras de un Velocity con FurrSecurity: se bloquea y se espera, sin generar enlaces ni expulsar. */
+    public boolean isProxyMode() {
+        return !platform.isProxy() && config.bool("proxy-mode", false);
     }
 
-    public MessageUtil getMessageUtil() {
-        return messageUtil;
+    public boolean isListedStaff(String nick) {
+        return staff.contains(Replies.normalizeNick(nick));
     }
 
-    public Object getPluginObject() {
-        return plugin;
+    public int listedStaffCount() {
+        return staff.size();
     }
 
-    public String getVersion() {
-        return "1.0.0";
+    public List<String> apiProblems() {
+        return apiProblems;
+    }
+
+    /** {@code null} hasta la primera respuesta de {@code get_staff}. */
+    public Boolean isSyncHealthy() {
+        return syncHealthy;
+    }
+
+    // ---- interno ----
+
+    private void applyConfig() {
+        ApiClientConfig apiConfig = ApiClientConfig.builder(config.string("api.url", DEFAULT_API_URL), config.string("api.key", ""))
+                .userAgent("FurrSecurity/" + BuildConstants.VERSION)
+                .build();
+        apiProblems = ApiClient.validateConfig(apiConfig);
+        if (!apiProblems.isEmpty()) {
+            logger.error("API de FurrSecurity mal configurada (" + String.join("; ", apiProblems)
+                    + "): el staff seguira bloqueado hasta corregir config.yml");
+        }
+        Api previous = api;
+        api = apiFactory.apply(apiConfig);
+        if (previous != null) {
+            previous.close(); // sus llamadas pendientes terminan como fallo y se reintentan con el cliente nuevo
+        }
+        localSettings = Settings.fromYaml(config);
+        Map<String, String> remote = remoteSettings;
+        settings = remote == null ? localSettings : localSettings.withApi(remote);
+    }
+
+    private void sync() {
+        Api client = api;
+        client.post("get_staff", Map.of()).thenAccept(result -> {
+            Set<String> nicks = Replies.staffNicks(result);
+            reportSync(nicks != null, result);
+            if (nicks != null) {
+                staff = nicks;
+                platform.runOnMain(verifier::sweep);
+            }
+        });
+        client.post("get_settings", Map.of()).thenAccept(result -> {
+            if (result instanceof Success ok) {
+                Map<String, String> remote = Json.stringMap(ok.body());
+                remoteSettings = remote;
+                settings = localSettings.withApi(remote);
+            }
+        });
+        client.post("get_messages", Map.of()).thenAccept(result -> {
+            if (result instanceof Success ok) {
+                messages = Messages.defaults().withOverrides(Json.stringMap(ok.body()));
+            }
+        });
+    }
+
+    private void reportSync(boolean healthy, ApiResult result) {
+        Boolean previous = syncHealthy;
+        syncHealthy = healthy;
+        if (!healthy && !Boolean.FALSE.equals(previous)) {
+            logger.warn("No se pudo actualizar la lista de staff (" + Replies.describe(result)
+                    + "): se mantiene la anterior y el staff con permisos sigue bloqueandose al entrar");
+        } else if (healthy && Boolean.FALSE.equals(previous)) {
+            logger.info("Conexion con la API de FurrSecurity recuperada");
+        }
     }
 }

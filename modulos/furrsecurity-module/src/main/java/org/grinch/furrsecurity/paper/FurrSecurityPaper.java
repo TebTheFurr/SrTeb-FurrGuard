@@ -1,36 +1,37 @@
 package org.grinch.furrsecurity.paper;
 
 import org.bukkit.plugin.java.JavaPlugin;
+import org.grinch.furrguard.common.log.PluginLogger;
 import org.grinch.furrsecurity.FurrSecurity;
-import org.grinch.furrsecurity.platform.PaperHandler;
 
-/**
- * Paper plugin entry point for FurrSecurity
- */
-public class FurrSecurityPaper extends JavaPlugin {
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-    private FurrSecurity furrSecurity;
+/** Punto de entrada en Paper. */
+public final class FurrSecurityPaper extends JavaPlugin {
+
+    private FurrSecurity core;
 
     @Override
     public void onEnable() {
+        Logger log = getLogger();
         try {
-            // Create FurrSecurity instance
-            this.furrSecurity = new FurrSecurity(this, getLogger());
-
-            // Initialize the plugin
-            this.furrSecurity.onEnable();
-
-            getLogger().info("FurrSecurity Paper plugin enabled successfully!");
-        } catch (Exception e) {
-            getLogger().severe("Failed to enable FurrSecurity: " + e.getMessage());
-            e.printStackTrace();
+            PaperHandler handler = new PaperHandler(this);
+            core = new FurrSecurity(PluginLogger.of(log::info, log::warning, (message, error) -> log.log(Level.SEVERE, message, error)),
+                    getDataFolder().toPath(), handler);
+            handler.bind(core);
+            core.enable();
+        } catch (RuntimeException e) {
+            log.log(Level.SEVERE, "FurrSecurity no ha podido arrancar y se desactiva: el staff NO esta protegido", e);
+            getServer().getPluginManager().disablePlugin(this);
         }
     }
 
+    /** Hilo principal: la ceguera de los bloqueados se quita aqui mismo. */
     @Override
     public void onDisable() {
-        if (furrSecurity != null) {
-            furrSecurity.onDisable();
+        if (core != null) {
+            core.disable();
         }
     }
 }

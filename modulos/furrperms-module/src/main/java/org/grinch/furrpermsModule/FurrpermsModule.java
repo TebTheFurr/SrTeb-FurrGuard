@@ -1,20 +1,29 @@
 package org.grinch.furrpermsModule;
 
 import com.google.inject.Inject;
-import com.velocitypowered.api.event.PostOrder;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
-import org.grinch.furrpermsModule.api.ApiClient;
+import com.velocitypowered.api.scheduler.ScheduledTask;
+import org.grinch.furrguard.common.config.YamlConfig;
+import org.grinch.furrguard.common.http.ApiClient;
+import org.grinch.furrguard.common.http.ApiClientConfig;
+import org.grinch.furrguard.common.http.ApiResult;
+import org.grinch.furrguard.common.http.ApiResult.Success;
+import org.grinch.furrguard.common.json.Json;
 import org.grinch.furrpermsModule.config.Config;
 import org.grinch.furrpermsModule.listener.CommandListener;
 import org.grinch.furrpermsModule.util.MessageUtil;
 import org.slf4j.Logger;
 
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 @Plugin(
         id = "furrperms-module",
@@ -24,102 +33,81 @@ import java.nio.file.Path;
         authors = {"GrinchHorizon"},
         url = "https://srteb.eu"
 )
-public class FurrpermsModule {
+public final class FurrpermsModule {
+
+    private static final long MESSAGES_REFRESH_MINUTES = 5;
 
     private final ProxyServer server;
     private final Logger logger;
     private final Path dataDirectory;
-
-    private Config config;
-    private ApiClient apiClient;
-    private MessageUtil messageUtil;
-
-    private static FurrpermsModule instance;
+    private final MessageUtil messages = new MessageUtil();
+    private ApiClient api;
+    private ScheduledTask messagesTask;
 
     @Inject
     public FurrpermsModule(ProxyServer server, Logger logger, @DataDirectory Path dataDirectory) {
         this.server = server;
         this.logger = logger;
         this.dataDirectory = dataDirectory;
-        instance = this;
     }
 
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) {
-        logger.info("╔═══════════════════════════════════════╗");
-        logger.info("║       FurrPerms Module v" + BuildConstants.VERSION + "         ║");
-        logger.info("║    Protección de Comandos Sensibles   ║");
-        logger.info("║      (c) SrTeb Limited - srteb.eu     ║");
-        logger.info("╚═══════════════════════════════════════╝");
-
-        loadConfig();
-
-        if (!config.isEnabled()) {
-            logger.warn("FurrPerms está desactivado en la configuración.");
+        YamlConfig.LoadResult loaded = YamlConfig.load(dataDirectory.resolve("config.yml"),
+                FurrpermsModule.class.getClassLoader(), "config.yml");
+        if (!loaded.ok()) {
+            logger.error("config.yml no valido ({}): se usan los valores por defecto", loaded.error());
+        }
+        Config config = Config.from(loaded.config());
+        if (!config.enabled()) {
+            logger.warn("FurrPerms esta desactivado en config.yml: los comandos de permisos NO estan protegidos");
             return;
         }
 
-        this.apiClient = new ApiClient(this);
-        this.messageUtil = new MessageUtil(this);
-
-        // Cargar mensajes desde la API
-        try {
-            messageUtil.loadMessages();
-        } catch (Exception e) {
-            logger.warn("No se pudieron cargar los mensajes desde la API, usando defaults.");
+        ApiClientConfig apiConfig = ApiClientConfig.builder(config.apiUrl(), config.apiKey())
+                .userAgent("FurrPerms/" + BuildConstants.VERSION)
+                .build();
+        List<String> problems = ApiClient.validateConfig(apiConfig);
+        if (!problems.isEmpty()) {
+            logger.error("API de FurrGuard mal configurada ({}): se deniegan todos los comandos protegidos",
+                    String.join("; ", problems));
         }
+        ApiClient client = new ApiClient(apiConfig);
+        api = client;
 
-        // Registrar listener de comandos
-        server.getEventManager().register(this, new CommandListener(this));
-        logger.info("Listener de comandos registrado.");
+        CommandListener.Api commands = new CommandListener.Api() {
+            @Override
+            public CompletableFuture<ApiResult> post(String action, Map<String, String> form) {
+                return client.post(action, form);
+            }
 
-        logger.info("FurrPerms iniciado correctamente.");
+            @Override
+            public CompletableFuture<ApiResult> postOnce(String action, Map<String, String> form) {
+                return client.postOnce(action, form);
+            }
+        };
+        server.getEventManager().register(this, new CommandListener(config, commands, messages, server, logger));
+        messagesTask = server.getScheduler().buildTask(this, this::refreshMessages)
+                .repeat(MESSAGES_REFRESH_MINUTES, TimeUnit.MINUTES)
+                .schedule();
+        logger.info("FurrPerms {} protegiendo {} comandos de permisos", BuildConstants.VERSION, config.protectedLabels().size());
     }
 
     @Subscribe
     public void onProxyShutdown(ProxyShutdownEvent event) {
-        logger.info("FurrPerms desactivado.");
-    }
-
-    private void loadConfig() {
-        this.config = new Config(this);
-        config.load();
-        logger.info("Configuración cargada.");
-    }
-
-    public void reload() {
-        loadConfig();
-        if (apiClient != null) {
-            messageUtil.loadMessages();
+        if (messagesTask != null) {
+            messagesTask.cancel();
         }
-        logger.info("Configuración recargada.");
+        if (api != null) {
+            api.close();
+        }
     }
 
-    public static FurrpermsModule getInstance() {
-        return instance;
-    }
-
-    public ProxyServer getServer() {
-        return server;
-    }
-
-    public Logger getLogger() {
-        return logger;
-    }
-
-    public Path getDataDirectory() {
-        return dataDirectory;
-    }
-
-    public Config getConfig() {
-        return config;
-    }
-
-    public ApiClient getApiClient() {
-        return apiClient;
-    }
-
-    public MessageUtil getMessageUtil() {
-        return messageUtil;
+    private void refreshMessages() {
+        api.post("get_messages", Map.of()).thenAccept(result -> {
+            if (result instanceof Success ok) {
+                messages.apply(Json.stringMap(ok.body()));
+            }
+        });
     }
 }

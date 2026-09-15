@@ -1,0 +1,38 @@
+# FurrSecurity - verificacion de identidad del staff con Discord
+
+# false: el modulo no bloquea a nadie (solo quedan los comandos /fsec)
+enabled: true
+
+# Solo Paper, detras de un Velocity que tambien lleva FurrSecurity: Paper bloquea y espera a que el
+# jugador verifique en el proxy. No genera enlaces, no expulsa y no avisa de desconexiones.
+proxy-mode: false
+
+api:
+  url: "https://furrguard.srteb.eu/api/furrsecurity.php"
+  # Genera la clave en el panel (Ajustes). Con la de ejemplo el staff queda bloqueado.
+  key: "YOUR_API_KEY_HERE"
+
+# ---------------------------------------------------------------------------------------------
+# Valores iniciales. En cuanto responde la API se usan los del panel (Ajustes > FurrSecurity),
+# que se vuelven a leer cada minuto.
+# ---------------------------------------------------------------------------------------------
+
+# Segundos antes de caducar la sesion en que se avisa al jugador
+alert-times: [3600, 1800, 300, 240, 180, 120, 60, 30]
+
+# Desde cuantos segundos antes de caducar se ofrece verificar de nuevo sin esperar
+early-verify-time: 300
+
+# Que se bloquea mientras el jugador no verifica. Romper, colocar, interactuar y recibir o hacer
+# dano se bloquean siempre.
+lock:
+  movement: true
+  commands: true
+  inventory: true
+  server-switch: true
+  # Sin equivalente en el panel: solo se configura aqui. Solo en Paper: Velocity no puede cortar
+  # el chat de clientes 1.19.1+ sin expulsarlos.
+  chat: true
+
+notify-admins: true
+admin-permission: "furrsecurity.notify"

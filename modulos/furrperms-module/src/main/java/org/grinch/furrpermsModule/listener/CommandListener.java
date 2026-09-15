@@ -1,266 +1,147 @@
 package org.grinch.furrpermsModule.listener;
 
-import com.velocitypowered.api.event.PostOrder;
+import com.velocitypowered.api.event.EventTask;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.command.CommandExecuteEvent;
 import com.velocitypowered.api.event.command.CommandExecuteEvent.CommandResult;
-import com.velocitypowered.api.event.player.PlayerChatEvent;
+import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.proxy.Player;
+import com.velocitypowered.api.proxy.ProxyServer;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import org.grinch.furrpermsModule.FurrpermsModule;
+import org.grinch.furrguard.common.command.CommandNormalizer;
+import org.grinch.furrguard.common.http.ApiResult;
+import org.grinch.furrpermsModule.access.AccessDecision;
+import org.grinch.furrpermsModule.access.AccessGate;
+import org.grinch.furrpermsModule.config.Config;
+import org.grinch.furrpermsModule.util.MessageUtil;
+import org.slf4j.Logger;
 
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.net.InetSocketAddress;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
-public class CommandListener {
+/**
+ * Comandos protegidos: se deciden de forma asincrona ({@link EventTask}) sin bloquear el hilo del evento.
+ * El comando queda denegado mientras se decide, asi un error nunca lo deja pasar.
+ */
+public final class CommandListener {
 
-    private final FurrpermsModule plugin;
-    private final Set<String> PROTECTED_BASE_COMMANDS = Set.of(
-            "op", "deop", "minecraft:op", "minecraft:deop",
-            "lp", "luckperms", "lpv", "luckpermsv",
-            "perms", "permissions", "perm"
-    );
+    public static final String NOTIFY_PERMISSION = "furrperms.notify";
+    private static final int MAX_LOGGED_COMMAND = 255;
 
-    public CommandListener(FurrpermsModule plugin) {
-        this.plugin = plugin;
+    /** Lo que se usa de {@code api/plugin.php}; en produccion, el {@code ApiClient} comun. */
+    public interface Api {
+        CompletableFuture<ApiResult> post(String action, Map<String, String> form);
+
+        CompletableFuture<ApiResult> postOnce(String action, Map<String, String> form);
     }
 
-    @Subscribe(order = PostOrder.EARLY)
-    public void onPlayerChat(PlayerChatEvent event) {
-        if (!plugin.getConfig().isEnabled()) {
-            return;
+    private final Config config;
+    private final Api api;
+    private final MessageUtil messages;
+    private final ProxyServer server;
+    private final Logger logger;
+    private final AccessGate gate = new AccessGate(System::currentTimeMillis);
+
+    public CommandListener(Config config, Api api, MessageUtil messages, ProxyServer server, Logger logger) {
+        this.config = config;
+        this.api = api;
+        this.messages = messages;
+        this.server = server;
+        this.logger = logger;
+    }
+
+    /** El ultimo: decide sobre el comando que de verdad se va a ejecutar, aunque otro plugin lo haya cambiado. */
+    @Subscribe(priority = Short.MIN_VALUE)
+    public EventTask onCommand(CommandExecuteEvent event) {
+        CommandResult original = event.getResult();
+        if (!(event.getCommandSource() instanceof Player player) || !original.isAllowed()) {
+            return null;
         }
-
-        // Solo procesar comandos (empiezan con /)
-        String message = event.getMessage().trim();
-        if (!message.startsWith("/")) {
-            return;
+        String command = original.getCommand().orElse(event.getCommand());
+        if (!config.isProtected(command)) {
+            return null;
         }
+        event.setResult(CommandResult.denied());
 
-        Player player = event.getPlayer();
-
-        // Debug: log todos los comandos de chat
-        if (plugin.getConfig().isDebug()) {
-            plugin.getLogger().info("[DEBUG] Chat comando: " + message + " por " + player.getUsername());
+        String nick = player.getUsername();
+        String ip = ip(player.getRemoteAddress());
+        AccessDecision local = gate.cached(nick, player.getUniqueId(), ip);
+        if (local != null) {
+            apply(event, original, player, command, local, local != AccessDecision.COOLDOWN);
+            return null;
         }
+        CompletableFuture<Void> decision = api
+                .post("check_furr_perms_whitelist", Map.of("nick", nick, "uuid", player.getUniqueId().toString(), "ip", ip))
+                .thenAccept(result -> {
+                    AccessDecision fresh = AccessDecision.from(result);
+                    gate.remember(nick, player.getUniqueId(), ip, fresh);
+                    apply(event, original, player, command, fresh, true);
+                })
+                .exceptionally(error -> {
+                    logger.error("Error decidiendo un comando protegido de " + nick + " (queda denegado)", error);
+                    return null;
+                });
+        return EventTask.resumeWhenComplete(decision);
+    }
 
-        String rawCommand = message.substring(1).trim(); // Quitar el /
-        String command = rawCommand.toLowerCase();
-        String[] parts = command.split(" ");
-        String baseCommand = parts[0];
+    @Subscribe
+    public void onDisconnect(DisconnectEvent event) {
+        gate.forget(event.getPlayer().getUsername(), event.getPlayer().getUniqueId());
+    }
 
-        // Verificar si es un comando protegido
-        if (!isProtectedCommand(baseCommand, parts)) {
-            return;
-        }
-
-        plugin.getLogger().info("[FurrPerms] Comando protegido detectado (chat): " + rawCommand + " por " + player.getUsername());
-
-        // NO verificar bypass permission - la whitelist del módulo es la única fuente de verdad
-
-        // Verificar con la API
-        String server = player.getCurrentServer()
-                .map(serverConn -> serverConn.getServerInfo().getName())
-                .orElse("unknown");
-
-        boolean allowed = plugin.getApiClient().checkCommand(
-                player.getUsername(),
-                player.getUniqueId().toString(),
-                baseCommand,
-                server
-        );
-
-        plugin.getLogger().info("[FurrPerms] API respondió: " + (allowed ? "PERMITIDO" : "BLOQUEADO"));
-
-        if (!allowed) {
-            // Bloquear comando
-            event.setResult(PlayerChatEvent.ChatResult.denied());
-
-            // Loggear y notificar en background
-            plugin.getServer().getScheduler().buildTask(plugin, () -> {
-                plugin.getApiClient().logCommand(
-                        player.getUsername(),
-                        player.getUniqueId().toString(),
-                        rawCommand,
-                        server,
-                        false,
-                        "No autorizado"
-                );
-
-                // Notificar al jugador
-                String blockMsg = plugin.getMessageUtil().getMessage("fur_perms_command_blocked")
-                        .replace("{command}", rawCommand);
-                plugin.getMessageUtil().sendMessage(player, blockMsg);
-
-                // Notificar admins
-                if (plugin.getConfig().notifyBlocked()) {
-                    String notifyMsg = plugin.getMessageUtil().getMessage("fur_perms_notify_blocked")
-                            .replace("{player}", player.getUsername())
-                            .replace("{command}", rawCommand)
-                            .replace("{server}", server);
-                    plugin.getMessageUtil().broadcastToAdmins(notifyMsg);
-                }
-            }).schedule();
-
-            plugin.getLogger().info("[FurrPerms] Comando BLOQUEADO: " + player.getUsername() + " intentó ejecutar: " + rawCommand);
+    private void apply(CommandExecuteEvent event, CommandResult original, Player player, String command,
+                       AccessDecision decision, boolean report) {
+        String shown = "/" + command;
+        if (decision.allowed()) {
+            event.setResult(original);
         } else {
-            // Comando permitido - loggear en background
-            plugin.getServer().getScheduler().buildTask(plugin, () -> {
-                if (plugin.getConfig().notifyAllowed()) {
-                    String notifyMsg = plugin.getMessageUtil().getMessage("fur_perms_notify_allowed")
-                            .replace("{player}", player.getUsername())
-                            .replace("{command}", rawCommand)
-                            .replace("{server}", server);
-                    plugin.getMessageUtil().broadcastToAdmins(notifyMsg);
-                }
-
-                plugin.getApiClient().logCommand(
-                        player.getUsername(),
-                        player.getUniqueId().toString(),
-                        rawCommand,
-                        server,
-                        true,
-                        null
-                );
-            }).schedule();
+            player.sendMessage(messages.render(decision.messageKey(), Map.of("command", shown)));
+        }
+        if (config.debug()) { // nunca los argumentos: podrian ser secretos
+            logger.info("[DEBUG] " + player.getUsername() + " " + labels(command)
+                    + " -> " + (decision.allowed() ? "permitido" : "denegado") + " (" + decision.reason() + ")");
+        }
+        if (report && !decision.moduleDisabled()) {
+            report(player, shown, decision);
         }
     }
 
-    @Subscribe(order = PostOrder.FIRST)
-    public void onCommandExecute(CommandExecuteEvent event) {
-        if (!plugin.getConfig().isEnabled()) {
-            return;
-        }
+    private void report(Player player, String command, AccessDecision decision) {
+        String server = player.getCurrentServer().map(connection -> connection.getServerInfo().getName()).orElse("proxy");
+        String logged = command.length() > MAX_LOGGED_COMMAND ? command.substring(0, MAX_LOGGED_COMMAND) : command;
+        api.postOnce("log_furr_perms_command", Map.of(
+                "player_uuid", player.getUniqueId().toString(),
+                "player_nick", player.getUsername(),
+                "command", logged,
+                "server_name", server,
+                "allowed", decision.allowed() ? "1" : "0",
+                "reason", decision.reason(),
+                "ip_address", ip(player.getRemoteAddress())));
 
-        // Debug: log todos los comandos ejecutados
-        if (plugin.getConfig().isDebug()) {
-            plugin.getLogger().info("[DEBUG] Comando ejecutado: " + event.getCommand() + " por: " +
-                (event.getCommandSource() instanceof Player ? ((Player) event.getCommandSource()).getUsername() : "Console"));
-        }
-
-        // Solo procesar comandos de jugadores
-        if (!(event.getCommandSource() instanceof Player player)) {
-            return;
-        }
-
-        String rawCommand = event.getCommand().trim();
-        String command = rawCommand.toLowerCase();
-        String[] parts = command.split(" ");
-        String baseCommand = parts[0];
-
-        // Verificar si es un comando protegido
-        if (!isProtectedCommand(baseCommand, parts)) {
-            return;
-        }
-
-        plugin.getLogger().info("[FurrPerms] Comando protegido detectado: " + rawCommand + " por " + player.getUsername());
-
-        // NO verificar bypass permission - la whitelist del módulo es la única fuente de verdad
-
-        // Verificar con la API (síncrono - bloquea brevemente pero es necesario para seguridad)
-        String server = player.getCurrentServer()
-                .map(serverConn -> serverConn.getServerInfo().getName())
-                .orElse("unknown");
-
-        boolean allowed = plugin.getApiClient().checkCommand(
-                player.getUsername(),
-                player.getUniqueId().toString(),
-                baseCommand,
-                server
-        );
-
-        plugin.getLogger().info("[FurrPerms] API respondió: " + (allowed ? "PERMITIDO" : "BLOQUEADO"));
-
-        if (allowed) {
-            // Comando permitido, loggear y notificar en background
-            plugin.getServer().getScheduler().buildTask(plugin, () -> {
-                if (plugin.getConfig().notifyAllowed()) {
-                    String notifyMsg = plugin.getMessageUtil().getMessage("fur_perms_notify_allowed")
-                            .replace("{player}", player.getUsername())
-                            .replace("{command}", rawCommand)
-                            .replace("{server}", server);
-                    plugin.getMessageUtil().broadcastToAdmins(notifyMsg);
-                }
-
-                plugin.getApiClient().logCommand(
-                        player.getUsername(),
-                        player.getUniqueId().toString(),
-                        rawCommand,
-                        server,
-                        true,
-                        null
-                );
-            }).schedule();
-            // No modificar event.setResult() permite el comando
-        } else {
-            // Comando bloqueado
-            String reason = "No autorizado";
-
-            // Loggear y notificar en background
-            plugin.getServer().getScheduler().buildTask(plugin, () -> {
-                plugin.getApiClient().logCommand(
-                        player.getUsername(),
-                        player.getUniqueId().toString(),
-                        rawCommand,
-                        server,
-                        false,
-                        reason
-                );
-
-                // Notificar al jugador
-                String blockMsg = plugin.getMessageUtil().getMessage("fur_perms_command_blocked")
-                        .replace("{command}", rawCommand);
-                plugin.getMessageUtil().sendMessage(player, blockMsg);
-
-                // Notificar admins
-                if (plugin.getConfig().notifyBlocked()) {
-                    String notifyMsg = plugin.getMessageUtil().getMessage("fur_perms_notify_blocked")
-                            .replace("{player}", player.getUsername())
-                            .replace("{command}", rawCommand)
-                            .replace("{server}", server);
-                    plugin.getMessageUtil().broadcastToAdmins(notifyMsg);
-                }
-            }).schedule();
-
-            plugin.getLogger().info("[FurrPerms] Comando BLOQUEADO: " + player.getUsername() + " intentó ejecutar: " + rawCommand);
-            event.setResult(CommandResult.denied());
+        if (decision.allowed() ? config.notifyAllowed() : config.notifyBlocked()) {
+            logger.info("[FurrPerms] " + player.getUsername() + " " + labels(command) + " en " + server + ": "
+                    + (decision.allowed() ? "permitido" : "denegado (" + decision.reason() + ")"));
+            Component notification = messages.notification(
+                    decision.allowed() ? "fur_perms_notify_allowed" : "fur_perms_notify_blocked",
+                    Map.of("player", player.getUsername(), "command", logged, "server", server, "reason", decision.reason()));
+            this.server.getAllPlayers().stream()
+                    .filter(admin -> admin.hasPermission(NOTIFY_PERMISSION))
+                    .forEach(admin -> admin.sendMessage(notification));
         }
     }
 
-    private boolean isProtectedCommand(String baseCommand, String[] parts) {
-        // Verificar comandos base protegidos
-        if (PROTECTED_BASE_COMMANDS.contains(baseCommand)) {
-            return true;
-        }
+    /** Solo las etiquetas raiz ({@code /lp}), sin argumentos. */
+    private static String labels(String command) {
+        return "/" + String.join(" /", CommandNormalizer.rootLabels(command));
+    }
 
-        // Verificar subcomandos de luckperms (lp user, lp group, lp permission, etc)
-        if (baseCommand.equals("lp")) {
-            if (parts.length >= 2) {
-                String subcommand = parts[1];
-                return Set.of("user", "group", "permission", "verbose", "editor", "export", "import",
-                        "create", "delete", "set", "unset", "clear").contains(subcommand);
-            }
+    private static String ip(InetSocketAddress address) {
+        if (address == null || address.getAddress() == null) {
+            return "";
         }
-
-        // Verificar comandos configurados custom
-        String configuredCommands = plugin.getConfig().getProtectedCommands().toLowerCase();
-        if (!configuredCommands.isEmpty()) {
-            String[] customCommands = configuredCommands.split(",");
-            for (String customCmd : customCommands) {
-                String trimmed = customCmd.trim();
-                if (trimmed.contains(" ")) {
-                    // Reconstruir el comando completo desde parts
-                    String fullCommand = String.join(" ", parts);
-                    if (fullCommand.startsWith(trimmed)) {
-                        return true;
-                    }
-                } else if (baseCommand.equals(trimmed)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        String host = address.getAddress().getHostAddress();
+        int scope = host.indexOf('%');
+        return scope < 0 ? host : host.substring(0, scope);
     }
 }

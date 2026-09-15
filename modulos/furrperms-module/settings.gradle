@@ -1,1 +1,3 @@
 rootProject.name = 'furrperms-module'
+
+includeBuild('../../libs/furrguard-common')

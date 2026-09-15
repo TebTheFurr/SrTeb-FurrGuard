@@ -1,95 +1,53 @@
 package org.grinch.furrpermsModule.util;
 
-import com.velocitypowered.api.proxy.Player;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import org.grinch.furrpermsModule.FurrpermsModule;
+import org.grinch.furrguard.common.text.SafeText;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
-public class MessageUtil {
+/**
+ * Mensajes {@code fur_perms_*}: los del panel ({@code get_messages}) sustituyen a estos por defecto.
+ * Los valores (nick, comando, servidor) nunca se interpretan como formato: {@code /op x &a✔ ...} no
+ * puede falsificar un aviso de "permitido".
+ */
+public final class MessageUtil {
 
-    private final FurrpermsModule plugin;
-    private final Map<String, String> messages;
-    private final LegacyComponentSerializer legacySerializer;
+    public static final String KEY_PREFIX = "fur_perms_";
+    private static final String NOTIFY_PREFIX = "&3[FurrPerms] &r";
 
-    public MessageUtil(FurrpermsModule plugin) {
-        this.plugin = plugin;
-        this.messages = new HashMap<>();
-        this.legacySerializer = LegacyComponentSerializer.builder()
-                .character(LegacyComponentSerializer.AMPERSAND_CHAR)
-                .hexColors()
-                .build();
-    }
+    private static final Map<String, String> DEFAULTS = Map.of(
+            "fur_perms_no_permission", "&c✘ &cNo tienes permiso para ejecutar este comando. Solo administradores autorizados pueden usar comandos de gestión de permisos.",
+            "fur_perms_command_blocked", "&c✘ &cEl comando &f{command} &cestá restringido por FurrPerms. Solo usuarios autorizados pueden ejecutarlo.",
+            "fur_perms_uuid_mismatch", "&c✘ &cTu cuenta no coincide con la autorizada para usar &f{command}&c.",
+            "fur_perms_needs_furrsecurity", "&c✘ &cVerifica tu identidad con FurrSecurity antes de usar &f{command}&c.",
+            "fur_perms_unavailable", "&c✘ &cNo se ha podido comprobar tu autorización. Inténtalo de nuevo en unos segundos.",
+            "fur_perms_notify_blocked", "&c⚠ &f{player} &7intentó ejecutar &f{command} &7en servidor &f{server}",
+            "fur_perms_notify_allowed", "&a✔ &f{player} &7ejecutó &f{command} &7en servidor &f{server}");
 
-    public void loadMessages() {
-        Map<String, String> apiMessages = plugin.getApiClient().getMessages();
-        messages.clear();
-        messages.putAll(apiMessages);
-        plugin.getLogger().info("Mensajes cargados: " + messages.size());
-    }
+    private volatile Map<String, String> templates = DEFAULTS;
 
-    public String getMessage(String key) {
-        return messages.getOrDefault(key, getDefaultMessage(key));
-    }
-
-    private String getDefaultMessage(String key) {
-        return switch (key) {
-            case "fur_perms_no_permission" -> "&c✘ &cNo tienes permiso para ejecutar este comando.";
-            case "fur_perms_command_blocked" -> "&c✘ &cEl comando está restringido por FurrPerms.";
-            case "fur_perms_logged" -> "&c✘ &cTu intento ha sido registrado.";
-            case "fur_perms_notify_blocked" -> "&c⚠ &f{player} &7intentó ejecutar &f{command}";
-            case "fur_perms_notify_allowed" -> "&a✔ &f{player} &7ejecutó &f{command}";
-            default -> key;
-        };
-    }
-
-    public Component parseMessage(String message) {
-        return legacySerializer.deserialize(message
-                .replace("§", "&")
-                .replace("&x", "#")
-        );
-    }
-
-    public Component prefixed(String message) {
-        return parseMessage("&3[FurrPerms] &r" + message);
-    }
-
-    /**
-     * Envía notificación SOLO a jugadores en whitelist de FurrPerms
-     * También imprime en consola de Velocity
-     */
-    public void broadcastToAdmins(String message) {
-        // Siempre imprimir en consola
-        String cleanMessage = message.replaceAll("&[0-9a-fk-orx]", "");
-        plugin.getLogger().info("[FurrPerms] " + cleanMessage);
-
-        Component component = prefixed(message);
-        int count = 0;
-
-        for (Player player : plugin.getServer().getAllPlayers()) {
-            // Verificar si está en whitelist de FurrPerms
-            boolean isWhitelisted = plugin.getApiClient().isInWhitelist(
-                player.getUsername(),
-                player.getUniqueId().toString()
-            );
-
-            if (isWhitelisted) {
-                player.sendMessage(component);
-                count++;
+    /** Aplica {@code get_messages} (objeto plano); solo cuentan las claves {@code fur_perms_*}. */
+    public void apply(Map<String, String> api) {
+        Map<String, String> merged = new HashMap<>(DEFAULTS);
+        api.forEach((key, value) -> {
+            if (key.startsWith(KEY_PREFIX) && value != null) {
+                merged.put(key, value);
             }
-        }
-
-        if (plugin.getConfig().isDebug()) {
-            plugin.getLogger().info("[DEBUG] Notificación enviada a " + count + " jugadores whitelist");
-        }
+        });
+        templates = Map.copyOf(merged);
     }
 
-    public void sendMessage(Player player, String message) {
-        player.sendMessage(parseMessage(message));
+    public Component render(String key, Map<String, String> placeholders) {
+        return SafeText.render(template(key), placeholders);
+    }
+
+    /** Aviso para administradores, con el prefijo de FurrPerms. */
+    public Component notification(String key, Map<String, String> placeholders) {
+        return SafeText.render(NOTIFY_PREFIX + template(key), placeholders);
+    }
+
+    private String template(String key) {
+        return templates.getOrDefault(key, "").replace("\\n", "\n");
     }
 }
