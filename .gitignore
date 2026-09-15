@@ -32,9 +32,6 @@ dist/
 # the Gradle wrapper must be committed or the modules can't build from a clone
 !**/gradle/wrapper/gradle-wrapper.jar
 
-# The Velocity plugin is its own git repository (github.com/grinchhorizon/FurrGuard-Plugin)
-/FurrGuard-plugin/
-
 # Temporary files
 tmp/
 temp/
