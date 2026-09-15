@@ -32,7 +32,10 @@ public sealed interface ApiResult permits ApiResult.Success, ApiResult.Failure {
         CLIENT_ERROR,
         /** Redireccion, cuerpo demasiado grande, JSON invalido o que no es un objeto. */
         INVALID_RESPONSE,
-        /** Configuracion invalida (URL, clave de ejemplo...) o cliente cerrado. No toca la red. */
+        /**
+         * Configuracion invalida (URL, clave de ejemplo...) o cliente cerrado, sin tocar la red; o HTTP 503
+         * {@code api_key_not_configured} (el panel aun no tiene clave). No se reintenta.
+         */
         NOT_CONFIGURED
     }
 

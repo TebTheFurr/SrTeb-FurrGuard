@@ -132,9 +132,9 @@ const notices = computed(() => {
           <EmptyState v-if="!data.recent_connections.length" :icon="IconPlug" title="Sin conexiones recientes" />
           <ul v-else class="eventos">
             <li v-for="(item, index) in data.recent_connections" :key="item.id ?? index" :class="{ bloqueada: isOn(item.blocked) }">
-              <PlayerHead :id="item.uuid" :name="item.nick" />
+              <PlayerHead :id="item.uuid ?? ''" :name="item.nick" />
               <div class="evento-texto">
-                <RouterLink v-if="session.can('players')" class="enlace-fila" :to="{ name: 'player', params: { uuid: item.uuid } }">{{ item.nick }}</RouterLink>
+                <RouterLink v-if="item.uuid && session.can('players')" class="enlace-fila" :to="{ name: 'player', params: { uuid: item.uuid } }">{{ item.nick }}</RouterLink>
                 <b v-else>{{ item.nick }}</b>
                 <span class="sub"><IpText :ip="item.ip" /> · <CountryTag :code="item.country_code" :name="item.country" /></span>
               </div>

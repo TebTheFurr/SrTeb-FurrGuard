@@ -51,7 +51,8 @@ export interface Health {
 
 export interface RecentConnection {
   id?: number
-  uuid: string
+  /** null en conexiones antiguas (anteriores a 2.0) que no guardaban el UUID */
+  uuid: string | null
   nick: string
   ip: string | null
   country: string | null
@@ -116,7 +117,8 @@ export interface PlayerIp {
 
 export interface ConnectionRow {
   id: number
-  uuid: string
+  /** null en conexiones antiguas (anteriores a 2.0) que no guardaban el UUID */
+  uuid: string | null
   nick: string
   ip: string | null
   country: string | null

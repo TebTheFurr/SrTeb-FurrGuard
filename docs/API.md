@@ -54,7 +54,7 @@ Errores que puede devolver cualquier acción (cuerpo `{"error", "message"}`):
 | 422 | `validation` | Campo ausente o inválido; añade `field` |
 | 429 | `rate_limited` | Cubo agotado; `Retry-After` y `retry_after` |
 | 503 | `api_key_not_configured` | Aún no se ha generado ninguna clave |
-| 503 | `database_unavailable` | Sin conexión, bloqueo o interbloqueo de la BD. Si la BD cae a mitad de la petición añade `Retry-After: 5` y `retry_after: 5`; si no se pudo conectar al empezar, no los lleva |
+| 503 | `database_unavailable` | Sin conexión, bloqueo o interbloqueo de la BD (al empezar o a mitad de la petición). Siempre con `Retry-After: 5` y `retry_after: 5` |
 | 500 | `internal_error` | Cualquier otro fallo (se registra en el log de PHP) |
 
 ### 1.2 Acciones

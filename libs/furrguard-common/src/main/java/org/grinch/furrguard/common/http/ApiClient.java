@@ -72,6 +72,7 @@ public final class ApiClient implements AutoCloseable {
     private static final long MAX_TIMEOUT_NANOS = TimeUnit.DAYS.toNanos(1); // evita desbordar nanoTime
     private static final Pattern PLACEHOLDER_KEY = Pattern.compile("(?i)(?:your|tu)_\\w*|change_?me");
     private static final Pattern ERROR_SLUG = Pattern.compile("[a-z0-9_]{1,64}");
+    private static final String API_KEY_NOT_CONFIGURED = "api_key_not_configured";
     private static final Pattern DIGITS = Pattern.compile("\\d+");
     private static final Executor INLINE = Runnable::run;
     private static final Failure CLOSED = new Failure(Kind.NOT_CONFIGURED, 0, "cliente cerrado", 0);
@@ -324,9 +325,16 @@ public final class ApiClient implements AutoCloseable {
             return Outcome.done(new Failure(Kind.RATE_LIMITED, status,
                     "HTTP 429: API en pausa " + waitMillis + " ms", waitMillis));
         }
-        String message = "HTTP " + status + errorSlug(body);
+        String slug = errorSlug(body);
+        String message = "HTTP " + status + slug;
         if (status == 401 || status == 403) {
             return Outcome.done(failure(Kind.UNAUTHORIZED, status, message));
+        }
+        // El panel aun no tiene API key (docs/API.md §1.1): es configuracion, no una caida. Sin reintentos
+        // y nunca sujeto a failure-policy: allow.
+        if (status == 503 && slug.equals(" (" + API_KEY_NOT_CONFIGURED + ")")) {
+            return Outcome.done(failure(Kind.NOT_CONFIGURED, status,
+                    message + ": el panel no tiene API key; generala en Ajustes y ponla en la configuracion"));
         }
         if (status >= 500 && status < 600) {
             return new Outcome(failure(Kind.SERVER_ERROR, status, message), true, false);

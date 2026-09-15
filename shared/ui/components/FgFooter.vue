@@ -28,17 +28,10 @@ const stars = [
       <div class="fg-pie-marca">
         <img src="../img/furrguard-64.webp" width="30" height="30" alt="">
         <span>
-          FurrGuard · Seguridad para servidores <span class="sep">|</span> <b>SrTeb Limited</b>
+          FurrGuard · Seguridad para servidores <span class="sep">|</span> <b>Tebby Services S.L.</b>
         </span>
       </div>
       <div class="fg-pie-enlaces">
-        <a class="fg-pie-chip" href="https://discord.gg/srteb" target="_blank" rel="noopener noreferrer"
-           aria-label="Únete a nuestro Discord">
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M20.3 4.5A19.8 19.8 0 0 0 15.4 3l-.2.5c1.6.4 3 1 4.3 1.9a15.6 15.6 0 0 0-13-.5l.4-.2a17 17 0 0 1 1.7-.7L8.4 3a19.8 19.8 0 0 0-4.8 1.5C.7 9 0 13.3.3 17.6a19.9 19.9 0 0 0 6 3l1.2-1.8c-.7-.3-1.4-.6-2-1l.5-.4a14.2 14.2 0 0 0 12 0l.5.4c-.6.4-1.3.7-2 1l1.2 1.8a19.9 19.9 0 0 0 6-3c.4-5-.7-9.3-3.4-13.1M8.1 15c-1.2 0-2.1-1.1-2.1-2.4S6.9 10.2 8 10.2s2.1 1.1 2.1 2.4S9.2 15 8.1 15m7.8 0c-1.2 0-2.1-1.1-2.1-2.4s.9-2.4 2.1-2.4 2.1 1.1 2.1 2.4S17 15 15.9 15" />
-          </svg>
-          Discord
-        </a>
         <a class="fg-pie-chip" href="https://x.com/SrTeb_" target="_blank" rel="noopener noreferrer"
            aria-label="Síguenos en X">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -56,8 +49,8 @@ const stars = [
       </div>
     </div>
     <div class="fg-pie-abajo">
-      <span>© {{ new Date().getFullYear() }} SrTeb Limited · Seguridad para comunidades de Minecraft</span>
-      <a href="https://srteb.eu" target="_blank" rel="noopener noreferrer">srteb.eu</a>
+      <span>© {{ new Date().getFullYear() }} Tebby Services · Seguridad para comunidades de Minecraft</span>
+      <a href="https://tebby.lgbt" target="_blank" rel="noopener noreferrer">tebby.lgbt</a>
     </div>
   </footer>
 </template>

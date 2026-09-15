@@ -284,6 +284,25 @@ class ApiClientTest {
     }
 
     @Test
+    void apiKeyNotConfiguredIsConfigurationNotAnOutage() throws Exception {
+        handler = (exchange, hit) -> respond(exchange, 503,
+                "{\"error\":\"api_key_not_configured\",\"message\":\"Sin clave\"}");
+
+        Failure failure = failure(await(client(config().build()).post("check_player", Map.of())), Kind.NOT_CONFIGURED);
+
+        assertEquals(503, failure.status());
+        assertTrue(failure.message().startsWith("HTTP 503 (api_key_not_configured)"), failure.message());
+        assertEquals(1, hits.get(), "sin reintentos: no es una caida");
+    }
+
+    @Test
+    void otherServiceUnavailableStaysAServerError() throws Exception {
+        handler = (exchange, hit) -> respond(exchange, 503, "{\"error\":\"database_unavailable\",\"retry_after\":5}");
+
+        failure(await(client(config().maxRetries(0).build()).post("check_player", Map.of())), Kind.SERVER_ERROR);
+    }
+
+    @Test
     void unauthorizedAndClientErrorsAreNotRetried() throws Exception {
         handler = (exchange, hit) -> respond(exchange, hit == 1 ? 401 : hit == 2 ? 403 : 422,
                 "{\"error\":\"invalid_api_key\",\"message\":\"Clave <script> invalida\"}");

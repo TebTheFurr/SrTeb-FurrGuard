@@ -11,6 +11,7 @@ const JSON_BODY_MAX_BYTES = 1048576;
 const JSON_FLAGS = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE;
 const PAGINATION_DEFAULT_PER_PAGE = 25;
 const PAGINATION_MAX_PER_PAGE = 100;
+const DATABASE_RETRY_AFTER_SECONDS = 5;
 
 /**
  * Error con código HTTP y slug. Los endpoints lo convierten en respuesta con respondHttpError().
@@ -314,6 +315,26 @@ function panelErrorBody(string $message, string $code, array $extra = []): array
 function pluginErrorBody(string $slug, string $message, array $extra = []): array
 {
     return ['error' => $slug, 'message' => $message] + $extra;
+}
+
+/**
+ * 503 `database_unavailable` de las APIs de plugins (docs/API.md §1.1): siempre con `Retry-After` y
+ * `retry_after`, tanto si la BD no conecta al empezar como si cae a mitad de la petición.
+ *
+ * @return array{body: array<string, mixed>, headers: array<string, string>}
+ */
+function pluginDatabaseUnavailableResponse(): array
+{
+    return [
+        'body' => pluginErrorBody('database_unavailable', 'Base de datos no disponible.', ['retry_after' => DATABASE_RETRY_AFTER_SECONDS]),
+        'headers' => ['Retry-After' => (string) DATABASE_RETRY_AFTER_SECONDS],
+    ];
+}
+
+function respondPluginDatabaseUnavailable(): never
+{
+    $response = pluginDatabaseUnavailableResponse();
+    sendJson(503, $response['body'], $response['headers']);
 }
 
 /**

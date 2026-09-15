@@ -12,45 +12,10 @@
 
 .pixel { image-rendering: pixelated; }
 
-/* iconos: pixelarticons solo a 24 px o múltiplos (a tamaños intermedios se emborronan);
-   lucide para glifos funcionales pequeños */
+/* iconos: pixelarticons solo a 24 px o múltiplos (a tamaños intermedios se emborronan) */
 .icono { display: block; flex: none; width: 24px; height: 24px; shape-rendering: crispEdges; }
-.icono.x2 { width: 48px; height: 48px; }
-.glifo { display: block; flex: none; width: 16px; height: 16px; }
 
-/* ── botones ─────────────────────────────────────────────────────────── */
-.btn {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 36px;
-  padding: 0 15px;
-  border: 1px solid var(--rule-2);
-  border-radius: var(--radius-sm);
-  background: var(--surface-2);
-  color: var(--ink-2);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  white-space: nowrap;
-  transition: color var(--t-fast) var(--ease), background var(--t-fast) var(--ease),
-    border-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
-}
-.btn .glifo { width: 16px; height: 16px; }
-.btn:hover { color: var(--ink); border-color: var(--rule-3); background: var(--surface-3); }
-.btn:active { transform: translateY(1px); }
-.btn.primary {
-  color: var(--bg);
-  background: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 70%, #fff);
-  font-weight: 600;
-}
-.btn.primary:hover { color: var(--bg); background: color-mix(in srgb, var(--accent) 86%, #fff); }
-.btn.ghost { background: transparent; border-color: transparent; }
-.btn.ghost:hover { background: var(--surface-3); }
-.btn.lg { height: 44px; padding: 0 20px; font-size: var(--text-md); border-radius: 10px; }
-
+/* ── botón de Discord (verificación) ─────────────────────────────────── */
 .btn-discord {
   position: relative;
   display: inline-flex;
@@ -100,11 +65,7 @@
   white-space: nowrap;
 }
 .chip.accent { color: var(--accent); border-color: var(--accent-line); background: var(--accent-bg); }
-.chip.fox { color: var(--fox); border-color: var(--fox-line); background: var(--fox-bg); }
-.chip.gold { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 38%, transparent); background: var(--gold-bg); }
-.chip.ok { color: var(--ok); border-color: var(--ok-line); background: var(--ok-bg); }
 .chip.warn { color: var(--warn); border-color: var(--warn-line); background: var(--warn-bg); }
-.chip.down { color: var(--down); border-color: var(--down-line); background: var(--down-bg); }
 .chip.tenue { color: var(--ink-3); border-color: var(--rule); }
 
 .baliza {

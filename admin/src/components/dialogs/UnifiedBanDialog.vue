@@ -117,7 +117,7 @@ async function submit(): Promise<void> {
               <span class="chip tenue"><IconUnlock aria-hidden="true" />No premium</span>
               <span>Se baneará el nick.</span>
             </template>
-            <template v-else>Mojang no responde: el servidor lo resolverá al banear.</template>
+            <template v-else>Mojang no responde: no se puede saber si es premium. Inténtalo en unos minutos o usa el baneo avanzado.</template>
           </p>
           <p v-if="lookupError" class="error" role="alert">{{ lookupError }}</p>
         </div>

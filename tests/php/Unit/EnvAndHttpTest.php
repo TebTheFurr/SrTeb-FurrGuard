@@ -116,6 +116,14 @@ final class EnvAndHttpTest extends TestCase
         self::assertSame(['error' => 'invalid_api_key', 'message' => 'Mal', 'retry_after' => 5], pluginErrorBody('invalid_api_key', 'Mal', ['retry_after' => 5]));
     }
 
+    public function testPluginDatabaseUnavailableAlwaysCarriesRetryAfter(): void
+    {
+        $response = pluginDatabaseUnavailableResponse();
+        self::assertSame('database_unavailable', $response['body']['error']);
+        self::assertSame(DATABASE_RETRY_AFTER_SECONDS, $response['body']['retry_after']);
+        self::assertSame(['Retry-After' => (string) DATABASE_RETRY_AFTER_SECONDS], $response['headers']);
+    }
+
     private function assertValidationError(callable $fn, string $field): void
     {
         try {

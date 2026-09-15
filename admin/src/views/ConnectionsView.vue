@@ -78,7 +78,8 @@ const detectionsOf = (row: ConnectionRow) => DETECTIONS.filter((d) => isOn(row[d
           <tr v-for="row in list.items" :key="row.id" :class="{ bloqueada: isOn(row.blocked) }">
             <td class="nowrap" :title="formatDateTime(row.created_at)">{{ timeAgo(row.created_at) }}</td>
             <td>
-              <RouterLink v-if="session.can('players')" class="enlace-fila" :to="{ name: 'player', params: { uuid: row.uuid } }">{{ row.nick }}</RouterLink>
+              <!-- Conexiones antiguas sin UUID: no hay ficha a la que enlazar (el nick no identifica) -->
+              <RouterLink v-if="row.uuid && session.can('players')" class="enlace-fila" :to="{ name: 'player', params: { uuid: row.uuid } }">{{ row.nick }}</RouterLink>
               <span v-else>{{ row.nick }}</span>
             </td>
             <td v-if="session.canSeeIps"><IpText :ip="row.ip" /></td>
@@ -107,7 +108,7 @@ const detectionsOf = (row: ConnectionRow) => DETECTIONS.filter((d) => isOn(row[d
         </div>
         <dl v-else-if="connection" class="detalles">
           <div class="detalle"><dt class="label">Jugador</dt><dd class="valor">{{ connection.nick }}</dd></div>
-          <div class="detalle"><dt class="label">UUID</dt><dd class="valor mono">{{ connection.uuid }}</dd></div>
+          <div class="detalle"><dt class="label">UUID</dt><dd class="valor mono">{{ connection.uuid ?? '—' }}</dd></div>
           <div v-if="session.canSeeIps" class="detalle"><dt class="label">IP</dt><dd class="valor"><IpText :ip="connection.ip" /></dd></div>
           <div class="detalle"><dt class="label">País</dt><dd class="valor"><CountryTag :code="connection.country_code" :name="connection.country" show-name /></dd></div>
           <div class="detalle"><dt class="label">Región / ciudad</dt><dd class="valor">{{ [connection.region, connection.city].filter(Boolean).join(' · ') || '—' }}</dd></div>
@@ -124,7 +125,7 @@ const detectionsOf = (row: ConnectionRow) => DETECTIONS.filter((d) => isOn(row[d
         </dl>
       </div>
       <footer class="modal-pie">
-        <RouterLink v-if="connection && session.can('players')" class="btn" :to="{ name: 'player', params: { uuid: connection.uuid } }">Ver jugador</RouterLink>
+        <RouterLink v-if="connection?.uuid && session.can('players')" class="btn" :to="{ name: 'player', params: { uuid: connection.uuid } }">Ver jugador</RouterLink>
         <button type="button" class="btn primary" @click="close">Cerrar</button>
       </footer>
     </AppDialog>

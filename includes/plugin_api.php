@@ -27,7 +27,7 @@ function pluginApiRun(array $routes): never
             header('Allow: POST');
             throw new HttpError(405, 'method_not_allowed', 'Esta API solo acepta POST.');
         }
-        $db = db() ?? throw new HttpError(503, 'database_unavailable', 'Base de datos no disponible.');
+        $db = db() ?? respondPluginDatabaseUnavailable();
         authenticatePluginRequest($db);
         $action = $_GET['action'] ?? null;
         $handler = is_string($action) ? ($routes[$action] ?? null) : null;
@@ -40,7 +40,7 @@ function pluginApiRun(array $routes): never
     } catch (PDOException $e) {
         error_log('FurrGuard API de plugins: ' . $e->getMessage());
         if (isDatabaseUnavailableError($e)) {
-            sendJson(503, pluginErrorBody('database_unavailable', 'Base de datos no disponible.', ['retry_after' => 5]), ['Retry-After' => '5']);
+            respondPluginDatabaseUnavailable();
         }
         respondPluginError(500, 'internal_error', 'Error interno del servidor.');
     } catch (Throwable $e) {
