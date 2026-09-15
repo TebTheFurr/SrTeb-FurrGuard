@@ -86,6 +86,9 @@ public class FurrSecurity {
             // Initialize API client
             this.apiClient = new ApiClient(this);
 
+            // Load messages from API (overrides defaults)
+            this.messageUtil.loadApiMessages();
+
             // Initialize managers
             this.playerLockManager = new PlayerLockManager(this);
             this.verificationManager = new VerificationManager(this);

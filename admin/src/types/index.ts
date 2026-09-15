@@ -22,6 +22,7 @@ export interface AdminUser {
 export interface AdminUserRow {
   id: number
   discord_id: string
+  discord_username?: string | null
   role: AdminRole
   created_by: string | null
   created_at: string

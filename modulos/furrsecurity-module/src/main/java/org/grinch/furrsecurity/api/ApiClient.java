@@ -375,4 +375,44 @@ public class ApiClient {
         public boolean blacklisted;
         public String error;
     }
+
+    /**
+     * Fetch messages from the web API for the FurrSecurity module
+     */
+    public Map<String, String> getMessages() {
+        Map<String, String> messages = new HashMap<>();
+        try {
+            String urlStr = apiUrl + "?action=get_messages";
+            URL url = new URL(urlStr);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("X-API-Key", apiKey);
+            conn.setConnectTimeout(timeout);
+            conn.setReadTimeout(timeout);
+
+            int code = conn.getResponseCode();
+            if (code != 200) return messages;
+
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) sb.append(line);
+
+                if (sb.length() == 0) return messages;
+                JsonObject json = JsonParser.parseString(sb.toString()).getAsJsonObject();
+                if (json.has("messages") && json.get("messages").isJsonObject()) {
+                    JsonObject msgs = json.getAsJsonObject("messages");
+                    for (Map.Entry<String, com.google.gson.JsonElement> entry : msgs.entrySet()) {
+                        if (entry.getKey().startsWith("furr_security_")) {
+                            messages.put(entry.getKey(), entry.getValue().getAsString());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to load messages from API: " + e.getMessage());
+        }
+        return messages;
+    }
 }

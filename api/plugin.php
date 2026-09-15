@@ -31,12 +31,9 @@ if ($db === null) {
 $clientIp = getClientIp();
 enforceRateLimit($clientIp, 120, 60, 'plugin_api');
 
-// Solo requerir API key para acciones que no sean de FurrPerms
+// Require API key for all actions
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
-$furrPermsActions = ['check_furr_perms_whitelist', 'log_furr_perms_command', 'get_messages'];
-if (!in_array($action, $furrPermsActions, true)) {
-    requireApiKey();
-}
+requireApiKey();
 
 // Validate action is a known action
 $validActions = ['check_player', 'lookup_player', 'player_join', 'player_quit', 'get_messages', 'add_whitelist', 'remove_whitelist', 'add_blacklist', 'remove_blacklist', 'get_settings', 'poll_changes', 'check_furr_perms_whitelist', 'log_furr_perms_command'];
@@ -354,6 +351,7 @@ function handleCheckPlayer(PDO $db): void {
     $blockVpn = getSetting($db, 'block_vpn', '1') === '1';
     $blockProxy = getSetting($db, 'block_proxy', '1') === '1';
     $blockHosting = getSetting($db, 'block_hosting', '1') === '1';
+    $blockMobile = getSetting($db, 'block_mobile', '0') === '1';
 
     $blocked = false;
     $blockReason = null;
@@ -368,6 +366,9 @@ function handleCheckPlayer(PDO $db): void {
         } elseif ($blockHosting && ($ipData['hosting'] ?? false)) {
             $blocked = true;
             $blockReason = 'hosting_detected';
+        } elseif ($blockMobile && ($ipData['mobile'] ?? false)) {
+            $blocked = true;
+            $blockReason = 'mobile_detected';
         }
 
         if (!$blocked && isInBlockedProviders($db, $ipData['isp'] ?? null, $ipData['org'] ?? null, $ipData['asname'] ?? null, 'hosting')) {

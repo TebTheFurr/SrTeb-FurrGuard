@@ -51,17 +51,22 @@ if (isset($_SESSION['furrguard_admin']['expires_at'])) {
     }
 }
 
-$currentRole = $_SESSION['furrguard_admin']['role'] ?? null;
-if (!$currentRole) {
-    $discordId = $_SESSION['furrguard_admin']['discord_id'] ?? '';
-    $currentRole = getUserRole($discordId);
-    if ($currentRole) {
-        $_SESSION['furrguard_admin']['role'] = $currentRole;
-    } else {
-        echo json_encode(['success' => false, 'error' => 'Rol no definido']);
-        exit;
-    }
+// Refresh session expiry on activity (extends session while user is active)
+if (isset($_SESSION['furrguard_admin']['expires_at'])) {
+    $newExpiry = date('Y-m-d H:i:s', strtotime('+8 hours'));
+    $_SESSION['furrguard_admin']['expires_at'] = $newExpiry;
 }
+
+// Re-validate role from DB on every request (prevents stale cached role)
+$discordId = $_SESSION['furrguard_admin']['discord_id'] ?? '';
+$currentRole = getUserRole($discordId);
+if (!$currentRole) {
+    session_destroy();
+    http_response_code(401);
+    echo json_encode(['success' => false, 'error' => 'Usuario no autorizado']);
+    exit;
+}
+$_SESSION['furrguard_admin']['role'] = $currentRole;
 
 function checkPermission(string $section): void {
     global $currentRole;
@@ -1257,6 +1262,8 @@ function getProviders($db, $input) {
         ORDER BY block_count DESC, name ASC
         LIMIT ? OFFSET ?
     ");
+    $params[] = $perPage;
+    $params[] = $offset;
     $stmt->execute($params);
 
     return [
@@ -1624,7 +1631,7 @@ function getSettings($db) {
 }
 
 function saveSettings($db, $settings) {
-    $allowedKeys = ['block_proxy', 'block_vpn', 'block_hosting', 'webhook_url', 'notify_connections', 'notify_hispanic', 'notify_blocks', 'server_name', 'discord_url', 'country_change_detection_enabled', 'country_change_min_connections', 'country_change_min_percentage', 'country_change_continent_only'];
+    $allowedKeys = ['block_proxy', 'block_vpn', 'block_hosting', 'block_mobile', 'webhook_url', 'notify_connections', 'notify_hispanic', 'notify_blocks', 'server_name', 'discord_url', 'country_change_detection_enabled', 'country_change_min_connections', 'country_change_min_percentage', 'country_change_continent_only'];
 
     // Filter allowed keys
     $filtered = array_intersect_key($settings, array_flip($allowedKeys));
@@ -1816,7 +1823,7 @@ function exportData($db) {
 }
 
 function getAdminUsers($db) {
-    $stmt = $db->query("SELECT id, discord_id, role, created_by, created_at FROM admin_users ORDER BY FIELD(role, 'founder','owner','manager','sradmin','admin'), created_at ASC");
+    $stmt = $db->query("SELECT au.id, au.discord_id, au.role, au.created_by, au.created_at, (SELECT s.discord_username FROM admin_sessions s WHERE s.discord_id = au.discord_id ORDER BY s.created_at DESC LIMIT 1) AS discord_username FROM admin_users au ORDER BY FIELD(au.role, 'founder','owner','manager','sradmin','admin'), au.created_at ASC");
     return [
         'success' => true,
         'data' => ['users' => $stmt->fetchAll(PDO::FETCH_ASSOC)]
@@ -1873,6 +1880,20 @@ function removeAdminUser($db, $id) {
     }
 
     $db->prepare("DELETE FROM admin_users WHERE id = ?")->execute([$id]);
+
+    // Invalidate all sessions for the removed user
+    $db->prepare("DELETE FROM admin_sessions WHERE discord_id = ?")->execute([$user['discord_id']]);
+
+    // Destroy the removed user's PHP session file if on same server
+    $sessionSavePath = session_save_path() ?: sys_get_temp_dir();
+    if (!empty($sessionSavePath)) {
+        foreach (glob($sessionSavePath . '/sess_*') as $sessionFile) {
+            $content = @file_get_contents($sessionFile);
+            if ($content !== false && strpos($content, $user['discord_id']) !== false) {
+                @unlink($sessionFile);
+            }
+        }
+    }
 
     logActivity($db, 'settings', 'Usuario admin eliminado', "Discord ID: {$user['discord_id']}");
 

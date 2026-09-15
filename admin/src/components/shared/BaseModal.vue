@@ -67,21 +67,21 @@ onUnmounted(() => {
         class="fixed inset-0 z-50 flex items-center justify-center p-4"
         @click="onOverlayClick"
       >
-        <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+        <!-- Backdrop with layered blur -->
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-md"></div>
 
-        <!-- Modal panel -->
+        <!-- Modal panel with animated border -->
         <div
           :class="sizeClasses[size]"
-          class="relative w-full glass-modal p-6 animate-[modal-in_0.2s_ease-out]"
+          class="relative w-full glass-modal p-6 gradient-border animate-[modal-in_0.25s_var(--ease-out-expo)]"
         >
           <!-- Header -->
-          <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center justify-between mb-5">
             <h2 class="text-lg font-display font-semibold text-text-primary">
               {{ title }}
             </h2>
             <button
-              class="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-dark-600 transition-colors"
+              class="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-dark-600 transition-all duration-200 active:scale-95"
               @click="close"
             >
               <X :size="18" />
@@ -104,7 +104,7 @@ onUnmounted(() => {
 <style scoped>
 .modal-enter-active,
 .modal-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity 0.25s var(--ease-out-expo);
 }
 
 .modal-enter-from,

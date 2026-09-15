@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import * as icons from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -21,21 +21,52 @@ const colorClasses: Record<string, string> = {
   amber: 'text-amber-400 bg-warning-dim',
   pink: 'text-pink-400 bg-pink-500/15',
 }
+
+const iconBgGradients: Record<string, string> = {
+  purple: 'bg-purple-500/10',
+  green: 'bg-success-dim',
+  red: 'bg-error-dim',
+  blue: 'bg-info-dim',
+  amber: 'bg-warning-dim',
+  pink: 'bg-pink-500/10',
+}
+
+// Counter animation for numeric values
+const displayValue = ref<string>(String(props.value))
+const numberRef = ref<HTMLElement | null>(null)
+
+onMounted(() => {
+  if (typeof props.value === 'number' && numberRef.value) {
+    const target = props.value
+    const duration = 1200
+    const start = performance.now()
+
+    function animate(now: number) {
+      const elapsed = now - start
+      const progress = Math.min(elapsed / duration, 1)
+      const eased = 1 - Math.pow(1 - progress, 3)
+      displayValue.value = Math.round(target * eased).toLocaleString()
+      if (progress < 1) requestAnimationFrame(animate)
+    }
+    requestAnimationFrame(animate)
+  }
+})
 </script>
 
 <template>
-  <div class="glass-card p-5 flex items-start gap-4 hover:shadow-card-hover transition-shadow duration-300">
+  <div class="flex flex-col items-center justify-center text-center gap-2">
     <div
-      class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+      class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
       :class="colorClasses[color ?? 'purple']"
     >
-      <component :is="iconComponent" :size="22" />
+      <component :is="iconComponent" :size="16" />
     </div>
-    <div class="min-w-0">
-      <div class="text-sm text-text-muted mb-1">{{ title }}</div>
-      <div class="text-2xl font-display font-bold text-text-primary leading-tight">
-        {{ value }}
-      </div>
+    <div
+      ref="numberRef"
+      class="text-xl font-display font-bold text-text-primary leading-none tabular-nums"
+    >
+      {{ displayValue }}
     </div>
+    <div class="text-[11px] text-text-muted leading-tight">{{ title }}</div>
   </div>
 </template>

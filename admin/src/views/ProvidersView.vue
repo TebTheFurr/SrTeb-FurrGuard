@@ -99,14 +99,14 @@ function typeLabel(type: string): string {
 
 <template>
   <div class="space-y-6">
-    <!-- Page header -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <!-- Section header -->
+    <div class="section-header">
       <div>
         <h1 class="text-2xl font-display font-bold gradient-text">Proveedores VPN</h1>
         <p class="text-sm text-text-muted mt-1">Proveedores de VPN, proxy y hosting bloqueados</p>
       </div>
       <button
-        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium transition-colors"
+        class="glass-button inline-flex items-center gap-2 px-4 py-2.5 text-sm"
         @click="openAddModal"
       >
         <Plus :size="16" />
@@ -114,21 +114,47 @@ function typeLabel(type: string): string {
       </button>
     </div>
 
-    <!-- Stats cards -->
-    <div v-if="store.stats" class="grid grid-cols-3 gap-3">
-      <StatCard title="Hosting" :value="store.stats.hosting" icon="Server" color="pink" />
-      <StatCard title="VPN" :value="store.stats.vpn" icon="ShieldAlert" color="red" />
-      <StatCard title="Proxy" :value="store.stats.proxy" icon="ShieldOff" color="amber" />
+    <!-- Compact stats bar -->
+    <div v-if="store.stats" class="glass-card p-3 flex items-center gap-6 overflow-x-auto">
+      <div class="flex items-center gap-2.5 shrink-0">
+        <div class="w-8 h-8 rounded-lg bg-pink-500/15 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" :width="16" :height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-pink-400"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>
+        </div>
+        <div>
+          <div class="text-xs text-text-muted">Hosting</div>
+          <div class="text-lg font-display font-bold text-text-primary leading-tight">{{ store.stats.hosting }}</div>
+        </div>
+      </div>
+      <div class="w-px h-8 bg-glass-border-subtle shrink-0"></div>
+      <div class="flex items-center gap-2.5 shrink-0">
+        <div class="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" :width="16" :height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-400"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>
+        </div>
+        <div>
+          <div class="text-xs text-text-muted">VPN</div>
+          <div class="text-lg font-display font-bold text-text-primary leading-tight">{{ store.stats.vpn }}</div>
+        </div>
+      </div>
+      <div class="w-px h-8 bg-glass-border-subtle shrink-0"></div>
+      <div class="flex items-center gap-2.5 shrink-0">
+        <div class="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" :width="16" :height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-400"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9.1 13 2.9-2.9 2.9 2.9"/></svg>
+        </div>
+        <div>
+          <div class="text-xs text-text-muted">Proxy</div>
+          <div class="text-lg font-display font-bold text-text-primary leading-tight">{{ store.stats.proxy }}</div>
+        </div>
+      </div>
     </div>
 
     <!-- Filters and search -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+    <div class="glass-card p-3 flex flex-col sm:flex-row items-start sm:items-center gap-3">
       <FilterTabs
         :filters="PROVIDER_TYPE_FILTERS"
         :model-value="currentFilter"
         @update:model-value="onFilterChange"
       />
-      <div class="w-full sm:w-72">
+      <div class="w-full sm:w-72 sm:ml-auto">
         <SearchInput
           :model-value="currentSearch"
           placeholder="Buscar proveedor..."

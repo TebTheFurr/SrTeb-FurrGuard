@@ -7,15 +7,22 @@ import { useUIStore } from '@/stores/ui'
 const ui = useUIStore()
 
 function onBeforeEnter(el: Element) {
-  gsap.set(el, { opacity: 0, y: 10 })
+  gsap.set(el, {
+    opacity: 0,
+    y: 16,
+    scale: 0.98,
+    filter: 'blur(4px)',
+  })
 }
 
 function onEnter(el: Element, done: () => void) {
   gsap.to(el, {
     opacity: 1,
     y: 0,
-    duration: 0.3,
-    ease: 'power2.out',
+    scale: 1,
+    filter: 'blur(0px)',
+    duration: 0.4,
+    ease: 'power3.out',
     onComplete: done,
   })
 }
@@ -23,8 +30,10 @@ function onEnter(el: Element, done: () => void) {
 function onLeave(el: Element, done: () => void) {
   gsap.to(el, {
     opacity: 0,
-    y: -10,
-    duration: 0.2,
+    y: -8,
+    scale: 0.99,
+    filter: 'blur(2px)',
+    duration: 0.25,
     ease: 'power2.in',
     onComplete: done,
   })

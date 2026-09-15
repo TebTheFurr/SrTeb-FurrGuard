@@ -22,14 +22,14 @@ export const useConnectionsStore = defineStore('connections', {
       if (search !== undefined) this.currentSearch = search
 
       try {
-        const res = await apiRequest<ApiResponse<{ connections: Connection[] }>>('get_connections', {
+        const res = await apiRequest<ApiResponse<{ connections: Connection[]; pagination: PaginationData }>>('get_connections', {
           page,
           filter: this.currentFilter,
           search: this.currentSearch,
         })
         if (res.success && res.data) {
           this.connections = res.data.connections
-          this.pagination = res.pagination ?? null
+          this.pagination = res.data.pagination ?? null
         } else {
           this.error = res.error ?? 'Error desconocido'
         }

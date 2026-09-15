@@ -1,0 +1,8 @@
+* text=auto
+# scripts run on the Linux server must keep LF even when checked out on Windows
+gradlew text eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf
+*.jar binary
+*.png binary
+*.woff2 binary

@@ -52,21 +52,21 @@ function formatDate(dateStr: string | null): string {
   >
     <LoadingSkeleton v-if="store.detailLoading" :rows="6" />
 
-    <div v-else-if="store.currentConnection" class="space-y-4">
+    <div v-else-if="store.currentConnection" class="space-y-5">
       <!-- Player & IP row -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="text-xs text-text-muted uppercase tracking-wider">Jugador</label>
-          <div class="mt-1">
+        <div class="p-3.5 rounded-xl bg-dark-800/30 border border-glass-border-subtle">
+          <label class="text-xs text-text-muted uppercase tracking-wider font-medium">Jugador</label>
+          <div class="mt-2">
             <PlayerCell
               :uuid="store.currentConnection.uuid"
               :nick="store.currentConnection.nick"
             />
           </div>
         </div>
-        <div>
-          <label class="text-xs text-text-muted uppercase tracking-wider">IP</label>
-          <div class="mt-1">
+        <div class="p-3.5 rounded-xl bg-dark-800/30 border border-glass-border-subtle">
+          <label class="text-xs text-text-muted uppercase tracking-wider font-medium">IP</label>
+          <div class="mt-2">
             <IPCell
               :ip="store.currentConnection.ip"
               :country-code="store.currentConnection.country_code"
@@ -78,24 +78,24 @@ function formatDate(dateStr: string | null): string {
 
       <!-- Location row -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="text-xs text-text-muted uppercase tracking-wider flex items-center gap-1">
+        <div class="p-3.5 rounded-xl bg-dark-800/30 border border-glass-border-subtle">
+          <label class="text-xs text-text-muted uppercase tracking-wider font-medium flex items-center gap-1.5">
             <MapPin :size="12" />
             Ubicacion
           </label>
-          <div class="mt-1 flex items-center gap-2">
+          <div class="mt-2 flex items-center gap-2">
             <CountryFlag :code="store.currentConnection.country_code ?? ''" />
             <span class="text-sm text-text-primary">
               {{ [store.currentConnection.city, store.currentConnection.region, store.currentConnection.country].filter(Boolean).join(', ') || '-' }}
             </span>
           </div>
         </div>
-        <div>
-          <label class="text-xs text-text-muted uppercase tracking-wider flex items-center gap-1">
+        <div class="p-3.5 rounded-xl bg-dark-800/30 border border-glass-border-subtle">
+          <label class="text-xs text-text-muted uppercase tracking-wider font-medium flex items-center gap-1.5">
             <Building2 :size="12" />
             ISP / Organizacion
           </label>
-          <div class="mt-1 text-sm text-text-primary">
+          <div class="mt-2 text-sm text-text-primary">
             {{ store.currentConnection.isp ?? '-' }}
           </div>
           <div v-if="store.currentConnection.org" class="text-xs text-text-muted mt-0.5">
@@ -106,24 +106,24 @@ function formatDate(dateStr: string | null): string {
 
       <!-- ASN row -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="text-xs text-text-muted uppercase tracking-wider flex items-center gap-1">
+        <div class="p-3.5 rounded-xl bg-dark-800/30 border border-glass-border-subtle">
+          <label class="text-xs text-text-muted uppercase tracking-wider font-medium flex items-center gap-1.5">
             <Hash :size="12" />
             ASN
           </label>
-          <div class="mt-1 text-sm text-text-primary font-mono">
+          <div class="mt-2 text-sm text-text-primary font-mono">
             {{ store.currentConnection.asn ?? '-' }}
             <span v-if="store.currentConnection.asname" class="text-text-muted font-sans">
               ({{ store.currentConnection.asname }})
             </span>
           </div>
         </div>
-        <div>
-          <label class="text-xs text-text-muted uppercase tracking-wider flex items-center gap-1">
+        <div class="p-3.5 rounded-xl bg-dark-800/30 border border-glass-border-subtle">
+          <label class="text-xs text-text-muted uppercase tracking-wider font-medium flex items-center gap-1.5">
             <Clock :size="12" />
             Fecha / Hora
           </label>
-          <div class="mt-1 text-sm text-text-primary font-mono">
+          <div class="mt-2 text-sm text-text-primary font-mono">
             {{ formatDate(store.currentConnection.created_at) }}
           </div>
         </div>
@@ -131,7 +131,7 @@ function formatDate(dateStr: string | null): string {
 
       <!-- Status & flags -->
       <div class="border-t border-glass-border-subtle pt-4">
-        <label class="text-xs text-text-muted uppercase tracking-wider">Estado</label>
+        <label class="text-xs text-text-muted uppercase tracking-wider font-medium">Estado</label>
         <div class="mt-2 flex flex-wrap items-center gap-2">
           <StatusBadge
             :status="store.currentConnection.blocked ? 'Bloqueado' : 'Permitido'"
@@ -139,25 +139,25 @@ function formatDate(dateStr: string | null): string {
           />
           <span
             v-if="store.currentConnection.is_proxy"
-            class="inline-flex px-2 py-0.5 rounded text-xs font-semibold bg-amber-500/15 text-amber-400"
+            class="inline-flex px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/15"
           >
             PROXY
           </span>
           <span
             v-if="store.currentConnection.is_vpn"
-            class="inline-flex px-2 py-0.5 rounded text-xs font-semibold bg-red-500/15 text-red-400"
+            class="inline-flex px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/15"
           >
             VPN
           </span>
           <span
             v-if="store.currentConnection.is_hosting"
-            class="inline-flex px-2 py-0.5 rounded text-xs font-semibold bg-pink-500/15 text-pink-400"
+            class="inline-flex px-2.5 py-1 rounded-lg text-xs font-semibold bg-pink-500/10 text-pink-400 border border-pink-500/15"
           >
             HOSTING
           </span>
           <span
             v-if="store.currentConnection.is_mobile"
-            class="inline-flex px-2 py-0.5 rounded text-xs font-semibold bg-blue-500/15 text-blue-400"
+            class="inline-flex px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/15"
           >
             MOBILE
           </span>
@@ -166,11 +166,11 @@ function formatDate(dateStr: string | null): string {
 
       <!-- Block reason -->
       <div v-if="store.currentConnection.blocked && store.currentConnection.block_reason" class="border-t border-glass-border-subtle pt-4">
-        <label class="text-xs text-text-muted uppercase tracking-wider flex items-center gap-1">
+        <label class="text-xs text-text-muted uppercase tracking-wider font-medium flex items-center gap-1.5">
           <AlertTriangle :size="12" />
           Razon del bloqueo
         </label>
-        <div class="mt-1 text-sm text-red-400 bg-error-dim rounded-lg p-3">
+        <div class="mt-2 text-sm text-red-400 bg-error-dim border border-red-500/15 rounded-xl p-3.5">
           {{ store.currentConnection.block_reason }}
         </div>
       </div>
@@ -178,19 +178,19 @@ function formatDate(dateStr: string | null): string {
       <!-- Extra info -->
       <div class="border-t border-glass-border-subtle pt-4">
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-          <div v-if="store.currentConnection.game_version">
+          <div v-if="store.currentConnection.game_version" class="p-2.5 rounded-lg bg-dark-800/30">
             <span class="text-text-muted">Version:</span>
-            <span class="text-text-secondary ml-1">{{ store.currentConnection.game_version }}</span>
+            <span class="text-text-secondary ml-1 font-medium">{{ store.currentConnection.game_version }}</span>
           </div>
-          <div v-if="store.currentConnection.ip_version">
+          <div v-if="store.currentConnection.ip_version" class="p-2.5 rounded-lg bg-dark-800/30">
             <span class="text-text-muted">IP Ver:</span>
-            <span class="text-text-secondary ml-1 uppercase">{{ store.currentConnection.ip_version }}</span>
+            <span class="text-text-secondary ml-1 uppercase font-medium">{{ store.currentConnection.ip_version }}</span>
           </div>
-          <div v-if="store.currentConnection.timezone">
+          <div v-if="store.currentConnection.timezone" class="p-2.5 rounded-lg bg-dark-800/30">
             <span class="text-text-muted">Zona:</span>
-            <span class="text-text-secondary ml-1">{{ store.currentConnection.timezone }}</span>
+            <span class="text-text-secondary ml-1 font-medium">{{ store.currentConnection.timezone }}</span>
           </div>
-          <div v-if="store.currentConnection.latitude && store.currentConnection.longitude">
+          <div v-if="store.currentConnection.latitude && store.currentConnection.longitude" class="p-2.5 rounded-lg bg-dark-800/30">
             <span class="text-text-muted">Coords:</span>
             <span class="text-text-secondary ml-1 font-mono">
               {{ store.currentConnection.latitude }}, {{ store.currentConnection.longitude }}
@@ -202,6 +202,9 @@ function formatDate(dateStr: string | null): string {
 
     <!-- Error state -->
     <div v-else-if="store.error" class="text-center py-8">
+      <div class="w-12 h-12 mx-auto mb-3 rounded-2xl bg-error-dim border border-red-500/15 flex items-center justify-center">
+        <AlertTriangle :size="24" class="text-red-400" />
+      </div>
       <p class="text-red-400 text-sm">{{ store.error }}</p>
     </div>
   </BaseModal>

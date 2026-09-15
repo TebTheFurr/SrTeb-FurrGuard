@@ -156,6 +156,7 @@ public class ApiClient {
             connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            connection.setRequestProperty("X-API-Key", plugin.getConfig().getApiKey());
             connection.setRequestProperty("User-Agent", "FurrPerms-Module/1.0");
             connection.setConnectTimeout(API_TIMEOUT);
             connection.setReadTimeout(API_TIMEOUT);

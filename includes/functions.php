@@ -38,7 +38,6 @@ function checkIpApi(string $ip, ?PDO $db = null, int $cacheTtl = 86400): ?array 
                 return json_decode($cached['data'], true);
             }
         } catch (PDOException $e) {
-            // Cache table might not exist, continue to API call
             error_log("IP Cache error: " . $e->getMessage());
         }
     }
@@ -60,7 +59,6 @@ function checkIpApi(string $ip, ?PDO $db = null, int $cacheTtl = 86400): ?array 
     curl_close($ch);
 
     if ($httpCode !== 200 || !$response) {
-        // Cache failures for 5 minutes to avoid repeated failed requests
         if ($db) {
             try {
                 $db->prepare("
@@ -69,16 +67,13 @@ function checkIpApi(string $ip, ?PDO $db = null, int $cacheTtl = 86400): ?array 
                     ON DUPLICATE KEY UPDATE status = 'fail', expires_at = DATE_ADD(NOW(), INTERVAL 5 MINUTE)
                 ")->execute([$ip, 'null']);
             } catch (PDOException $e) {
-                // Ignore cache errors
             }
         }
 
-        // Check if we should fail open or closed
         if ($db) {
             $failOpen = getSetting($db, 'ip_api_fail_open', '0') === '1';
 
             if (!$failOpen) {
-                // Fail closed - log and return null (caller should deny connection)
                 error_log("IP API unavailable for $ip - failing closed (deny connection)");
             } else {
                 error_log("IP API unavailable for $ip - failing open (allow connection)");
@@ -91,7 +86,6 @@ function checkIpApi(string $ip, ?PDO $db = null, int $cacheTtl = 86400): ?array 
     $data = json_decode($response, true);
 
     if ($data['status'] === 'success') {
-        // Cache successful response
         if ($db) {
             try {
                 $db->prepare("

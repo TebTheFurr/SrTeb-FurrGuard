@@ -8,6 +8,7 @@ import SearchInput from '@/components/shared/SearchInput.vue'
 import DataTable from '@/components/shared/DataTable.vue'
 import PaginationBar from '@/components/shared/PaginationBar.vue'
 import StatusBadge from '@/components/shared/StatusBadge.vue'
+import { Gavel } from 'lucide-vue-next'
 
 const store = useBlacklistStore()
 
@@ -73,14 +74,14 @@ function getSanctionStatus(entry: Record<string, unknown>): { label: string; var
 
 function typeBadgeClass(type: string): string {
   const map: Record<string, string> = {
-    uuid: 'bg-purple-500/15 text-purple-400',
-    nick: 'bg-blue-500/15 text-blue-400',
-    ip: 'bg-amber-500/15 text-amber-400',
-    asn: 'bg-pink-500/15 text-pink-400',
-    cidr: 'bg-cyan-500/15 text-cyan-400',
-    ip_range: 'bg-cyan-500/15 text-cyan-400',
+    uuid: 'bg-purple-500/15 text-purple-400 border-purple-500/20',
+    nick: 'bg-blue-500/15 text-blue-400 border-blue-500/20',
+    ip: 'bg-amber-500/15 text-amber-400 border-amber-500/20',
+    asn: 'bg-pink-500/15 text-pink-400 border-pink-500/20',
+    cidr: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/20',
+    ip_range: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/20',
   }
-  return map[type] ?? 'bg-gray-500/15 text-gray-400'
+  return map[type] ?? 'bg-gray-500/15 text-gray-400 border-gray-500/20'
 }
 
 function typeLabel(type: string): string {
@@ -97,89 +98,114 @@ function typeLabel(type: string): string {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="page-container">
     <!-- Page header -->
-    <div>
-      <h1 class="text-2xl font-display font-bold gradient-text">Sanciones</h1>
-      <p class="text-sm text-text-muted mt-1">Historial completo de sanciones</p>
+    <div class="section-header">
+      <div class="flex items-center gap-3">
+        <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20">
+          <Gavel :size="20" class="text-amber-400" />
+        </div>
+        <div>
+          <h1 class="text-2xl font-display font-bold gradient-text">Sanciones</h1>
+          <p class="text-sm text-text-muted mt-0.5">Historial completo de sanciones</p>
+        </div>
+      </div>
     </div>
 
     <!-- Stats cards -->
-    <div v-if="store.stats" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-      <StatCard title="Total" :value="store.stats.total" icon="Gavel" />
-      <StatCard title="Activas" :value="store.stats.active" icon="CheckCircle" color="green" />
-      <StatCard title="Permanentes" :value="store.stats.permanent" icon="Infinity" color="amber" />
-      <StatCard title="Temporales" :value="store.stats.temporary" icon="Clock" color="blue" />
-      <StatCard title="Expiradas" :value="store.stats.expired" icon="TimerOff" color="muted" />
-      <StatCard title="Inactivas" :value="store.stats.inactive" icon="XCircle" color="red" />
+    <div v-if="store.stats" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 stagger-children">
+      <div class="glass-card-hover p-4">
+        <StatCard title="Total" :value="store.stats.total" icon="Gavel" />
+      </div>
+      <div class="glass-card-hover p-4">
+        <StatCard title="Activas" :value="store.stats.active" icon="CheckCircle" color="green" />
+      </div>
+      <div class="glass-card-hover p-4">
+        <StatCard title="Permanentes" :value="store.stats.permanent" icon="Infinity" color="amber" />
+      </div>
+      <div class="glass-card-hover p-4">
+        <StatCard title="Temporales" :value="store.stats.temporary" icon="Clock" color="blue" />
+      </div>
+      <div class="glass-card-hover p-4">
+        <StatCard title="Expiradas" :value="store.stats.expired" icon="TimerOff" color="muted" />
+      </div>
+      <div class="glass-card-hover p-4">
+        <StatCard title="Inactivas" :value="store.stats.inactive" icon="XCircle" color="red" />
+      </div>
     </div>
 
     <!-- Filters and search -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-      <FilterTabs
-        :filters="SANCTION_FILTERS"
-        :model-value="currentFilter"
-        @update:model-value="onFilterChange"
-      />
-      <div class="w-full sm:w-72">
-        <SearchInput
-          :model-value="currentSearch"
-          placeholder="Buscar ban ID, valor, razon..."
-          @update:model-value="onSearchChange"
+    <div class="glass-card p-4">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <FilterTabs
+          :filters="SANCTION_FILTERS"
+          :model-value="currentFilter"
+          @update:model-value="onFilterChange"
         />
+        <div class="w-full sm:w-72 sm:ml-auto">
+          <SearchInput
+            :model-value="currentSearch"
+            placeholder="Buscar ban ID, valor, razon..."
+            @update:model-value="onSearchChange"
+          />
+        </div>
       </div>
     </div>
 
     <!-- Sanctions table -->
-    <DataTable
-      :columns="columns"
-      :rows="store.sanctions as unknown as Record<string, unknown>[]"
-      :loading="store.sanctionsLoading"
-      empty-message="No se encontraron sanciones"
-      @row-click="() => {}"
-    >
-      <template #cell-ban_id="{ row }">
-        <span class="text-xs text-text-muted font-mono">{{ (row as any).ban_id }}</span>
-      </template>
-
-      <template #cell-type="{ row }">
-        <span
-          class="inline-flex px-2 py-0.5 rounded text-xs font-semibold uppercase"
-          :class="typeBadgeClass((row as any).type)"
-        >
-          {{ typeLabel((row as any).type) }}
-        </span>
-      </template>
-
-      <template #cell-value="{ row }">
-        <div>
-          <span class="text-sm text-text-primary font-mono">{{ (row as any).value }}</span>
-          <span v-if="(row as any).minecraft_name" class="text-xs text-text-muted ml-2">
-            ({{ (row as any).minecraft_name }})
+    <div class="glass-card overflow-hidden">
+      <DataTable
+        :columns="columns"
+        :rows="store.sanctions as unknown as Record<string, unknown>[]"
+        :loading="store.sanctionsLoading"
+        empty-message="No se encontraron sanciones"
+        @row-click="() => {}"
+      >
+        <template #cell-ban_id="{ row }">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs text-text-muted font-mono bg-dark-700/50 border border-glass-border-subtle">
+            {{ (row as any).ban_id }}
           </span>
-        </div>
-      </template>
+        </template>
 
-      <template #cell-reason="{ row }">
-        <span class="text-sm text-text-secondary line-clamp-2">{{ (row as any).reason || '-' }}</span>
-      </template>
+        <template #cell-type="{ row }">
+          <span
+            class="inline-flex px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider border"
+            :class="typeBadgeClass((row as any).type)"
+          >
+            {{ typeLabel((row as any).type) }}
+          </span>
+        </template>
 
-      <template #cell-status="{ row }">
-        <StatusBadge
-          :status="getSanctionStatus(row).label"
-          :variant="getSanctionStatus(row).variant"
-        />
-      </template>
+        <template #cell-value="{ row }">
+          <div>
+            <span class="text-sm text-text-primary font-mono font-medium">{{ (row as any).value }}</span>
+            <span v-if="(row as any).minecraft_name" class="text-xs text-text-muted ml-2">
+              ({{ (row as any).minecraft_name }})
+            </span>
+          </div>
+        </template>
 
-      <template #cell-expires_at="{ row }">
-        <span v-if="!(row as any).expires_at" class="text-xs text-red-400 font-medium">Permanente</span>
-        <span v-else class="text-xs text-text-muted font-mono">{{ formatDate((row as any).expires_at) }}</span>
-      </template>
+        <template #cell-reason="{ row }">
+          <span class="text-sm text-text-secondary line-clamp-2">{{ (row as any).reason || '-' }}</span>
+        </template>
 
-      <template #cell-created_at="{ row }">
-        <span class="text-xs text-text-muted font-mono">{{ formatDate((row as any).created_at) }}</span>
-      </template>
-    </DataTable>
+        <template #cell-status="{ row }">
+          <StatusBadge
+            :status="getSanctionStatus(row).label"
+            :variant="getSanctionStatus(row).variant"
+          />
+        </template>
+
+        <template #cell-expires_at="{ row }">
+          <span v-if="!(row as any).expires_at" class="text-xs text-red-400 font-semibold">Permanente</span>
+          <span v-else class="text-xs text-text-muted font-mono">{{ formatDate((row as any).expires_at) }}</span>
+        </template>
+
+        <template #cell-created_at="{ row }">
+          <span class="text-xs text-text-muted font-mono">{{ formatDate((row as any).created_at) }}</span>
+        </template>
+      </DataTable>
+    </div>
 
     <!-- Pagination -->
     <PaginationBar

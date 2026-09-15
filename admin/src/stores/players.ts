@@ -24,14 +24,14 @@ export const usePlayersStore = defineStore('players', {
       if (search !== undefined) this.currentSearch = search
 
       try {
-        const res = await apiRequest<ApiResponse<{ players: Player[] }>>('get_players', {
+        const res = await apiRequest('get_players', {
           page,
           filter: this.currentFilter,
           search: this.currentSearch,
         })
         if (res.success && res.data) {
           this.players = res.data.players
-          this.pagination = res.pagination ?? null
+          this.pagination = res.data.pagination ?? null
         } else {
           this.error = res.error ?? 'Error desconocido'
         }
@@ -79,11 +79,13 @@ export const usePlayersStore = defineStore('players', {
 
     async getNameHistory(playerName: string) {
       try {
-        const res = await apiRequest<ApiResponse<NameHistoryEntry[]>>('get_name_history', {
+        const res = await apiRequest<ApiResponse<any>>('get_name_history', {
           player_name: playerName,
         })
         if (res.success && res.data) {
-          this.nameHistory = res.data
+          // API returns { history: NameHistoryEntry[], uuid, query, ... } not a plain array
+          const history = Array.isArray(res.data) ? res.data : res.data.history
+          this.nameHistory = Array.isArray(history) ? history : []
         } else {
           this.nameHistory = []
         }

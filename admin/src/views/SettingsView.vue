@@ -5,7 +5,7 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useToast } from '@/composables/useToast'
 import ToggleSwitch from '@/components/shared/ToggleSwitch.vue'
 import LoadingSkeleton from '@/components/shared/LoadingSkeleton.vue'
-import { Save, Key, Download, Database, RefreshCw, Eye, EyeOff } from 'lucide-vue-next'
+import { Save, Key, Download, Database, RefreshCw, Eye, EyeOff, Copy, Check } from 'lucide-vue-next'
 
 const store = useSettingsStore()
 const { isFounder } = usePermissions()
@@ -15,11 +15,13 @@ const showApiKey = ref(false)
 const confirmRegenerate = ref(false)
 const confirmMigrateBlacklist = ref(false)
 const confirmMigratePlayers = ref(false)
+const copiedKey = ref(false)
 
 const form = reactive({
   block_proxy: false,
   block_vpn: false,
   block_hosting: false,
+  block_mobile: false,
   notify_connections: false,
   notify_hispanic: false,
   notify_blocks: false,
@@ -36,6 +38,7 @@ function loadFormFromSettings() {
   form.block_proxy = store.settings.block_proxy === '1'
   form.block_vpn = store.settings.block_vpn === '1'
   form.block_hosting = store.settings.block_hosting === '1'
+  form.block_mobile = store.settings.block_mobile === '1'
   form.notify_connections = store.settings.notify_connections === '1'
   form.notify_hispanic = store.settings.notify_hispanic === '1'
   form.notify_blocks = store.settings.notify_blocks === '1'
@@ -53,6 +56,7 @@ function buildSettingsPayload(): Record<string, string> {
     block_proxy: form.block_proxy ? '1' : '0',
     block_vpn: form.block_vpn ? '1' : '0',
     block_hosting: form.block_hosting ? '1' : '0',
+    block_mobile: form.block_mobile ? '1' : '0',
     notify_connections: form.notify_connections ? '1' : '0',
     notify_hispanic: form.notify_hispanic ? '1' : '0',
     notify_blocks: form.notify_blocks ? '1' : '0',
@@ -92,6 +96,18 @@ async function handleRegenerateApiKey() {
 function maskApiKey(key: string): string {
   if (!key || key.length < 10) return key
   return key.slice(0, 7) + '...' + key.slice(-5)
+}
+
+async function copyApiKey() {
+  const key = store.settings.api_key ?? ''
+  if (!key) return
+  try {
+    await navigator.clipboard.writeText(key)
+    copiedKey.value = true
+    setTimeout(() => { copiedKey.value = false }, 2000)
+  } catch {
+    toast.error('Error', 'No se pudo copiar al portapapeles')
+  }
 }
 
 async function handleExportData() {
@@ -151,15 +167,15 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="page-container">
     <!-- Page header -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div class="section-header">
       <div>
         <h1 class="text-2xl font-display font-bold gradient-text">Configuracion</h1>
         <p class="text-sm text-text-muted mt-1">Ajustes generales del sistema FurrGuard</p>
       </div>
       <button
-        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium transition-colors disabled:opacity-50"
+        class="glass-button inline-flex items-center gap-2 px-5 py-2.5 text-sm disabled:opacity-40 hover:shadow-[0_8px_30px_rgba(139,92,246,0.5)]"
         :disabled="store.loading"
         @click="handleSave"
       >
@@ -172,162 +188,254 @@ onMounted(async () => {
     <LoadingSkeleton v-if="store.loading && Object.keys(store.settings).length === 0" :rows="5" />
 
     <template v-else>
-      <!-- Blocking settings -->
-      <div class="glass-card p-5 space-y-4">
-        <h2 class="text-lg font-display font-semibold text-text-primary">Bloqueo de conexiones</h2>
-        <p class="text-xs text-text-muted">Configura que tipos de conexiones sospechosas se bloquean automaticamente</p>
-
-        <div class="space-y-3">
-          <ToggleSwitch
-            v-model="form.block_proxy"
-            label="Bloquear conexiones Proxy"
-          />
-          <ToggleSwitch
-            v-model="form.block_vpn"
-            label="Bloquear conexiones VPN"
-          />
-          <ToggleSwitch
-            v-model="form.block_hosting"
-            label="Bloquear conexiones desde Hosting/Datacenter"
-          />
-        </div>
-      </div>
-
-      <!-- Country change detection -->
-      <div class="glass-card p-5 space-y-4">
-        <h2 class="text-lg font-display font-semibold text-text-primary">Deteccion de cambio de pais</h2>
-        <p class="text-xs text-text-muted">Detecta cuentas comprometidas por cambios sospechosos de ubicacion</p>
-
-        <div class="space-y-3">
-          <ToggleSwitch
-            v-model="form.country_change_detection_enabled"
-            label="Activar deteccion de cambio de pais"
-          />
-          <ToggleSwitch
-            v-model="form.country_change_continent_only"
-            label="Solo detectar cambios entre continentes"
-          />
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
-          <div>
-            <label class="block text-xs text-text-muted uppercase tracking-wider mb-1">Conexiones minimas</label>
-            <input
-              v-model="form.country_change_min_connections"
-              type="number"
-              min="1"
-              max="100"
-              class="w-full px-3 py-2 rounded-lg bg-dark-800 border border-glass-border-subtle text-text-primary text-sm focus:outline-none focus:border-purple-500"
-            />
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-children">
+        <!-- Blocking settings -->
+        <div class="glass-card p-5 space-y-4">
+          <div class="flex items-center gap-3 mb-1">
+            <div class="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center">
+              <span class="text-red-400 text-sm">&#x1F6E1;</span>
+            </div>
+            <div>
+              <h2 class="text-base font-display font-semibold text-text-primary">Bloqueo de conexiones</h2>
+              <p class="text-xs text-text-muted">Tipos de conexiones sospechosas a bloquear</p>
+            </div>
           </div>
-          <div>
-            <label class="block text-xs text-text-muted uppercase tracking-wider mb-1">Porcentaje minimo (%)</label>
-            <input
-              v-model="form.country_change_min_percentage"
-              type="number"
-              min="0"
-              max="100"
-              step="0.1"
-              class="w-full px-3 py-2 rounded-lg bg-dark-800 border border-glass-border-subtle text-text-primary text-sm focus:outline-none focus:border-purple-500"
-            />
+
+          <div class="space-y-2">
+            <div class="px-3 py-2.5 rounded-xl bg-dark-800/40 border border-glass-border-subtle hover:border-glass-border transition-colors">
+              <ToggleSwitch
+                v-model="form.block_proxy"
+                label="Bloquear conexiones Proxy"
+              />
+            </div>
+            <div class="px-3 py-2.5 rounded-xl bg-dark-800/40 border border-glass-border-subtle hover:border-glass-border transition-colors">
+              <ToggleSwitch
+                v-model="form.block_vpn"
+                label="Bloquear conexiones VPN"
+              />
+            </div>
+            <div class="px-3 py-2.5 rounded-xl bg-dark-800/40 border border-glass-border-subtle hover:border-glass-border transition-colors">
+              <ToggleSwitch
+                v-model="form.block_hosting"
+                label="Bloquear conexiones desde Hosting/Datacenter"
+              />
+            </div>
+            <div class="px-3 py-2.5 rounded-xl bg-dark-800/40 border border-glass-border-subtle hover:border-glass-border transition-colors">
+              <ToggleSwitch
+                v-model="form.block_mobile"
+                label="Bloquear conexiones desde redes moviles"
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Notifications -->
-      <div class="glass-card p-5 space-y-4">
-        <h2 class="text-lg font-display font-semibold text-text-primary">Notificaciones</h2>
-        <p class="text-xs text-text-muted">Configura las notificaciones via Discord Webhook</p>
+        <!-- Notifications -->
+        <div class="glass-card p-5 space-y-4">
+          <div class="flex items-center gap-3 mb-1">
+            <div class="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center">
+              <span class="text-purple-400 text-sm">&#x1F514;</span>
+            </div>
+            <div>
+              <h2 class="text-base font-display font-semibold text-text-primary">Notificaciones</h2>
+              <p class="text-xs text-text-muted">Configura las notificaciones via Discord Webhook</p>
+            </div>
+          </div>
 
-        <div class="space-y-3">
-          <ToggleSwitch
-            v-model="form.notify_blocks"
-            label="Notificar bloqueos"
-          />
-          <ToggleSwitch
-            v-model="form.notify_connections"
-            label="Notificar conexiones"
-          />
-          <ToggleSwitch
-            v-model="form.notify_hispanic"
-            label="Notificar conexiones hispanas"
-          />
-        </div>
+          <div class="space-y-2">
+            <div class="px-3 py-2.5 rounded-xl bg-dark-800/40 border border-glass-border-subtle hover:border-glass-border transition-colors">
+              <ToggleSwitch
+                v-model="form.notify_blocks"
+                label="Notificar bloqueos"
+              />
+            </div>
+            <div class="px-3 py-2.5 rounded-xl bg-dark-800/40 border border-glass-border-subtle hover:border-glass-border transition-colors">
+              <ToggleSwitch
+                v-model="form.notify_connections"
+                label="Notificar conexiones"
+              />
+            </div>
+            <div class="px-3 py-2.5 rounded-xl bg-dark-800/40 border border-glass-border-subtle hover:border-glass-border transition-colors">
+              <ToggleSwitch
+                v-model="form.notify_hispanic"
+                label="Notificar conexiones hispanas"
+              />
+            </div>
+          </div>
 
-        <div>
-          <label class="block text-xs text-text-muted uppercase tracking-wider mb-1">Webhook URL</label>
-          <input
-            v-model="form.webhook_url"
-            type="text"
-            class="w-full px-3 py-2 rounded-lg bg-dark-800 border border-glass-border-subtle text-text-primary text-sm font-mono focus:outline-none focus:border-purple-500"
-            placeholder="https://discord.com/api/webhooks/..."
-          />
-        </div>
-      </div>
-
-      <!-- General settings -->
-      <div class="glass-card p-5 space-y-4">
-        <h2 class="text-lg font-display font-semibold text-text-primary">General</h2>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs text-text-muted uppercase tracking-wider mb-1">Nombre del servidor</label>
+          <div class="pt-2">
+            <label class="block text-xs text-text-muted uppercase tracking-wider mb-1.5 font-semibold">Webhook URL</label>
             <input
-              v-model="form.server_name"
+              v-model="form.webhook_url"
               type="text"
-              class="w-full px-3 py-2 rounded-lg bg-dark-800 border border-glass-border-subtle text-text-primary text-sm focus:outline-none focus:border-purple-500"
-              placeholder="MI SERVIDOR"
+              class="w-full px-3 py-2.5 rounded-xl bg-dark-800/60 border border-glass-border-subtle text-text-primary text-sm font-mono focus:outline-none focus:border-purple-500/50 focus:shadow-[0_0_12px_rgba(139,92,246,0.1)] transition-all duration-200 placeholder:text-text-tertiary"
+              placeholder="https://discord.com/api/webhooks/..."
             />
           </div>
-          <div>
-            <label class="block text-xs text-text-muted uppercase tracking-wider mb-1">Discord URL</label>
-            <input
-              v-model="form.discord_url"
-              type="text"
-              class="w-full px-3 py-2 rounded-lg bg-dark-800 border border-glass-border-subtle text-text-primary text-sm font-mono focus:outline-none focus:border-purple-500"
-              placeholder="discord.gg/tuservidor"
-            />
+        </div>
+
+        <!-- Country change detection -->
+        <div class="glass-card p-5 space-y-4">
+          <div class="flex items-center gap-3 mb-1">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
+              <span class="text-amber-400 text-sm">&#x1F30D;</span>
+            </div>
+            <div>
+              <h2 class="text-base font-display font-semibold text-text-primary">Deteccion de cambio de pais</h2>
+              <p class="text-xs text-text-muted">Detecta cuentas comprometidas por cambios de ubicacion</p>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <div class="px-3 py-2.5 rounded-xl bg-dark-800/40 border border-glass-border-subtle hover:border-glass-border transition-colors">
+              <ToggleSwitch
+                v-model="form.country_change_detection_enabled"
+                label="Activar deteccion de cambio de pais"
+              />
+            </div>
+            <div class="px-3 py-2.5 rounded-xl bg-dark-800/40 border border-glass-border-subtle hover:border-glass-border transition-colors">
+              <ToggleSwitch
+                v-model="form.country_change_continent_only"
+                label="Solo detectar cambios entre continentes"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 mt-2">
+            <div>
+              <label class="block text-xs text-text-muted uppercase tracking-wider mb-1.5 font-semibold">Conexiones minimas</label>
+              <input
+                v-model="form.country_change_min_connections"
+                type="number"
+                min="1"
+                max="100"
+                class="w-full px-3 py-2.5 rounded-xl bg-dark-800/60 border border-glass-border-subtle text-text-primary text-sm focus:outline-none focus:border-purple-500/50 focus:shadow-[0_0_12px_rgba(139,92,246,0.1)] transition-all duration-200"
+              />
+            </div>
+            <div>
+              <label class="block text-xs text-text-muted uppercase tracking-wider mb-1.5 font-semibold">Porcentaje minimo (%)</label>
+              <input
+                v-model="form.country_change_min_percentage"
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                class="w-full px-3 py-2.5 rounded-xl bg-dark-800/60 border border-glass-border-subtle text-text-primary text-sm focus:outline-none focus:border-purple-500/50 focus:shadow-[0_0_12px_rgba(139,92,246,0.1)] transition-all duration-200"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- General settings -->
+        <div class="glass-card p-5 space-y-4">
+          <div class="flex items-center gap-3 mb-1">
+            <div class="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
+              <span class="text-blue-400 text-sm">&#x2699;</span>
+            </div>
+            <div>
+              <h2 class="text-base font-display font-semibold text-text-primary">General</h2>
+              <p class="text-xs text-text-muted">Informacion basica del servidor</p>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs text-text-muted uppercase tracking-wider mb-1.5 font-semibold">Nombre del servidor</label>
+              <input
+                v-model="form.server_name"
+                type="text"
+                class="w-full px-3 py-2.5 rounded-xl bg-dark-800/60 border border-glass-border-subtle text-text-primary text-sm focus:outline-none focus:border-purple-500/50 focus:shadow-[0_0_12px_rgba(139,92,246,0.1)] transition-all duration-200 placeholder:text-text-tertiary"
+                placeholder="MI SERVIDOR"
+              />
+            </div>
+            <div>
+              <label class="block text-xs text-text-muted uppercase tracking-wider mb-1.5 font-semibold">Discord URL</label>
+              <input
+                v-model="form.discord_url"
+                type="text"
+                class="w-full px-3 py-2.5 rounded-xl bg-dark-800/60 border border-glass-border-subtle text-text-primary text-sm font-mono focus:outline-none focus:border-purple-500/50 focus:shadow-[0_0_12px_rgba(139,92,246,0.1)] transition-all duration-200 placeholder:text-text-tertiary"
+                placeholder="discord.gg/tuservidor"
+              />
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- API Key -->
-      <div class="glass-card p-5 space-y-4">
-        <h2 class="text-lg font-display font-semibold text-text-primary">API Key</h2>
-        <p class="text-xs text-text-muted">Clave de API utilizada por el plugin de Minecraft</p>
-
-        <div class="flex items-center gap-3">
-          <div class="flex-1 px-3 py-2 rounded-lg bg-dark-800 border border-glass-border-subtle text-sm font-mono text-text-secondary">
-            {{ showApiKey ? (store.settings.api_key ?? '') : maskApiKey(store.settings.api_key ?? '') }}
+      <!-- API Key section -->
+      <div class="glass-card overflow-hidden">
+        <div class="p-5">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
+              <Key :size="14" class="text-white" />
+            </div>
+            <div>
+              <h2 class="text-base font-display font-semibold text-text-primary">API Key</h2>
+              <p class="text-xs text-text-muted">Clave utilizada por el plugin de Minecraft para autenticarse</p>
+            </div>
           </div>
-          <button
-            class="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-dark-600 transition-colors"
-            title="Mostrar/ocultar"
-            @click="showApiKey = !showApiKey"
-          >
-            <Eye v-if="!showApiKey" :size="18" />
-            <EyeOff v-else :size="18" />
-          </button>
-          <button
-            class="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-            :class="confirmRegenerate
-              ? 'bg-red-500 hover:bg-red-600 text-white'
-              : 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'"
-            @click="handleRegenerateApiKey"
-          >
-            <RefreshCw :size="14" />
-            {{ confirmRegenerate ? 'Confirmar regeneracion' : 'Regenerar' }}
-          </button>
+
+          <!-- API Key display with security styling -->
+          <div class="rounded-xl bg-dark-950/60 border border-glass-border-subtle p-4">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="flex-1 flex items-center gap-2 px-4 py-3 rounded-xl bg-dark-800/80 border border-glass-border-subtle">
+                <Key :size="14" class="text-purple-400 shrink-0" />
+                <span class="text-sm font-mono text-text-primary flex-1 truncate">
+                  {{ showApiKey ? (store.settings.api_key ?? '') : maskApiKey(store.settings.api_key ?? '') }}
+                </span>
+                <div class="flex items-center gap-1 shrink-0">
+                  <button
+                    class="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-dark-600 transition-colors"
+                    title="Copiar"
+                    @click="copyApiKey"
+                  >
+                    <Check v-if="copiedKey" :size="14" class="text-green-400" />
+                    <Copy v-else :size="14" />
+                  </button>
+                  <button
+                    class="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-dark-600 transition-colors"
+                    title="Mostrar/ocultar"
+                    @click="showApiKey = !showApiKey"
+                  >
+                    <Eye v-if="!showApiKey" :size="14" />
+                    <EyeOff v-else :size="14" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <button
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200"
+                :class="confirmRegenerate
+                  ? 'glass-button-danger'
+                  : 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 border border-amber-500/20'"
+                @click="handleRegenerateApiKey"
+              >
+                <RefreshCw :size="14" />
+                {{ confirmRegenerate ? 'Confirmar regeneracion' : 'Regenerar clave' }}
+              </button>
+              <span v-if="confirmRegenerate" class="text-xs text-red-400/70">
+                Se invalidara la clave actual. Vuelve a hacer click para confirmar.
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- Tools -->
-      <div class="glass-card p-5 space-y-4">
-        <h2 class="text-lg font-display font-semibold text-text-primary">Herramientas</h2>
+      <div class="glass-card p-5">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
+            <Download :size="14" class="text-blue-400" />
+          </div>
+          <div>
+            <h2 class="text-base font-display font-semibold text-text-primary">Herramientas</h2>
+            <p class="text-xs text-text-muted">Exporta y migra datos del sistema</p>
+          </div>
+        </div>
 
         <div class="flex flex-wrap gap-3">
           <button
-            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 text-sm font-medium transition-colors"
+            class="glass-button-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm hover:text-text-primary hover:border-blue-500/30 hover:bg-blue-500/10"
             @click="handleExportData"
           >
             <Download :size="16" />
@@ -337,16 +445,23 @@ onMounted(async () => {
       </div>
 
       <!-- Migration tools (founder only) -->
-      <div v-if="isFounder()" class="glass-card p-5 space-y-4">
-        <h2 class="text-lg font-display font-semibold text-text-primary">Herramientas de migracion</h2>
-        <p class="text-xs text-text-muted">Solo disponible para el Founder. Estas operaciones pueden tardar varios minutos.</p>
+      <div v-if="isFounder()" class="glass-card p-5 gradient-border">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
+            <Database :size="14" class="text-amber-400" />
+          </div>
+          <div>
+            <h2 class="text-base font-display font-semibold text-text-primary">Herramientas de migracion</h2>
+            <p class="text-xs text-text-muted">Solo disponible para el Founder. Estas operaciones pueden tardar varios minutos.</p>
+          </div>
+        </div>
 
         <div class="flex flex-wrap gap-3">
           <button
-            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
             :class="confirmMigrateBlacklist
-              ? 'bg-red-500 hover:bg-red-600 text-white'
-              : 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'"
+              ? 'glass-button-danger'
+              : 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 border border-amber-500/20'"
             :disabled="store.loading"
             @click="handleMigrateBlacklist"
           >
@@ -355,10 +470,10 @@ onMounted(async () => {
           </button>
 
           <button
-            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
             :class="confirmMigratePlayers
-              ? 'bg-red-500 hover:bg-red-600 text-white'
-              : 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'"
+              ? 'glass-button-danger'
+              : 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 border border-amber-500/20'"
             :disabled="store.loading"
             @click="handleMigratePlayers"
           >
@@ -370,7 +485,7 @@ onMounted(async () => {
     </template>
 
     <!-- Error display -->
-    <p v-if="store.error && !store.loading" class="text-red-400 text-sm text-center">
+    <p v-if="store.error && !store.loading" class="text-red-400 text-sm text-center py-2">
       {{ store.error }}
     </p>
   </div>

@@ -11,11 +11,11 @@ withDefaults(defineProps<{
     <div
       v-for="i in rows"
       :key="i"
-      class="h-10 rounded-lg bg-dark-700"
+      class="h-10 rounded-lg"
       :style="{
-        background: 'linear-gradient(90deg, var(--color-dark-700) 25%, var(--color-dark-600) 50%, var(--color-dark-700) 75%)',
+        background: 'linear-gradient(110deg, var(--color-dark-750) 25%, var(--color-dark-600) 37%, var(--color-dark-750) 50%)',
         backgroundSize: '200% 100%',
-        animation: 'shimmer 2s linear infinite',
+        animation: 'shimmer 1.8s linear infinite',
       }"
     ></div>
   </div>

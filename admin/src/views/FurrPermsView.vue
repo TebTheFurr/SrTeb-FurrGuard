@@ -6,7 +6,6 @@ import SearchInput from '@/components/shared/SearchInput.vue'
 import FilterTabs from '@/components/shared/FilterTabs.vue'
 import DataTable from '@/components/shared/DataTable.vue'
 import PaginationBar from '@/components/shared/PaginationBar.vue'
-import StatCard from '@/components/shared/StatCard.vue'
 import FurrPermsModal from '@/components/modals/FurrPermsModal.vue'
 import { Plus, Trash2, Trash } from 'lucide-vue-next'
 
@@ -113,8 +112,8 @@ const statsBlocked = computed(() => store.logStats?.blocked ?? 0)
 
 <template>
   <div class="space-y-6">
-    <!-- Page header -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <!-- Section header -->
+    <div class="section-header">
       <div>
         <h1 class="text-2xl font-display font-bold gradient-text">FurrPerms</h1>
         <p class="text-sm text-text-muted mt-1">Gestion de permisos de comandos</p>
@@ -122,7 +121,7 @@ const statsBlocked = computed(() => store.logStats?.blocked ?? 0)
       <div class="flex items-center gap-2">
         <button
           v-if="activeTab === 'logs'"
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-400 text-sm font-medium transition-colors"
+          class="glass-button-danger inline-flex items-center gap-2 px-4 py-2.5 text-sm"
           @click="clearLogs"
         >
           <Trash :size="16" />
@@ -130,7 +129,7 @@ const statsBlocked = computed(() => store.logStats?.blocked ?? 0)
         </button>
         <button
           v-if="activeTab === 'whitelist'"
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium transition-colors"
+          class="glass-button inline-flex items-center gap-2 px-4 py-2.5 text-sm"
           @click="openAddModal"
         >
           <Plus :size="16" />
@@ -139,39 +138,69 @@ const statsBlocked = computed(() => store.logStats?.blocked ?? 0)
       </div>
     </div>
 
-    <!-- Stats bar -->
-    <div v-if="activeTab === 'logs' && store.logStats" class="grid grid-cols-3 gap-3">
-      <StatCard title="Total logs" :value="store.logStats.total" icon="FileText" color="purple" />
-      <StatCard title="Permitidos" :value="statsAllowed" icon="CheckCircle" color="green" />
-      <StatCard title="Bloqueados" :value="statsBlocked" icon="XCircle" color="red" />
-    </div>
-
-    <!-- Tab navigation -->
-    <div class="flex items-center gap-1 p-1 bg-dark-800/50 rounded-lg w-fit">
+    <!-- Tab navigation (glassmorphism pill style) -->
+    <div class="glass-card p-1 flex items-center gap-1 w-fit">
       <button
-        class="px-4 py-2 rounded-md text-sm font-medium transition-colors"
-        :class="activeTab === 'whitelist' ? 'bg-purple-500 text-white' : 'text-text-muted hover:text-text-primary'"
+        class="px-5 py-2 rounded-[var(--radius-md)] text-sm font-medium transition-all duration-300"
+        :class="activeTab === 'whitelist'
+          ? 'gradient-primary text-white shadow-[0_0_16px_rgba(139,92,246,0.25)]'
+          : 'text-text-muted hover:text-text-primary hover:bg-hover'"
         @click="switchTab('whitelist')"
       >
         Whitelist ({{ store.whitelistTotal }})
       </button>
       <button
-        class="px-4 py-2 rounded-md text-sm font-medium transition-colors"
-        :class="activeTab === 'logs' ? 'bg-purple-500 text-white' : 'text-text-muted hover:text-text-primary'"
+        class="px-5 py-2 rounded-[var(--radius-md)] text-sm font-medium transition-all duration-300"
+        :class="activeTab === 'logs'
+          ? 'gradient-primary text-white shadow-[0_0_16px_rgba(139,92,246,0.25)]'
+          : 'text-text-muted hover:text-text-primary hover:bg-hover'"
         @click="switchTab('logs')"
       >
         Logs
       </button>
     </div>
 
+    <!-- Logs stats bar (only in logs tab) -->
+    <div v-if="activeTab === 'logs' && store.logStats" class="glass-card p-3 flex items-center gap-6 overflow-x-auto">
+      <div class="flex items-center gap-2.5 shrink-0">
+        <div class="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" :width="16" :height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-purple-400"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+        </div>
+        <div>
+          <div class="text-xs text-text-muted">Total logs</div>
+          <div class="text-lg font-display font-bold text-text-primary leading-tight">{{ store.logStats.total }}</div>
+        </div>
+      </div>
+      <div class="w-px h-8 bg-glass-border-subtle shrink-0"></div>
+      <div class="flex items-center gap-2.5 shrink-0">
+        <div class="w-8 h-8 rounded-lg bg-success-dim flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" :width="16" :height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-400"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+        </div>
+        <div>
+          <div class="text-xs text-text-muted">Permitidos</div>
+          <div class="text-lg font-display font-bold text-text-primary leading-tight">{{ statsAllowed }}</div>
+        </div>
+      </div>
+      <div class="w-px h-8 bg-glass-border-subtle shrink-0"></div>
+      <div class="flex items-center gap-2.5 shrink-0">
+        <div class="w-8 h-8 rounded-lg bg-error-dim flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" :width="16" :height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-400"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+        </div>
+        <div>
+          <div class="text-xs text-text-muted">Bloqueados</div>
+          <div class="text-lg font-display font-bold text-text-primary leading-tight">{{ statsBlocked }}</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Filters and search (logs tab) -->
-    <div v-if="activeTab === 'logs'" class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+    <div v-if="activeTab === 'logs'" class="glass-card p-3 flex flex-col sm:flex-row items-start sm:items-center gap-3">
       <FilterTabs
         :filters="FURRPERMS_LOG_FILTERS"
         :model-value="currentFilter"
         @update:model-value="onFilterChange"
       />
-      <div class="w-full sm:w-72">
+      <div class="w-full sm:w-72 sm:ml-auto">
         <SearchInput
           :model-value="currentSearch"
           placeholder="Buscar en logs..."
@@ -181,7 +210,7 @@ const statsBlocked = computed(() => store.logStats?.blocked ?? 0)
     </div>
 
     <!-- Search (whitelist tab) -->
-    <div v-if="activeTab === 'whitelist'" class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+    <div v-if="activeTab === 'whitelist'" class="glass-card p-3 flex items-center gap-3">
       <div class="w-full sm:w-72">
         <SearchInput
           :model-value="currentSearch"
@@ -218,7 +247,7 @@ const statsBlocked = computed(() => store.logStats?.blocked ?? 0)
 
       <template #cell-actions="{ row }">
         <button
-          class="p-1.5 rounded-lg text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
+          class="p-1.5 rounded-lg hover:bg-hover text-text-muted hover:text-red-400 transition-colors"
           title="Eliminar"
           @click.stop="removeEntry((row as any).id)"
         >

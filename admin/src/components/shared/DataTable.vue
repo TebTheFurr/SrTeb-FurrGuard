@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import { ChevronUp, ChevronDown } from 'lucide-vue-next'
 import LoadingSkeleton from './LoadingSkeleton.vue'
 import EmptyState from './EmptyState.vue'
@@ -9,7 +10,7 @@ export interface Column {
   sortable?: boolean
 }
 
-defineProps<{
+const props = defineProps<{
   columns: Column[]
   rows: Record<string, unknown>[]
   loading?: boolean
@@ -21,9 +22,18 @@ const emit = defineEmits<{
   sort: [key: string, direction: 'asc' | 'desc']
 }>()
 
+const sortKey = ref('')
+const sortDir = ref<'asc' | 'desc'>('asc')
+
 function handleSort(column: Column) {
   if (!column.sortable) return
-  emit('sort', column.key, 'asc')
+  if (sortKey.value === column.key) {
+    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortKey.value = column.key
+    sortDir.value = 'asc'
+  }
+  emit('sort', column.key, sortDir.value)
 }
 </script>
 
@@ -49,14 +59,22 @@ function handleSort(column: Column) {
               v-for="col in columns"
               :key="col.key"
               class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-muted"
-              :class="{ 'cursor-pointer hover:text-text-secondary': col.sortable }"
+              :class="{ 'cursor-pointer hover:text-text-secondary transition-colors': col.sortable }"
               @click="handleSort(col)"
             >
-              <span class="flex items-center gap-1">
+              <span class="flex items-center gap-1.5">
                 {{ col.label }}
                 <span v-if="col.sortable" class="flex flex-col">
-                  <ChevronUp :size="10" class="-mb-1" />
-                  <ChevronDown :size="10" class="-mt-1" />
+                  <ChevronUp
+                    :size="10"
+                    class="-mb-1 transition-colors"
+                    :class="sortKey === col.key && sortDir === 'asc' ? 'text-purple-400' : ''"
+                  />
+                  <ChevronDown
+                    :size="10"
+                    class="-mt-1 transition-colors"
+                    :class="sortKey === col.key && sortDir === 'desc' ? 'text-purple-400' : ''"
+                  />
                 </span>
               </span>
             </th>
@@ -66,7 +84,8 @@ function handleSort(column: Column) {
           <tr
             v-for="(row, idx) in rows"
             :key="idx"
-            class="border-b border-glass-border-subtle last:border-0 hover:bg-hover transition-colors cursor-pointer"
+            class="border-b border-glass-border-subtle/50 last:border-0 hover:bg-hover transition-all duration-150 cursor-pointer group"
+            :style="{ animation: `row-enter 0.3s var(--ease-out-expo) ${idx * 0.03}s both` }"
             @click="emit('rowClick', row)"
           >
             <td

@@ -17,7 +17,7 @@ const avatarUrl = computed(() => {
   <img
     :src="avatarUrl"
     :alt="uuid"
-    class="rounded-md"
+    class="rounded-md ring-1 ring-glass-border-subtle"
     :style="{ width: `${size}px`, height: `${size}px` }"
     loading="lazy"
   />

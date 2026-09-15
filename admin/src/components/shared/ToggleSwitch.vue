@@ -17,12 +17,12 @@ const emit = defineEmits<{
       role="switch"
       :aria-checked="modelValue"
       :disabled="disabled"
-      class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-purple-500"
-      :class="modelValue ? 'bg-purple-500' : 'bg-dark-500'"
+      class="relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus-visible:outline-2 focus-visible:outline-purple-500"
+      :class="modelValue ? 'bg-gradient-to-r from-purple-500 to-magenta-500 shadow-[0_0_12px_rgba(139,92,246,0.3)]' : 'bg-dark-500'"
       @click="!disabled && emit('update:modelValue', !modelValue)"
     >
       <span
-        class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200"
+        class="inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-all duration-300"
         :class="modelValue ? 'translate-x-6' : 'translate-x-1'"
       />
     </button>
