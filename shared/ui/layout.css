@@ -126,7 +126,7 @@
 .barra-sup .zona-migas { flex: 1; min-width: 0; display: flex; align-items: center; }
 .barra-sup .zona-acciones { display: flex; align-items: center; gap: 8px; }
 
-.contenido { flex: 1; width: 100%; max-width: 1480px; padding: 26px var(--gutter) 28px; }
+.contenido { flex: 1; width: 100%; max-width: 1480px; margin: 0 auto; padding: 26px var(--gutter) 28px; }
 .contenido:focus { outline: none; }
 .cabecera-pagina { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
 .cabecera-pagina .textos { min-width: 0; }
