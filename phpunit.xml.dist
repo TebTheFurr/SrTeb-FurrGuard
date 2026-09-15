@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="tests/php/bootstrap.php"
+         colors="true"
+         cacheDirectory="vendor/.phpunit.cache"
+         failOnWarning="true"
+         failOnRisky="true"
+         failOnDeprecation="true"
+         beStrictAboutOutputDuringTests="true">
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/php/Unit</directory>
+        </testsuite>
+        <!-- Necesita MariaDB/MySQL; si no hay conexión los tests se marcan como omitidos. -->
+        <testsuite name="Integration">
+            <directory>tests/php/Integration</directory>
+        </testsuite>
+    </testsuites>
+    <php>
+        <env name="FG_TEST_DB_HOST" value="127.0.0.1"/>
+        <env name="FG_TEST_DB_PORT" value="3307"/>
+        <env name="FG_TEST_DB_NAME" value="furrguard_test"/>
+        <env name="FG_TEST_DB_USER" value="root"/>
+        <env name="FG_TEST_DB_PASS" value="root"/>
+    </php>
+    <source>
+        <include>
+            <directory>includes</directory>
+            <directory>config</directory>
+            <directory>database</directory>
+        </include>
+    </source>
+</phpunit>

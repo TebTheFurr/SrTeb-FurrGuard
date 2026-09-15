@@ -1,285 +1,244 @@
 <?php
+
+declare(strict_types=1);
+
 /**
- * FurrGuard - Security Middleware
- *
- * Rate limiting, CSRF protection, input sanitization, security headers.
+ * FurrGuard - cabeceras de seguridad, sesión web, CSRF, IP del cliente y búsquedas LIKE.
  *
  * @author GrinchHorizon
  */
 
+const SESSION_GC_MAXLIFETIME = 28800;
+const VITE_DEV_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+
 /**
- * Apply security headers to all responses.
+ * Rangos de Cloudflare (https://www.cloudflare.com/ips/). Revisar si Cloudflare los cambia.
  */
-function getCspNonce(): string {
-    static $nonce = null;
-    if ($nonce === null) {
-        $nonce = bin2hex(random_bytes(16));
-    }
-    return $nonce;
+const CLOUDFLARE_RANGES = [
+    '173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22', '141.101.64.0/18',
+    '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20', '197.234.240.0/22', '198.41.128.0/17',
+    '162.158.0.0/15', '104.16.0.0/13', '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22',
+    '2400:cb00::/32', '2606:4700::/32', '2803:f800::/32', '2405:b500::/32', '2405:8100::/32',
+    '2a06:98c0::/29', '2c0f:f248::/32',
+];
+
+// ─── Entorno ────────────────────────────────────────────────────────────────
+
+function isDevelopment(): bool
+{
+    return APP_ENV === 'development';
 }
 
-function applySecurityHeaders(): void {
-    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || ($_SERVER['SERVER_PORT'] ?? 0) == 443
-        || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+function appUsesHttps(): bool
+{
+    return str_starts_with(strtolower(APP_URL), 'https://');
+}
 
+/**
+ * Origen (`esquema://host[:puerto]`) de APP_URL en minúsculas, o '' si no está configurada.
+ */
+function appOrigin(): string
+{
+    return originOf(APP_URL);
+}
+
+function originOf(string $url): string
+{
+    $parts = parse_url($url);
+    if (!is_array($parts) || !isset($parts['scheme'], $parts['host'])) {
+        return '';
+    }
+    $scheme = strtolower($parts['scheme']);
+    $origin = $scheme . '://' . strtolower($parts['host']);
+    $port = $parts['port'] ?? null;
+    if ($port !== null && !(($scheme === 'https' && $port === 443) || ($scheme === 'http' && $port === 80))) {
+        $origin .= ':' . $port;
+    }
+    return $origin;
+}
+
+// ─── Cabeceras ──────────────────────────────────────────────────────────────
+
+function getCspNonce(): string
+{
+    static $nonce = null;
+    return $nonce ??= base64_encode(random_bytes(18));
+}
+
+function buildContentSecurityPolicy(string $nonce, bool $development): string
+{
+    $dev = $development ? ' ' . implode(' ', VITE_DEV_ORIGINS) : '';
+    $devSockets = $development ? ' ws://localhost:5173 ws://127.0.0.1:5173' : '';
+    return implode('; ', [
+        "default-src 'self'",
+        "script-src 'self' 'nonce-{$nonce}'{$dev}",
+        "style-src 'self' 'unsafe-inline'{$dev}",
+        "img-src 'self' data: https://cdn.discordapp.com https://mc-heads.net https://flagcdn.com{$dev}",
+        "font-src 'self'{$dev}",
+        "connect-src 'self'{$dev}{$devSockets}",
+        "frame-ancestors 'none'",
+        "base-uri 'none'",
+        "object-src 'none'",
+        "form-action 'self' https://discord.com",
+    ]);
+}
+
+/**
+ * Cabeceras de las páginas web (panel, landing, verificación).
+ */
+function applySecurityHeaders(): void
+{
+    if (headers_sent()) {
+        return;
+    }
+    header('Content-Security-Policy: ' . buildContentSecurityPolicy(getCspNonce(), isDevelopment()));
     header('X-Content-Type-Options: nosniff');
     header('X-Frame-Options: DENY');
-    header('X-XSS-Protection: 1; mode=block');
     header('Referrer-Policy: strict-origin-when-cross-origin');
-    header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
-
-    if ($isHttps) {
-        header('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload');
+    header('Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()');
+    if (appUsesHttps()) {
+        header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
     }
-
-    $nonce = getCspNonce();
-
-    // Detect development mode (Vite dev server or localhost)
-    $host = $_SERVER['HTTP_HOST'] ?? '';
-    $isDevMode = (strpos($host, 'localhost') !== false)
-        || (strpos($host, '127.0.0.1') !== false)
-        || ($_SERVER['SERVER_PORT'] ?? 0) == 5173;
-
-    if ($isDevMode) {
-        header("Content-Security-Policy: default-src 'self' localhost:* 127.0.0.1:*; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'nonce-{$nonce}' localhost:* 127.0.0.1:* https://unpkg.com https://fonts.googleapis.com; script-src-attr 'unsafe-inline'; style-src 'self' 'unsafe-inline' localhost:* 127.0.0.1:* https://fonts.googleapis.com; font-src 'self' localhost:* 127.0.0.1:* https://fonts.gstatic.com; img-src 'self' https://crafatar.com https://cdn.discordapp.com https://mineskin.eu https://mc-heads.net https://flagcdn.com data: localhost:* 127.0.0.1:*; connect-src 'self' localhost:* 127.0.0.1:* ws://localhost:* ws://127.0.0.1:* https://unpkg.com https://mc-heads.net");
-    } else {
-        header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{$nonce}' https://unpkg.com https://fonts.googleapis.com; script-src-attr 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://crafatar.com https://cdn.discordapp.com https://mineskin.eu https://mc-heads.net https://flagcdn.com data:; connect-src 'self' https://unpkg.com https://mc-heads.net");
-    }
-
-    // Prevent caching of sensitive pages
-    if (strpos($_SERVER['REQUEST_URI'] ?? '', '/admin/') !== false) {
-        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    if (isSensitivePath((string) ($_SERVER['SCRIPT_NAME'] ?? ''), (string) ($_SERVER['REQUEST_URI'] ?? ''))) {
+        header('Cache-Control: no-store');
         header('Pragma: no-cache');
     }
 }
 
 /**
- * Configure session security settings. Call BEFORE session_start().
+ * Panel (`/admin/…`) y verificación (`/verify.php`) nunca se cachean.
  */
-function configureSecureSession(): void {
+function isSensitivePath(string $scriptName, string $requestUri): bool
+{
+    $path = (string) parse_url($requestUri, PHP_URL_PATH);
+    foreach ([$scriptName, $path] as $candidate) {
+        if (str_contains($candidate, '/admin/') || str_ends_with($candidate, '/verify.php')) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// ─── Sesión web ─────────────────────────────────────────────────────────────
+
+/**
+ * Configura la sesión (llamar antes de session_start). La cookie es `Secure` según APP_URL,
+ * nunca según cabeceras del cliente.
+ */
+function configureSecureSession(): void
+{
     if (session_status() === PHP_SESSION_ACTIVE) {
         return;
     }
-
-    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || ($_SERVER['SERVER_PORT'] ?? 0) == 443
-        || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
-
-    ini_set('session.cookie_httponly', '1');
-    ini_set('session.cookie_samesite', 'Lax');
+    $secure = appUsesHttps();
     ini_set('session.use_strict_mode', '1');
     ini_set('session.use_only_cookies', '1');
-    ini_set('session.gc_maxlifetime', '28800'); // 8 hours
-    ini_set('session.cookie_lifetime', '28800'); // 8 hours
+    ini_set('session.use_trans_sid', '0');
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.cookie_samesite', 'Lax');
+    ini_set('session.cookie_secure', $secure ? '1' : '0');
+    ini_set('session.cookie_lifetime', '0');
+    ini_set('session.gc_maxlifetime', (string) SESSION_GC_MAXLIFETIME);
+    // Debian pone gc_probability=0 y limpia solo su carpeta por cron: la nuestra la limpia PHP.
+    ini_set('session.gc_probability', '1');
+    ini_set('session.gc_divisor', '100');
+    session_name($secure ? '__Host-furrguard' : 'furrguard');
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'secure' => $secure,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
 
-    // Use a dedicated session save path so other apps don't garbage-collect our sessions
-    $sessionPath = sys_get_temp_dir() . '/furrguard_sessions';
-    if (!is_dir($sessionPath)) {
-        @mkdir($sessionPath, 0700, true);
-    }
-    session_save_path($sessionPath);
-
-    if ($isHttps) {
-        ini_set('session.cookie_secure', '1');
-    }
-}
-
-/**
- * Rate limiter using filesystem (no Redis dependency).
- * Returns true if the request is allowed, false if rate limited.
- * Fails OPEN (allows request) if filesystem issues occur.
- */
-function checkRateLimit(string $identifier, int $maxAttempts, int $windowSeconds, string $action = 'general'): bool {
-    $rateLimitDir = sys_get_temp_dir() . '/furrguard_ratelimit';
-
-    // Create directory with explicit error handling
-    if (!is_dir($rateLimitDir)) {
-        if (!mkdir($rateLimitDir, 0700, true) && !is_dir($rateLimitDir)) {
-            error_log("WARNING: Cannot create rate limit directory: $rateLimitDir - allowing request (fail open)");
-            // Fail open - allow request when rate limiting is unavailable
-            return true;
-        }
-    }
-
-    $file = $rateLimitDir . '/' . md5($action . '_' . $identifier) . '.json';
-    $now = time();
-    $attempts = [];
-
-    if (file_exists($file)) {
-        $jsonData = @file_get_contents($file);
-        if ($jsonData === false) {
-            error_log("WARNING: Cannot read rate limit file: $file - allowing request (fail open)");
-            return true;
-        }
-
-        $data = json_decode($jsonData, true);
-        if (is_array($data)) {
-            // Keep only attempts within the window
-            $attempts = array_filter($data, fn($t) => $t > ($now - $windowSeconds));
-        }
-    }
-
-    if (count($attempts) >= $maxAttempts) {
-        return false; // Rate limited
-    }
-
-    $attempts[] = $now;
-
-    $writeResult = @file_put_contents($file, json_encode(array_values($attempts)), LOCK_EX);
-    if ($writeResult === false) {
-        error_log("WARNING: Cannot write to rate limit file: $file - allowing request (fail open)");
-        // Still return true since we already decided to allow the request
-    }
-
-    return true;
-}
-
-/**
- * Enforce rate limit — sends 429 and exits if exceeded.
- */
-function enforceRateLimit(string $identifier, int $maxAttempts, int $windowSeconds, string $action = 'general'): void {
-    if (!checkRateLimit($identifier, $maxAttempts, $windowSeconds, $action)) {
-        http_response_code(429);
-        header('Retry-After: ' . $windowSeconds);
-        if (isJsonRequest()) {
-            echo json_encode(['success' => false, 'error' => 'Demasiadas solicitudes. Intenta de nuevo más tarde.']);
-        } else {
-            echo 'Too Many Requests';
-        }
-        exit;
+    $path = storagePath('sessions');
+    if ((is_dir($path) || @mkdir($path, 0700, true)) && is_writable($path)) {
+        session_save_path($path);
+    } else {
+        error_log("FurrGuard: no se puede usar {$path} para sesiones; se usa la ruta por defecto de PHP");
     }
 }
 
-/**
- * Generate a CSRF token and store it in the session.
- */
-function generateCsrfToken(): string {
-    if (empty($_SESSION['csrf_token']) || empty($_SESSION['csrf_token_time']) || (time() - $_SESSION['csrf_token_time']) > 3600) {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        $_SESSION['csrf_token_time'] = time();
+function startWebSession(): void
+{
+    if (session_status() === PHP_SESSION_NONE) {
+        configureSecureSession();
+        session_start();
     }
-    return $_SESSION['csrf_token'];
+}
+
+// ─── CSRF ───────────────────────────────────────────────────────────────────
+
+/**
+ * Token CSRF de la sesión (se crea si no existe). Requiere sesión iniciada.
+ */
+function csrfToken(): string
+{
+    $token = $_SESSION['csrf_token'] ?? null;
+    if (!is_string($token) || strlen($token) !== 64) {
+        $token = rotateCsrfToken();
+    }
+    return $token;
+}
+
+function rotateCsrfToken(): string
+{
+    $token = bin2hex(random_bytes(32));
+    $_SESSION['csrf_token'] = $token;
+    return $token;
+}
+
+function validateCsrfToken(?string $token): bool
+{
+    $expected = $_SESSION['csrf_token'] ?? null;
+    return is_string($expected) && $expected !== '' && is_string($token) && hash_equals($expected, $token);
 }
 
 /**
- * Validate a CSRF token.
+ * ¿Cumple la petición las reglas del API del panel (docs/API.md §4.2)?
+ *
+ * @param array<string, mixed> $server $_SERVER
  */
-function validateCsrfToken(?string $token): bool {
-    if (empty($token) || empty($_SESSION['csrf_token'])) {
+function isValidAdminApiRequest(array $server, ?string $expectedToken, string $appOrigin): bool
+{
+    if (strtoupper((string) ($server['REQUEST_METHOD'] ?? '')) !== 'POST') {
         return false;
     }
-    return hash_equals($_SESSION['csrf_token'], $token);
-}
-
-/**
- * Sanitize a string for safe output (XSS prevention).
- */
-function sanitizeOutput(string $input): string {
-    return htmlspecialchars($input, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-}
-
-/**
- * Validate and sanitize an IP address.
- */
-function validateIp(string $ip): ?string {
-    $ip = trim($ip);
-    if (filter_var($ip, FILTER_VALIDATE_IP)) {
-        return $ip;
-    }
-    return null;
-}
-
-/**
- * Validate a UUID format.
- */
-function validateUuid(string $uuid): ?string {
-    $uuid = trim($uuid);
-    if (preg_match('/^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i', $uuid)) {
-        return $uuid;
-    }
-    return null;
-}
-
-/**
- * Validate a Minecraft username.
- */
-function validateMinecraftNick(string $nick): ?string {
-    $nick = trim($nick);
-    if (preg_match('/^[a-zA-Z0-9_]{1,16}$/', $nick)) {
-        return $nick;
-    }
-    return null;
-}
-
-/**
- * Sanitize search input (prevent SQL wildcards abuse).
- */
-function sanitizeSearchInput(string $input, int $maxLength = 100): string {
-    $input = trim($input);
-    $input = mb_substr($input, 0, $maxLength);
-    return $input;
-}
-
-/**
- * Detect if the current request expects JSON.
- */
-function isJsonRequest(): bool {
-    $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
-    $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
-    return stripos($accept, 'application/json') !== false
-        || stripos($contentType, 'application/json') !== false;
-}
-
-/**
- * Check whether an IP address is contained in a CIDR range (IPv4 or IPv6).
- */
-function ipInCidr(string $ip, string $cidr): bool {
-    if (strpos($cidr, '/') === false) {
-        return $ip === $cidr;
-    }
-    [$subnet, $bits] = explode('/', $cidr, 2);
-    $bits = (int) $bits;
-
-    $ipBin = @inet_pton($ip);
-    $subnetBin = @inet_pton($subnet);
-    // false on invalid IP; different lengths => IPv4 vs IPv6 mismatch
-    if ($ipBin === false || $subnetBin === false || strlen($ipBin) !== strlen($subnetBin)) {
+    $contentType = (string) ($server['CONTENT_TYPE'] ?? $server['HTTP_CONTENT_TYPE'] ?? '');
+    if (strtolower(trim(explode(';', $contentType, 2)[0])) !== 'application/json') {
         return false;
     }
-
-    $wholeBytes = intdiv($bits, 8);
-    $remainderBits = $bits % 8;
-
-    if ($wholeBytes > 0 && strncmp($ipBin, $subnetBin, $wholeBytes) !== 0) {
+    $token = $server['HTTP_X_CSRF_TOKEN'] ?? null;
+    if ($expectedToken === null || $expectedToken === '' || !is_string($token) || !hash_equals($expectedToken, $token)) {
         return false;
     }
-    if ($remainderBits > 0) {
-        $mask = chr((0xff << (8 - $remainderBits)) & 0xff);
-        if ((ord($ipBin[$wholeBytes]) & ord($mask)) !== (ord($subnetBin[$wholeBytes]) & ord($mask))) {
-            return false;
-        }
+    if (isset($server['HTTP_ORIGIN']) && ($appOrigin === '' || originOf((string) $server['HTTP_ORIGIN']) !== $appOrigin)) {
+        return false;
+    }
+    if (isset($server['HTTP_SEC_FETCH_SITE']) && strtolower((string) $server['HTTP_SEC_FETCH_SITE']) !== 'same-origin') {
+        return false;
     }
     return true;
 }
 
 /**
- * Whether the request reached us directly from a Cloudflare edge IP.
- * Ranges from https://www.cloudflare.com/ips/ (stable; refresh if Cloudflare updates them).
+ * Exige POST + JSON + `X-CSRF-Token` + `Origin`/`Sec-Fetch-Site` coherentes. Si no → 403 `csrf`.
+ * Requiere sesión iniciada.
  */
-function isCloudflareRequest(string $remoteAddr): bool {
-    static $ranges = [
-        // IPv4
-        '173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22',
-        '141.101.64.0/18', '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20',
-        '197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13',
-        '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22',
-        // IPv6
-        '2400:cb00::/32', '2606:4700::/32', '2803:f800::/32', '2405:b500::/32',
-        '2405:8100::/32', '2a06:98c0::/29', '2c0f:f248::/32',
-    ];
-    foreach ($ranges as $cidr) {
-        if (ipInCidr($remoteAddr, $cidr)) {
+function enforceAdminApiRequest(): void
+{
+    $expected = $_SESSION['csrf_token'] ?? null;
+    if (!isValidAdminApiRequest($_SERVER, is_string($expected) ? $expected : null, appOrigin())) {
+        respondPanelError(403, 'Token CSRF inválido o petición no permitida. Recarga la página.', 'csrf');
+    }
+}
+
+// ─── IP del cliente ─────────────────────────────────────────────────────────
+
+function isCloudflareIp(string $ip): bool
+{
+    foreach (CLOUDFLARE_RANGES as $range) {
+        if (ipInCidr($ip, $range)) {
             return true;
         }
     }
@@ -287,76 +246,76 @@ function isCloudflareRequest(string $remoteAddr): bool {
 }
 
 /**
- * Get the REAL client IP address, accounting for proxies.
- *
- * Trust order:
- *   1. Cloudflare: trust the CF-Connecting-IP header ONLY when the request
- *      actually comes from a Cloudflare edge IP (otherwise it is spoofable).
- *   2. Generic reverse proxy / load balancer declared in TRUSTED_PROXIES:
- *      first hop of X-Forwarded-For.
- *   3. Otherwise the raw REMOTE_ADDR.
- *
- * Returning a STABLE per-user IP prevents session IP-binding from logging the
- * user out when a CDN/proxy rotates its own edge IPs between requests.
+ * @return list<string> IPs o CIDR de TRUSTED_PROXIES.
  */
-function getClientIp(): string {
-    $remoteAddr = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+function trustedProxies(): array
+{
+    return array_values(array_filter(array_map('trim', explode(',', env('TRUSTED_PROXIES')))));
+}
 
-    // 1. Cloudflare edge -> real client IP is in CF-Connecting-IP
-    if (isCloudflareRequest($remoteAddr)) {
-        $cfIp = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? '';
-        if (filter_var($cfIp, FILTER_VALIDATE_IP)) {
-            return $cfIp;
+/**
+ * @param list<string> $trusted
+ */
+function isTrustedProxy(string $ip, array $trusted): bool
+{
+    foreach ($trusted as $entry) {
+        if (ipInCidr($ip, $entry)) {
+            return true;
         }
     }
+    return false;
+}
 
-    // 2. Other trusted reverse proxy / load balancer
-    $trustedProxies = array_filter(array_map('trim', explode(',', getenv('TRUSTED_PROXIES') ?: '')));
-    if (!empty($trustedProxies) && in_array($remoteAddr, $trustedProxies, true)) {
-        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            $ips = array_map('trim', explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']));
-            $clientIp = $ips[0];
-            if (filter_var($clientIp, FILTER_VALIDATE_IP)) {
-                return $clientIp;
+/**
+ * IP real del cliente, normalizada.
+ *
+ * 1. Si REMOTE_ADDR es un proxy de TRUSTED_PROXIES, se recorre X-Forwarded-For de derecha a
+ *    izquierda saltando proxies de confianza; la primera IP que no lo es es el cliente (M4: la
+ *    entrada de la izquierda la escribe el cliente y no vale).
+ * 2. Si el salto resultante es de Cloudflare, se usa CF-Connecting-IP.
+ * 3. '0.0.0.0' si no hay ninguna IP válida (CLI).
+ *
+ * @param array<string, mixed>|null $server $_SERVER (para tests)
+ * @param list<string>|null $trusted TRUSTED_PROXIES (para tests)
+ */
+function getClientIp(?array $server = null, ?array $trusted = null): string
+{
+    $server ??= $_SERVER;
+    $trusted ??= trustedProxies();
+    $ip = normalizeIp(is_string($server['REMOTE_ADDR'] ?? null) ? $server['REMOTE_ADDR'] : null);
+    if ($ip === null) {
+        return '0.0.0.0';
+    }
+
+    if ($trusted !== [] && isTrustedProxy($ip, $trusted) && is_string($server['HTTP_X_FORWARDED_FOR'] ?? null)) {
+        $hops = array_reverse(array_map('trim', explode(',', $server['HTTP_X_FORWARDED_FOR'])));
+        foreach ($hops as $hop) {
+            $hopIp = normalizeIp($hop);
+            if ($hopIp === null) {
+                break;
+            }
+            $ip = $hopIp;
+            if (!isTrustedProxy($hopIp, $trusted)) {
+                break;
             }
         }
     }
 
-    // 3. Direct connection
-    return $remoteAddr;
-}
-
-/**
- * Validate session integrity (IP binding).
- * Rejects requests from a different IP than the one bound at login.
- * A stolen cookie cannot be used from a different IP.
- */
-function validateSessionIntegrity(): bool {
-    $currentIp = getClientIp();
-
-    if (!isset($_SESSION['_session_ip'])) {
-        $_SESSION['_session_ip'] = $currentIp;
-        return true;
-    }
-
-    if ($_SESSION['_session_ip'] !== $currentIp) {
-        return false;
-    }
-
-    return true;
-}
-
-/**
- * Clean up expired rate limit files (call periodically).
- */
-function cleanupRateLimitFiles(): void {
-    $rateLimitDir = sys_get_temp_dir() . '/furrguard_ratelimit';
-    if (!is_dir($rateLimitDir)) return;
-
-    $now = time();
-    foreach (glob($rateLimitDir . '/*.json') as $file) {
-        if ($now - filemtime($file) > 3600) {
-            @unlink($file);
+    if (isCloudflareIp($ip) && is_string($server['HTTP_CF_CONNECTING_IP'] ?? null)) {
+        $cfIp = normalizeIp($server['HTTP_CF_CONNECTING_IP']);
+        if ($cfIp !== null) {
+            $ip = $cfIp;
         }
     }
+    return $ip;
+}
+
+// ─── Búsquedas ──────────────────────────────────────────────────────────────
+
+/**
+ * Patrón LIKE "contiene" con `%`, `_` y `\` escapados: `WHERE col LIKE ?` con likePattern($q).
+ */
+function likePattern(string $term): string
+{
+    return '%' . addcslashes($term, '\\%_') . '%';
 }

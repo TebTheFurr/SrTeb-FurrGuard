@@ -1,0 +1,22 @@
+parameters:
+    level: 6
+    # Zona de plataforma. El agente de endpoints añade aquí api/, admin/*.php, verify.php e index.php.
+    paths:
+        - config.php
+        - config
+        - includes
+        - bin
+        - database
+        - tests/php
+    bootstrapFiles:
+        - tests/php/phpstan-bootstrap.php
+    # Constantes que dependen del entorno: PHPStan no debe asumir su valor.
+    dynamicConstantNames:
+        - APP_ENV
+        - APP_URL
+        - DISCORD_CLIENT_ID
+        - DISCORD_CLIENT_SECRET
+        - DISCORD_REDIRECT_URI
+        - FOUNDER_DISCORD_ID
+        - FURRGUARD_STORAGE
+        - FURRGUARD_SKIP_DOTENV
