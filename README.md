@@ -18,7 +18,7 @@ Software propietario de **Tebby Services S.L.** (<https://tebby.lgbt>). Versión
 | `includes/` | Lógica PHP: seguridad, sesión del panel, geolocalización, baneos, detección, FurrSecurity, FurrPerms |
 | `config/` | Carga de `.env` y conexión a la base de datos (`config.php` en la raíz arranca las páginas web) |
 | `database/` | Migraciones (`migrations/`) y datos iniciales (`data/providers.tsv`) |
-| `bin/` | Comandos: `migrate.php`, `cleanup.php`, `geoip-update.php` |
+| `bin/` | Comandos: `migrate.php`, `cleanup.php`, `geoip-update.php` (`--status` comprueba el espejo MaxMind) |
 | `storage/` | Datos en tiempo de ejecución (sesiones, límites, bases GeoIP); su contenido no se versiona |
 | `tests/php/` | Tests PHPUnit (`Unit` e `Integration`) |
 | `libs/furrguard-common/` | Librería Java común: cliente HTTP de la API, YAML, JSON, texto seguro, normalización de comandos |

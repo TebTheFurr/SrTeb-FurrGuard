@@ -442,13 +442,24 @@ ls -l /var/www/furrguard/storage/geoip/        # los dos .mmdb, -rw-r----- furrg
 > **Siempre como `furrguard`.** Descargadas como root, las bases quedarían `root:root 0640`:
 > PHP-FPM no podría leerlas y el panel marcaría el espejo como `missing`.
 
-Comprueba que PHP las lee:
+Comprueba que PHP las lee con el comando de estado (siempre como `furrguard`, que es quien las
+leerá desde PHP-FPM):
 
 ```bash
-runuser -u furrguard -- php -r 'require "/var/www/furrguard/includes/bootstrap.php"; echo geoMirrorStatus(), "\n"; var_export(geoMaxmindLookup("8.8.8.8")); echo "\n";'
-# ok
-# array ( 'countryCode' => 'US', 'country' => 'United States', …, 'as' => 'AS15169 …', … )
+runuser -u furrguard -- php /var/www/furrguard/bin/geoip-update.php --status
+# Lector MaxMind (maxmind-db/reader): instalado, versión v1.14.0
+# GeoLite2-Country … Archivo: existe, 8.9 MB … Compilada: 2026-09-12 UTC, hace 3 días … Consulta 8.8.8.8: US (United States)
+# GeoLite2-ASN … Consulta 8.8.8.8: AS15169 GOOGLE
+# Espejo (como lo ve el panel): ok — las dos bases están y se pueden leer
+# ip-api: ok
+# Resultado: OK (salida 0)
 ```
+
+El comando devuelve `0` solo si el lector está instalado, las dos bases existen, se pueden leer y
+responden a la consulta de prueba (`--ip=1.2.3.4` la cambia). Cualquier otro caso devuelve `1` y
+explica qué falta: `disabled` es que falta `vendor/` (`composer install --no-dev`), `missing` es que
+faltan las bases o PHP no puede leerlas. Avisa además si las bases tienen más de 30 días (el timer
+del paso 10 las renueva dos veces por semana). Sirve tal cual para monitorización.
 
 ## 9. nginx y TLS
 
@@ -1220,6 +1231,7 @@ userdel furrguard
 | «Token CSRF inválido o petición no permitida. Recarga la página.» | una vez: la pestaña estaba abierta desde antes del último login. En todas las acciones: `APP_URL` no coincide con la dirección del navegador (`http://`, `www.`, otro dominio) | recarga; `APP_URL` exacta, con https |
 | La sesión del panel se cierra sola | cambió tu IP (IPv4, o de red /64 en IPv6), 2 h sin uso, 8 h desde el login o entraste desde otro dispositivo | es lo previsto |
 | Resumen: «Falta el espejo MaxMind» | faltan las `.mmdb` o PHP no puede leerlas | paso 8 como `furrguard`; `ls -l storage/geoip`; rutas `GEOIP_*` dentro de `/var/www/furrguard` |
+| No sé si el espejo MaxMind está bien instalado | — | `runuser -u furrguard -- php bin/geoip-update.php --status`: dice qué falta y devuelve 0 solo si todo responde |
 | El espejo MaxMind no funciona, pero el Resumen no dice «Falta el espejo MaxMind» | espejo `disabled`: falta `vendor/`, y el Resumen solo avisa del caso `missing` | paso 4: `composer install` y la comprobación `MaxMind: OK` |
 | Resumen: «ip-api no responde» | sin salida por http (puerto 80) a `ip-api.com` | abre esa salida: el plan gratuito no admite https |
 | Resumen: «ip-api limitada» | se agotó el cupo por minuto (FurrGuard gasta como mucho 40) | normal en picos: el espejo MaxMind cubre país, continente y ASN |

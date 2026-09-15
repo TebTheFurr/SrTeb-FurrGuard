@@ -160,6 +160,8 @@ continente, ASN y proveedor siguen funcionando (respuestas con `degraded: true`)
 1. Crea una cuenta gratuita en <https://www.maxmind.com/en/geolite2/signup> y genera una license key.
 2. Pon `MAXMIND_ACCOUNT_ID` y `MAXMIND_LICENSE_KEY` en `.env`.
 3. Descarga las bases: `php bin/geoip-update.php` (verifica el SHA-256 y las sustituye de forma atómica).
+4. Comprueba el espejo: `php bin/geoip-update.php --status` (lector, bases, fecha, consulta de prueba y
+   estado tal como lo ve el panel; devuelve 0 solo si todo responde, útil para monitorización).
 
 Sin estas bases FurrGuard funciona igual, pero sin el espejo: el **Resumen** del panel muestra
 `missing` (faltan las `.mmdb`) o `disabled` (falta `composer install`).
@@ -454,6 +456,7 @@ a 2.0 usa `docs/ACTUALIZACION_2.0.md`.
 | La sesión del panel caduca sola | Cambió tu IP (IPv4, o de red /64 en IPv6), 2 h de inactividad, 8 h desde el login o has entrado desde otro dispositivo |
 | "Token CSRF inválido" en el panel | La pestaña lleva abierta desde antes del último login: recarga |
 | Resumen: espejo MaxMind "missing" / "disabled" | Faltan las `.mmdb` (`php bin/geoip-update.php`, revisa `MAXMIND_*`) o falta `composer install` |
+| ¿Está bien el espejo MaxMind? | `php bin/geoip-update.php --status` lo comprueba todo y explica qué falta |
 | Resumen: ip-api "limited" | Cuota gratuita agotada: el espejo MaxMind cubre país, continente y ASN |
 | FurrSecurity no carga en Paper o Velocity | Necesita Java 21 |
 | Discord OAuth no vuelve | Los redirects del portal deben coincidir exactamente con `DISCORD_REDIRECT_URI` y `APP_URL/verify.php` |
