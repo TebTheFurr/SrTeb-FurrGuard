@@ -7,8 +7,8 @@ declare(strict_types=1);
  * muestra la landing.
  *
  * @author GrinchHorizon
- * @copyright SrTeb Limited
- * @website https://srteb.eu
+ * @copyright Tebby Services S.L.
+ * @website https://tebby.lgbt
  */
 
 require_once __DIR__ . '/includes/bootstrap.php';

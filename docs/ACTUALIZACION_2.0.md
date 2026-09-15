@@ -160,6 +160,9 @@ Si PHP-FPM tiene OPcache con `validate_timestamps=0`, reinícialo desde CloudPan
    ya **no** se leen de los `config.yml` de los módulos.
 4. **Ajustes**, migraciones «Blacklist unificada» y «Jugadores premium» (opcional): trabajan por
    lotes de 25, se pueden cancelar y omiten lo que Mojang no pueda confirmar.
+5. **Usuarios:** las migraciones no crean ni borran usuarios, así que la fila `founder` que sembraba el
+   antiguo `install.sql` sigue en la lista. Si no es la cuenta de `FOUNDER_DISCORD_ID`, ahora se puede
+   quitar desde aquí; la de `FOUNDER_DISCORD_ID` no se puede quitar y tiene acceso siempre.
 
 ---
 

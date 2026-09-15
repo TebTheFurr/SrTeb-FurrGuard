@@ -43,7 +43,7 @@ final class MigrationsTest extends DatabaseTestCase
 
         // Semillas.
         self::assertSame(count(loadProvidersTsv()), (int) $db->query('SELECT COUNT(*) FROM blocked_providers')->fetchColumn());
-        self::assertSame('founder', $db->query("SELECT role FROM admin_users WHERE discord_id = '1227233322044887082'")->fetchColumn());
+        self::assertSame(0, (int) $db->query('SELECT COUNT(*) FROM admin_users')->fetchColumn(), 'sin founder fijo: sale de FOUNDER_DISCORD_ID');
         $messageKeys = $db->query('SELECT `key` FROM messages')->fetchAll(PDO::FETCH_COLUMN);
         self::assertCount(76, $messageKeys, '69 de 0001 + 4 del plugin y 3 de FurrPerms 2.0 (0007)');
         self::assertCount(25, array_filter($messageKeys, static fn ($k) => str_starts_with((string) $k, 'furr_security_')));

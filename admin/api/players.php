@@ -128,7 +128,7 @@ function adminLookupPlayer(PDO $db, array $in, array $user): array
 /**
  * @param array<string, mixed> $in
  * @param AdminUser $user
- * @return array{uuid: ?string, history: list<array{name: string, changed_at: ?string}>}
+ * @return array{uuid: ?string, history: list<array{name: string, changed_at: ?string}>, complete: bool, failed_sources: list<string>}
  */
 function adminGetNameHistory(PDO $db, array $in, array $user): array
 {

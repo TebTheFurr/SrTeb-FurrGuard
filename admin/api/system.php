@@ -157,13 +157,15 @@ function adminExportData(PDO $db, array $in, array $user): array
 // ─── Usuarios ───────────────────────────────────────────────────────────────
 
 /**
+ * `removable`: false solo en la fila de FOUNDER_DISCORD_ID (remove_admin_user la rechaza).
+ *
  * @param array<string, mixed> $in
  * @param AdminUser $user
  * @return array{items: list<mixed>, pagination: array{page: int, per_page: int, total: int, total_pages: int}}
  */
 function adminGetAdminUsers(PDO $db, array $in, array $user): array
 {
-    return adminPaginate(
+    $list = adminPaginate(
         $db,
         $in,
         'au.id, au.discord_id, au.role, au.created_by, au.created_at,
@@ -172,6 +174,11 @@ function adminGetAdminUsers(PDO $db, array $in, array $user): array
         [],
         "FIELD(au.role, 'founder', 'owner', 'manager', 'sradmin', 'admin'), au.created_at, au.id"
     );
+    $list['items'] = array_map(
+        static fn (mixed $row): mixed => is_array($row) ? $row + ['removable' => !isFounderDiscordId((string) $row['discord_id'])] : $row,
+        $list['items']
+    );
+    return $list;
 }
 
 /**
@@ -185,7 +192,7 @@ function adminAddAdminUser(PDO $db, array $in, array $user): array
     if (preg_match('/^\d{17,20}\z/', $discordId) !== 1) {
         throw new ValidationError('El Discord ID son 17 a 20 dígitos.', 'discord_id');
     }
-    if (FOUNDER_DISCORD_ID !== '' && hash_equals(FOUNDER_DISCORD_ID, $discordId)) {
+    if (isFounderDiscordId($discordId)) {
         throw new ValidationError('El founder ya tiene acceso siempre.', 'discord_id');
     }
     $role = inputEnum($in, 'role', ADMIN_ASSIGNABLE_ROLES);
@@ -202,7 +209,8 @@ function adminAddAdminUser(PDO $db, array $in, array $user): array
 }
 
 /**
- * Quita el acceso y revoca todas sus sesiones del panel.
+ * Quita el acceso y revoca todas sus sesiones del panel. Las filas `founder` se pueden borrar salvo
+ * la de FOUNDER_DISCORD_ID, que tiene acceso siempre.
  *
  * @param array<string, mixed> $in
  * @param AdminUser $user
@@ -213,8 +221,8 @@ function adminRemoveAdminUser(PDO $db, array $in, array $user): null
     withTransaction($db, static function (PDO $db) use ($user, $id): void {
         $target = adminFindRow($db, 'admin_users', $id, 'discord_id, role') ?? adminNotFound('Usuario no encontrado.');
         $discordId = (string) $target['discord_id'];
-        if ($target['role'] === 'founder' || (FOUNDER_DISCORD_ID !== '' && hash_equals(FOUNDER_DISCORD_ID, $discordId))) {
-            throw new HttpError(403, 'forbidden', 'No se puede quitar el acceso al founder.');
+        if (isFounderDiscordId($discordId)) {
+            throw new HttpError(403, 'forbidden', 'No se puede quitar el acceso al founder de FOUNDER_DISCORD_ID.');
         }
         $db->prepare('DELETE FROM admin_users WHERE id = ?')->execute([$id]);
         $revoked = adminSessionRevokeForDiscordId($db, $discordId);

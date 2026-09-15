@@ -443,11 +443,8 @@ return static function (PDO $db): void {
     $inserted = seedMessagesIfMissing($db, $messages);
     migrationLog("  mensajes insertados: {$inserted}");
 
-    // El founder de install.sql y los proveedores solo en una tabla vacía: en una actualización no se
-    // resucitan filas que un administrador borró a propósito.
-    if ((int) $db->query('SELECT COUNT(*) FROM admin_users')->fetchColumn() === 0) {
-        $db->exec("INSERT INTO admin_users (discord_id, role) VALUES ('1227233322044887082', 'founder')");
-    }
+    // Proveedores solo en una tabla vacía: en una actualización no se resucitan filas que un
+    // administrador borró a propósito. No se siembra ningún usuario: el founder sale de FOUNDER_DISCORD_ID.
     if ((int) $db->query('SELECT COUNT(*) FROM blocked_providers')->fetchColumn() === 0) {
         $rows = loadProvidersTsv();
         foreach (array_chunk($rows, 500) as $chunk) {

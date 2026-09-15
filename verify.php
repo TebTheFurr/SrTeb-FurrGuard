@@ -11,7 +11,7 @@ declare(strict_types=1);
  *   GET  (sin parámetros) → la confirmación del token guardado en sesión (la SPA limpia la URL)
  *
  * @author GrinchHorizon
- * @copyright SrTeb Limited
+ * @copyright Tebby Services S.L.
  */
 
 require_once __DIR__ . '/config.php';

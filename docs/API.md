@@ -365,7 +365,7 @@ admin:   overview players whitelist blacklist sanctions
 | `get_players` | players | `page,per_page,filter(all\|online\|whitelisted\|blacklisted),search` | lista de `{id,uuid,last_nick,first_nick,last_ip,last_country,last_country_code,is_online,is_whitelisted,is_blacklisted,total_connections,first_seen,last_seen}` |
 | `get_player_detail` | players | `uuid` | `{player,nicks[],ips[],recent_connections[],whitelist_entries[{id,type,value}],blacklist_entries[{id,ban_id,type,value,reason,active,expires_at}],premium:{status,uuid},ip_hidden}`; 404 `not_found` |
 | `lookup_player` | players | `player_name` | `{status:"premium"\|"not_found"\|"unknown",uuid,name}` |
-| `get_name_history` | players | `player_name` | `{uuid,history:[{name,changed_at}]}` |
+| `get_name_history` | players | `player_name` | `{uuid,history:[{name,changed_at}],complete,failed_sources:["mojang"\|"laby"\|"namemc"]}`; `failed_sources` son las fuentes que no se pudieron consultar (si Mojang no responde, Laby cuenta también: sin UUID no se consulta) y `complete` es false si hay alguna: el historial puede estar incompleto. Un nick sin cuenta de Mojang no consulta Laby y no cuenta como fallo |
 | `get_connections` | connections | `page,per_page,filter(all\|allowed\|blocked\|proxy\|vpn\|hosting\|mobile),search` | lista |
 | `get_connection_detail` | connections | `id` | `{connection}` |
 | `get_ips` | ips | `page,per_page,search` | lista `{ip,country,country_code,isp,asn,first_seen,player_count,connection_count,is_whitelisted,is_blacklisted}` |
@@ -398,9 +398,9 @@ admin:   overview players whitelist blacklist sanctions
 | `regenerate_api_key` | settings | — | `{api_key,prefix,created_at}` (la clave solo se muestra aquí, una vez) |
 | `export_data` | settings | — | `{exported_at,version,settings,messages,whitelist,blacklist,providers,countries,continents}`, sin `api_key*` ni secretos |
 | `migrate_blacklist` / `migrate_players` | settings | `cursor?`(defecto 0), `batch_size?`(1–25, defecto 25) | `{processed,skipped,changed,details[],next_cursor\|null,total}` |
-| `get_admin_users` | users | `page,per_page` | lista `{id,discord_id,role,created_by,created_at,discord_username}` |
+| `get_admin_users` | users | `page,per_page` | lista `{id,discord_id,role,created_by,created_at,discord_username,removable}` (`removable` false solo en la fila de `FOUNDER_DISCORD_ID`) |
 | `add_admin_user` | users | `discord_id` (17–20 dígitos), `role(owner\|manager\|sradmin\|admin)` | `{id}` |
-| `remove_admin_user` | users | `id` | `null` (403 con el founder; revoca sus sesiones) |
+| `remove_admin_user` | users | `id` | `null` (revoca sus sesiones; las filas `founder` se pueden quitar salvo la de `FOUNDER_DISCORD_ID`, que da 403) |
 | `get_furr_perms_whitelist` | furrperms | `page,per_page,search` | lista `{id,nick,uuid,reason,added_by,active,created_at}` |
 | `add_furr_perms_whitelist` / `remove_furr_perms_whitelist` | furrperms | `nick,uuid?,reason?` / `id` | `{id}` / `null` |
 | `get_furr_perms_logs` | furrperms | `page,per_page,filter(all\|allowed\|blocked),search` | lista + `stats:{total,allowed,blocked}` |

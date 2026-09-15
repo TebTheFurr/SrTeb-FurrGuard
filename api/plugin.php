@@ -8,7 +8,7 @@ declare(strict_types=1);
  * POST /api/plugin.php?action=<acción> con X-API-Key. Sin cookies, sesión ni CORS.
  *
  * @author GrinchHorizon
- * @copyright SrTeb Limited
+ * @copyright Tebby Services S.L.
  */
 
 require_once dirname(__DIR__) . '/includes/bootstrap.php';

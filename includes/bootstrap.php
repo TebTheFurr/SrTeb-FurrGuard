@@ -11,7 +11,7 @@ declare(strict_types=1);
  *   FURRGUARD_STORAGE      carpeta de datos en tiempo de ejecución (por defecto `storage/`)
  *
  * @author GrinchHorizon
- * @copyright SrTeb Limited
+ * @copyright Tebby Services S.L.
  */
 
 define('FURRGUARD_ROOT', dirname(__DIR__));

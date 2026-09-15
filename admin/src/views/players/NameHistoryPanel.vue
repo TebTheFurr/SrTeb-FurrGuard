@@ -1,13 +1,22 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref, shallowRef } from 'vue'
+import { computed, onBeforeUnmount, ref, shallowRef } from 'vue'
+import IconAlert from '~icons/pixelarticons/alert'
 import IconTimeline from '~icons/pixelarticons/timeline'
 import { api, ApiError, isAbortError } from '@/api/client'
-import type { NameHistory } from '@/api/types'
+import type { NameHistory, NameHistorySource } from '@/api/types'
 import { formatDateTime } from '@/lib/dates'
 
 const props = defineProps<{ playerName: string }>()
 
+const SOURCE_LABELS: Record<NameHistorySource, string> = { mojang: 'Mojang', laby: 'Laby', namemc: 'NameMC' }
+
 const history = shallowRef<NameHistory | null>(null)
+/** Fuentes que no se pudieron consultar, en texto («Mojang, Laby y NameMC»); vacío si la consulta fue completa. */
+const failedSources = computed(() => {
+  if (!history.value || history.value.complete !== false) return ''
+  const names = history.value.failed_sources.map((source) => SOURCE_LABELS[source] ?? source)
+  return new Intl.ListFormat('es', { type: 'conjunction' }).format(names)
+})
 const loading = ref(false)
 const error = ref('')
 let controller: AbortController | null = null
@@ -48,18 +57,25 @@ onBeforeUnmount(() => controller?.abort())
       <p v-if="error" class="form-error" role="alert">{{ error }}</p>
       <p v-else-if="!history && !loading" class="faint">Se consulta a servicios externos (Mojang, Laby, NameMC) solo cuando lo pides.</p>
       <p v-else-if="loading" class="faint" aria-busy="true">Consultando…</p>
-      <ol v-else-if="history && history.history.length" class="historial">
-        <li v-for="(entry, index) in history.history" :key="`${entry.name}-${index}`">
-          <b class="mono">{{ entry.name }}</b>
-          <span class="faint">{{ entry.changed_at ? formatDateTime(entry.changed_at) : 'Original' }}</span>
-        </li>
-      </ol>
-      <p v-else class="faint">No hay cambios de nombre registrados.</p>
+      <template v-else-if="history">
+        <div v-if="failedSources" class="aviso historial-aviso" role="status">
+          <IconAlert aria-hidden="true" />
+          <span class="texto">Historial posiblemente incompleto<small>No se pudo consultar {{ failedSources }}: puede faltar algún nombre anterior. Vuelve a consultar más tarde.</small></span>
+        </div>
+        <ol v-if="history.history.length" class="historial">
+          <li v-for="(entry, index) in history.history" :key="`${entry.name}-${index}`">
+            <b class="mono">{{ entry.name }}</b>
+            <span class="faint">{{ entry.changed_at ? formatDateTime(entry.changed_at) : 'Original' }}</span>
+          </li>
+        </ol>
+        <p v-else class="faint">No hay cambios de nombre registrados.</p>
+      </template>
     </div>
   </section>
 </template>
 
 <style scoped>
+.historial-aviso { margin-bottom: 12px; }
 .historial { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .historial li { display: flex; justify-content: space-between; gap: 12px; font-size: var(--text-sm); }
 </style>

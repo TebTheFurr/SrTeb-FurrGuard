@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
         version = BuildConstants.VERSION,
         description = "Módulo de protección de comandos sensibles para FurrGuard",
         authors = {"GrinchHorizon"},
-        url = "https://srteb.eu"
+        url = "https://tebby.lgbt"
 )
 public final class FurrpermsModule {
 

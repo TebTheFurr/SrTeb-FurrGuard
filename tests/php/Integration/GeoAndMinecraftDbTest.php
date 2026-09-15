@@ -168,6 +168,47 @@ final class GeoAndMinecraftDbTest extends DatabaseTestCase
         self::assertSame(2, $this->mojangCalls);
     }
 
+    public function testNameHistoryReportsSourcesThatDidNotAnswer(): void
+    {
+        self::assertSame(
+            ['uuid' => null, 'history' => [['name' => 'Notch', 'changed_at' => null]], 'complete' => false, 'failed_sources' => ['mojang', 'laby', 'namemc']],
+            $this->nameHistoryWithDown(['api.mojang.com', 'namemc.com'], 'Notch'),
+            'todo caído (sin Mojang no hay UUID para Laby): solo el nombre pedido, pero avisando'
+        );
+
+        $full = $this->nameHistoryWithDown([], 'Notch');
+        self::assertSame([true, [], ['OldNotch', 'Notch']], [$full['complete'], $full['failed_sources'], array_column($full['history'], 'name')]);
+
+        $partial = $this->nameHistoryWithDown(['laby.net'], 'notch');
+        self::assertSame(['069a79f4-44e9-4726-a5be-fca90e38aaf5', false, ['laby']], [$partial['uuid'], $partial['complete'], $partial['failed_sources']]);
+
+        $this->db->exec('DELETE FROM minecraft_profiles');
+        $nonPremium = $this->nameHistoryWithDown([], 'NoPremium_1');
+        self::assertSame([true, []], [$nonPremium['complete'], $nonPremium['failed_sources']], 'nick sin cuenta de Mojang: sin Laby, pero completo');
+    }
+
+    /**
+     * Historial con Mojang, Laby y NameMC falsos; los hosts de `$down` no responden.
+     *
+     * @param list<string> $down
+     * @return array{uuid: ?string, history: list<array{name: string, changed_at: ?string}>, complete: bool, failed_sources: list<string>}
+     */
+    private function nameHistoryWithDown(array $down, string $name): array
+    {
+        minecraftUseHttpClient(static function (string $url) use ($down): array {
+            $host = (string) parse_url($url, PHP_URL_HOST);
+            return match (true) {
+                in_array($host, $down, true) => ['status' => $host === 'api.mojang.com' ? 429 : 403, 'headers' => [], 'body' => null],
+                $host === 'api.mojang.com' => str_ends_with(strtolower($url), '/notch')
+                    ? ['status' => 200, 'headers' => [], 'body' => '{"id":"069a79f444e94726a5befca90e38aaf5","name":"Notch"}']
+                    : ['status' => 404, 'headers' => [], 'body' => null],
+                $host === 'laby.net' => ['status' => 200, 'headers' => [], 'body' => '[{"name":"OldNotch","changed_at":null},{"name":"Notch","changed_at":"2015-01-01T00:00:00Z"}]'],
+                default => ['status' => 200, 'headers' => [], 'body' => '<html>sin tabla de nombres</html>'],
+            };
+        });
+        return minecraftNameHistory($this->db, $name);
+    }
+
     private function ttl(string $ip): int
     {
         $stmt = $this->db->prepare('SELECT TIMESTAMPDIFF(SECOND, NOW(), expires_at) FROM ip_cache WHERE ip = ?');

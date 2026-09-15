@@ -8,7 +8,7 @@ declare(strict_types=1);
  * Los clientes fallan en cerrado: cualquier error aquí significa "bloquear y reintentar".
  *
  * @author GrinchHorizon
- * @copyright SrTeb Limited
+ * @copyright Tebby Services S.L.
  */
 
 require_once dirname(__DIR__) . '/includes/bootstrap.php';

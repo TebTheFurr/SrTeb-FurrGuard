@@ -232,30 +232,50 @@ function minecraftNameCacheWrite(PDO $db, string $uuid, ?string $username, strin
 /**
  * Historial de nombres combinando Laby.net y NameMC. Fechas en UTC `Y-m-d H:i:s`.
  *
- * @return array{uuid: ?string, history: list<array{name: string, changed_at: ?string}>}
+ * `failed_sources` lista las fuentes que no se pudieron consultar (mojang, laby, namemc; si Mojang no
+ * responde tampoco hay UUID para Laby) y `complete` es false si hay alguna: puede faltar historial.
+ * Un nick que Mojang no conoce no tiene historial en Laby: eso no es un fallo.
+ *
+ * @return array{uuid: ?string, history: list<array{name: string, changed_at: ?string}>, complete: bool, failed_sources: list<string>}
  */
 function minecraftNameHistory(PDO $db, string $playerName): array
 {
     $playerName = trim($playerName);
     if (preg_match(MOJANG_NAME_PATTERN, $playerName) !== 1) {
-        return ['uuid' => null, 'history' => []];
+        return ['uuid' => null, 'history' => [], 'complete' => true, 'failed_sources' => []];
     }
     $profile = minecraftProfileByName($db, $playerName);
     $currentName = $profile['name'] ?? $playerName;
-    $rows = $profile['uuid'] !== null ? fetchLabyNameHistory($profile['uuid']) : [];
-    $rows = array_merge($rows, fetchNameMcNameHistory($currentName));
-    return ['uuid' => $profile['uuid'], 'history' => mergeNameHistorySources($rows, $currentName)];
+    $mojangFailed = $profile['status'] === 'unknown';
+    $laby = $profile['uuid'] !== null ? fetchLabyNameHistory($profile['uuid']) : ($mojangFailed ? null : []);
+    $nameMc = fetchNameMcNameHistory($currentName);
+    $failed = $mojangFailed ? ['mojang'] : [];
+    if ($laby === null) {
+        $failed[] = 'laby';
+    }
+    if ($nameMc === null) {
+        $failed[] = 'namemc';
+    }
+    return [
+        'uuid' => $profile['uuid'],
+        'history' => mergeNameHistorySources(array_merge($laby ?? [], $nameMc ?? []), $currentName),
+        'complete' => $failed === [],
+        'failed_sources' => $failed,
+    ];
 }
 
 /**
- * @return list<array{name: string, changed_at: ?string}>
+ * @return list<array{name: string, changed_at: ?string}>|null null si Laby no respondió
  */
-function fetchLabyNameHistory(string $uuid): array
+function fetchLabyNameHistory(string $uuid): ?array
 {
     $response = minecraftHttpGet('https://laby.net/api/user/' . str_replace('-', '', $uuid) . '/get-names', 3, 6);
     $data = $response['status'] === 200 && $response['body'] !== null ? json_decode($response['body'], true) : null;
+    if (!is_array($data)) {
+        return null;
+    }
     $rows = [];
-    foreach (is_array($data) ? $data : [] as $entry) {
+    foreach ($data as $entry) {
         if (is_array($entry) && is_string($entry['name'] ?? null)) {
             $rows[] = ['name' => $entry['name'], 'changed_at' => is_string($entry['changed_at'] ?? null) ? $entry['changed_at'] : null];
         }
@@ -264,9 +284,10 @@ function fetchLabyNameHistory(string $uuid): array
 }
 
 /**
- * @return list<array{name: string, changed_at: ?string}>
+ * @return list<array{name: string, changed_at: ?string}>|null null si NameMC no respondió (una página
+ *         sin tabla de nombres es una respuesta válida: ese perfil no tiene historial)
  */
-function fetchNameMcNameHistory(string $username): array
+function fetchNameMcNameHistory(string $username): ?array
 {
     if (preg_match(MOJANG_NAME_PATTERN, $username) !== 1) {
         return [];
@@ -278,9 +299,10 @@ function fetchNameMcNameHistory(string $username): array
         ['Accept: text/html,application/xhtml+xml', 'Accept-Language: en-US,en;q=0.5'],
         true
     );
-    $html = $response['status'] === 200 ? $response['body'] : null;
-    if ($html === null
-        || !preg_match('/<table[^>]*class="[^"]*table-(?:borderless|striped)[^"]*"[^>]*>(.*?)<\/table>/is', $html, $table)) {
+    if ($response['status'] !== 200 || $response['body'] === null) {
+        return null;
+    }
+    if (!preg_match('/<table[^>]*class="[^"]*table-(?:borderless|striped)[^"]*"[^>]*>(.*?)<\/table>/is', $response['body'], $table)) {
         return [];
     }
     preg_match_all('/<tr[^>]*>(.*?)<\/tr>/is', $table[1], $matches);

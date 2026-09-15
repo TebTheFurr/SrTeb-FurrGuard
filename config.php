@@ -11,8 +11,8 @@ declare(strict_types=1);
  * (definidos en includes/admin_session.php). Las APIs de plugin cargan solo includes/bootstrap.php.
  *
  * @author GrinchHorizon
- * @copyright SrTeb Limited
- * @website https://srteb.eu
+ * @copyright Tebby Services S.L.
+ * @website https://tebby.lgbt
  */
 
 require_once __DIR__ . '/includes/bootstrap.php';

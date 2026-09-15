@@ -175,9 +175,14 @@ export interface LookupResult {
   name: string | null
 }
 
+export type NameHistorySource = 'mojang' | 'laby' | 'namemc'
+
 export interface NameHistory {
   uuid: string | null
   history: { name: string; changed_at: string | null }[]
+  /** false si alguna fuente no se pudo consultar: puede faltar historial. */
+  complete: boolean
+  failed_sources: NameHistorySource[]
 }
 
 export interface IpRow {
@@ -276,6 +281,8 @@ export interface AdminUserRow {
   created_by: string | null
   created_at: string
   discord_username?: string | null
+  /** false solo en la fila de FOUNDER_DISCORD_ID, que no se puede quitar. */
+  removable: boolean
 }
 
 /* ── módulos ───────────────────────────────────────────────────────────── */

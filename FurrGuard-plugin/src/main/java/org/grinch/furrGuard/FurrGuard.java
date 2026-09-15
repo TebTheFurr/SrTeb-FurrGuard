@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit;
         version = BuildConstants.VERSION,
         description = "Sistema de seguridad anti-proxy/VPN/hosting para Minecraft",
         authors = {"GrinchHorizon"},
-        url = "https://srteb.eu"
+        url = "https://tebby.lgbt"
 )
 public class FurrGuard {
 

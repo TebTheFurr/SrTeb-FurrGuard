@@ -4,7 +4,7 @@ main: org.grinch.furrsecurity.paper.FurrSecurityPaper
 api-version: '1.21'
 description: Verificacion de identidad del staff con Discord
 author: GrinchHorizon
-website: https://srteb.eu
+website: https://tebby.lgbt
 
 commands:
   furrsecurity:

@@ -139,10 +139,9 @@ php bin/migrate.php --status   # lista aplicadas y pendientes
 
 - Las migraciones están en `database/migrations/` y son idempotentes: si una se corta, vuelve a
   lanzar el comando. Ya no existen `install.sql` ni los `.sql` de los módulos.
-- En una base vacía crean todas las tablas, los ajustes y mensajes por defecto, la lista de
-  proveedores y una fila `founder` en `admin_users` (heredada del antiguo `install.sql`; revísala en
-  **Usuarios** si instalas para otra persona). El founder de `FOUNDER_DISCORD_ID` tiene acceso
-  siempre, esté o no en esa tabla.
+- En una base vacía crean todas las tablas, los ajustes y mensajes por defecto y la lista de
+  proveedores. No crean ningún usuario del panel: el founder es la cuenta de `FOUNDER_DISCORD_ID`,
+  que tiene acceso siempre sin estar en `admin_users`, y el resto se añade desde **Usuarios**.
 - **Antes de migrar una instalación existente, haz copia de la base de datos** (ver
   `docs/ACTUALIZACION_2.0.md`).
 

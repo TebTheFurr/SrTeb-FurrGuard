@@ -7,8 +7,8 @@ declare(strict_types=1);
  * El cierre de sesión es la acción `logout` del API (POST con CSRF), nunca un GET.
  *
  * @author GrinchHorizon
- * @copyright SrTeb Limited
- * @website https://srteb.eu
+ * @copyright Tebby Services S.L.
+ * @website https://tebby.lgbt
  */
 
 require_once dirname(__DIR__) . '/config.php';

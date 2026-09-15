@@ -37,13 +37,21 @@ function getUserRole(PDO $db, string $discordId): ?string
     if (preg_match('/^\d{1,20}\z/', $discordId) !== 1) {
         return null;
     }
-    if (FOUNDER_DISCORD_ID !== '' && hash_equals(FOUNDER_DISCORD_ID, $discordId)) {
+    if (isFounderDiscordId($discordId)) {
         return 'founder';
     }
     $stmt = $db->prepare('SELECT role FROM admin_users WHERE discord_id = ?');
     $stmt->execute([$discordId]);
     $role = $stmt->fetchColumn();
     return is_string($role) && isset(ROLE_PERMISSIONS[$role]) ? $role : null;
+}
+
+/**
+ * ¿Es el founder de FOUNDER_DISCORD_ID? (tiene acceso siempre y no se le puede quitar).
+ */
+function isFounderDiscordId(string $discordId): bool
+{
+    return FOUNDER_DISCORD_ID !== '' && hash_equals(FOUNDER_DISCORD_ID, $discordId);
 }
 
 function hasPermission(string $role, string $section): bool

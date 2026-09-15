@@ -86,7 +86,7 @@ async function remove(row: AdminUserRow): Promise<void> {
             <td class="nowrap" :title="formatDateTime(row.created_at)">{{ timeAgo(row.created_at) }}</td>
             <td class="acciones">
               <button
-                v-if="row.role !== 'founder'"
+                v-if="row.removable"
                 type="button"
                 class="btn ghost icono sm"
                 :aria-label="`Quitar acceso a ${row.discord_username || row.discord_id}`"

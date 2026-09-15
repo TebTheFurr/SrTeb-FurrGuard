@@ -7,8 +7,8 @@ declare(strict_types=1);
  * inicio de sesión. Siempre redirige a /admin/ (con ?error=<código> si algo falla).
  *
  * @author GrinchHorizon
- * @copyright SrTeb Limited
- * @website https://srteb.eu
+ * @copyright Tebby Services S.L.
+ * @website https://tebby.lgbt
  */
 
 require_once dirname(__DIR__) . '/config.php';

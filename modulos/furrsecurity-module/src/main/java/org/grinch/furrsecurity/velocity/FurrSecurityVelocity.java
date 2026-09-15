@@ -20,7 +20,7 @@ import java.nio.file.Path;
         name = "FurrSecurity",
         version = BuildConstants.VERSION,
         description = "Verificacion de identidad del staff con Discord",
-        url = "https://srteb.eu",
+        url = "https://tebby.lgbt",
         authors = {"GrinchHorizon"}
 )
 public final class FurrSecurityVelocity {

@@ -9,7 +9,7 @@ declare(strict_types=1);
  * preparadas reales (`ATTR_EMULATE_PREPARES = false`).
  *
  * @author GrinchHorizon
- * @copyright SrTeb Limited
+ * @copyright Tebby Services S.L.
  */
 
 const DB_SQL_MODE = 'STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';

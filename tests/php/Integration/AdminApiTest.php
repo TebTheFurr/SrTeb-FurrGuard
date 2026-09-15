@@ -15,11 +15,12 @@ final class AdminApiTest extends DomainTestCase
 {
     private const FOUNDER = '111111111111111111';
     private const ADMIN = '333333333333333333';
+    private const OTHER_FOUNDER = '666666666666666666';
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->db->exec("DELETE FROM admin_users WHERE discord_id IN ('" . self::ADMIN . "', '444444444444444444')");
+        $this->db->exec("DELETE FROM admin_users WHERE discord_id IN ('" . self::FOUNDER . "', '" . self::ADMIN . "', '444444444444444444', '" . self::OTHER_FOUNDER . "')");
         $this->db->exec("INSERT INTO admin_users (discord_id, role) VALUES ('" . self::ADMIN . "', 'admin')");
         foreach (['REQUEST_METHOD', 'CONTENT_TYPE', 'HTTP_X_CSRF_TOKEN', 'HTTP_ORIGIN', 'HTTP_SEC_FETCH_SITE'] as $key) {
             unset($_SERVER[$key]);
@@ -75,6 +76,29 @@ final class AdminApiTest extends DomainTestCase
         self::assertNull($this->call($user, 'logout'));
         $this->assertHttpError(401, 'unauthorized', fn () => adminApiAuthenticate($this->db));
         self::assertSame(1, $this->countRows('activity_logs', "type = 'auth' AND action = 'logout'"));
+    }
+
+    public function testFounderRowsAreRemovableExceptFounderDiscordId(): void
+    {
+        $this->db->exec("INSERT INTO admin_users (discord_id, role) VALUES ('" . self::FOUNDER . "', 'founder'), ('" . self::OTHER_FOUNDER . "', 'founder')");
+        $ids = $this->db->query("SELECT discord_id, id FROM admin_users WHERE role = 'founder'")->fetchAll(\PDO::FETCH_KEY_PAIR);
+        $other = $this->login(self::OTHER_FOUNDER, 'founder');
+        $founder = $this->login();
+
+        $removable = array_column($this->call($founder, 'get_admin_users')['items'], 'removable', 'discord_id');
+        self::assertSame([false, true], [$removable[self::FOUNDER], $removable[self::OTHER_FOUNDER]]);
+
+        $this->assertHttpError(403, 'forbidden', fn () => $this->call($founder, 'remove_admin_user', ['id' => (int) $ids[self::FOUNDER]]));
+        self::assertSame(1, $this->countRows('admin_users', 'discord_id = ?', [self::FOUNDER]));
+
+        $this->call($founder, 'remove_admin_user', ['id' => (int) $ids[self::OTHER_FOUNDER]]);
+        self::assertSame(0, $this->countRows('admin_users', 'discord_id = ?', [self::OTHER_FOUNDER]));
+        self::assertSame(0, $this->countRows('admin_sessions', 'discord_id = ? AND revoked_at IS NULL', [self::OTHER_FOUNDER]), 'se revocan sus sesiones');
+        self::assertSame('founder', $other['role']);
+        self::assertSame(1, $this->countRows('activity_logs', "type = 'users' AND action = 'remove_user' AND details LIKE ?", ['%' . self::OTHER_FOUNDER . ' (founder)%']));
+
+        $this->assertHttpError(422, 'validation', fn () => $this->call($founder, 'add_admin_user', ['discord_id' => '777777777777777777', 'role' => 'founder']));
+        self::assertSame(0, $this->countRows('admin_users', 'discord_id = ?', ['777777777777777777']));
     }
 
     public function testDispatchFailsClosed(): void
