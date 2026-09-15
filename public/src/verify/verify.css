@@ -1,0 +1,117 @@
+/* ══════════════════════════════════════════════════════════════════════
+   verify.css — pantalla de acceso (mismo armazón que la de Tebby Vault).
+   ══════════════════════════════════════════════════════════════════════ */
+
+.acceso {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  padding: 0 20px;
+  background:
+    radial-gradient(900px 420px at 50% -10%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%),
+    var(--bg);
+}
+.acceso-centro { display: grid; place-items: center; padding: 40px 0 8px; }
+.acceso-pie { width: 100%; max-width: 1100px; margin: 0 auto; }
+
+.acceso-tarjeta {
+  width: min(460px, 100%);
+  padding: 32px 30px 28px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  animation: tarjeta .32s var(--ease-out);
+}
+@keyframes tarjeta { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.acceso-tarjeta h1 { font-size: 24px; overflow-wrap: anywhere; }
+.acceso-tarjeta .label { display: block; margin-top: 6px; }
+/* logo con el icono del estado (confirmar, éxito, error, caducado) en la esquina */
+.acceso-marca { position: relative; width: 56px; margin: 0 auto 18px; }
+.acceso-marca img { width: 56px; height: 56px; }
+.acceso-estado {
+  position: absolute;
+  right: -14px;
+  bottom: -10px;
+  display: grid;
+  place-items: center;
+  width: 34px; height: 34px;
+  border: 1px solid var(--rule-2);
+  border-radius: 8px;
+  background: var(--surface-3);
+  color: var(--accent);
+}
+.resultado.success .acceso-estado { color: var(--ok); border-color: var(--ok-line); }
+.resultado.error .acceso-estado { color: var(--down); border-color: var(--down-line); }
+
+/* ── confirmación ────────────────────────────────────────────────────── */
+.confirmar-intro { margin: 14px auto 20px; max-width: 340px; color: var(--ink-2); }
+
+.datos {
+  display: grid;
+  margin: 0 0 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--bg);
+  text-align: left;
+}
+/* la etiqueta conserva su ancho y el valor (IPv6, fecha) es el que se parte */
+.dato {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px 14px;
+  padding: 10px 14px;
+}
+.dato + .dato { border-top: 1px solid var(--rule); }
+.dato dt { display: flex; align-items: center; gap: 8px; color: var(--ink-3); font-size: var(--text-sm); white-space: nowrap; }
+.dato dd {
+  margin: 0;
+  min-width: 0;
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.dato dd.mono { font-size: 12.5px; }
+.dato dt .icono { color: var(--ink-3); }
+.dato-pais { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.bandera { width: 20px; height: 15px; border-radius: 2px; box-shadow: 0 0 0 1px var(--rule-2); }
+
+.confirmar-aviso { margin-bottom: 18px; }
+.confirmar-aviso b { font-weight: 600; }
+
+.confirmar-form { display: grid; gap: 14px; }
+.confirmo {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 14px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+}
+.confirmo:hover { border-color: var(--rule-3); }
+.confirmo:has(.check:checked) { border-color: var(--accent-line); background: var(--accent-bg); }
+.confirmar-nota { font-size: var(--text-xs); }
+
+/* ── éxito y error ───────────────────────────────────────────────────── */
+.resultado-mensaje { margin: 14px auto 20px; max-width: 360px; color: var(--ink-2); overflow-wrap: anywhere; }
+.resultado .aviso { margin-top: 4px; }
+.resultado-codigo { margin-top: 16px; }
+.resultado.success { border-color: var(--ok-line); }
+.resultado.success h1 { color: var(--ok); }
+
+@media (max-width: 480px) {
+  .acceso { padding: 0 16px; }
+  .acceso-tarjeta { padding: 26px 18px 22px; }
+  .dato { grid-template-columns: minmax(0, 1fr); }
+  .dato dd { text-align: left; }
+  .dato-pais { justify-content: flex-start; }
+}

@@ -1,0 +1,163 @@
+/* ══════════════════════════════════════════════════════════════════════
+   app.css — piezas que comparten la landing y la verificación.
+   Solo tokens de shared/ui/tokens.css; nada de colores sueltos salvo
+   el azul de Discord y el blanco sobre botones de color.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* arranque: lo que se ve mientras llega el chunk de la vista */
+.arranque { min-height: 100vh; display: grid; place-items: center; }
+.arranque img { width: 40px; height: 40px; image-rendering: pixelated; animation: latido 1.8s var(--ease) infinite; }
+@keyframes latido { 0%, 100% { opacity: .35; } 50% { opacity: .95; } }
+.noscript { max-width: 420px; margin: 18vh auto 0; padding: 0 24px; text-align: center; color: var(--ink-2); }
+
+.pixel { image-rendering: pixelated; }
+
+/* iconos: pixelarticons solo a 24 px o múltiplos (a tamaños intermedios se emborronan);
+   lucide para glifos funcionales pequeños */
+.icono { display: block; flex: none; width: 24px; height: 24px; shape-rendering: crispEdges; }
+.icono.x2 { width: 48px; height: 48px; }
+.glifo { display: block; flex: none; width: 16px; height: 16px; }
+
+/* ── botones ─────────────────────────────────────────────────────────── */
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 15px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color var(--t-fast) var(--ease), background var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+}
+.btn .glifo { width: 16px; height: 16px; }
+.btn:hover { color: var(--ink); border-color: var(--rule-3); background: var(--surface-3); }
+.btn:active { transform: translateY(1px); }
+.btn.primary {
+  color: var(--bg);
+  background: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 70%, #fff);
+  font-weight: 600;
+}
+.btn.primary:hover { color: var(--bg); background: color-mix(in srgb, var(--accent) 86%, #fff); }
+.btn.ghost { background: transparent; border-color: transparent; }
+.btn.ghost:hover { background: var(--surface-3); }
+.btn.lg { height: 44px; padding: 0 20px; font-size: var(--text-md); border-radius: 10px; }
+
+.btn-discord {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  width: 100%;
+  height: 46px;
+  padding: 0 22px;
+  border-radius: 11px;
+  background: #5865f2;
+  color: #fff;
+  font-weight: 600;
+  font-size: 14.5px;
+  transition: filter var(--t) var(--ease), transform var(--t) var(--ease), opacity var(--t) var(--ease);
+}
+.btn-discord:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+.btn-discord:disabled { opacity: .45; }
+.btn-discord[aria-busy="true"] { color: transparent; }
+.btn-discord[aria-busy="true"] > * { visibility: hidden; }
+.btn-discord[aria-busy="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 16px; height: 16px;
+  border: 2px solid rgba(255, 255, 255, .35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: giro .7s linear infinite;
+}
+@keyframes giro { to { transform: rotate(360deg); } }
+
+/* ── chips, balizas y avisos ─────────────────────────────────────────── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid var(--rule-2);
+  border-radius: 6px;
+  color: var(--ink-2);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .01em;
+  white-space: nowrap;
+}
+.chip.accent { color: var(--accent); border-color: var(--accent-line); background: var(--accent-bg); }
+.chip.fox { color: var(--fox); border-color: var(--fox-line); background: var(--fox-bg); }
+.chip.gold { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 38%, transparent); background: var(--gold-bg); }
+.chip.ok { color: var(--ok); border-color: var(--ok-line); background: var(--ok-bg); }
+.chip.warn { color: var(--warn); border-color: var(--warn-line); background: var(--warn-bg); }
+.chip.down { color: var(--down); border-color: var(--down-line); background: var(--down-bg); }
+.chip.tenue { color: var(--ink-3); border-color: var(--rule); }
+
+.baliza {
+  display: inline-block;
+  width: 7px; height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 18%, transparent);
+}
+.baliza.viva { animation: baliza 2.4s var(--ease) infinite; }
+@keyframes baliza {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 18%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, currentColor 0%, transparent); }
+}
+
+.aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 11px 14px;
+  border: 1px solid var(--warn-line);
+  border-radius: var(--radius-sm);
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  text-align: left;
+}
+.aviso .icono { margin-top: -2px; }
+.aviso.info { color: var(--accent); border-color: var(--accent-line); background: var(--accent-bg); }
+.aviso.down { color: var(--down); border-color: var(--down-line); background: var(--down-bg); }
+
+/* casilla de verificación (mismo dibujo que Vault) */
+.check {
+  display: inline-grid;
+  place-items: center;
+  width: 18px; height: 18px;
+  margin: 0;
+  flex: none;
+  appearance: none;
+  border: 1.5px solid var(--rule-3);
+  border-radius: 5px;
+  background: var(--bg);
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+}
+.check:hover { border-color: var(--ink-3); }
+.check:checked { background: var(--accent); border-color: var(--accent); }
+.check:checked::after {
+  content: "";
+  width: 9px; height: 5px;
+  border: 2px solid var(--bg);
+  border-top: 0; border-right: 0;
+  transform: translateY(-1px) rotate(-45deg);
+}
