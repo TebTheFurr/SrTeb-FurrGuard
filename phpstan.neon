@@ -1,6 +1,6 @@
 parameters:
     level: 6
-    # Zona de plataforma. El agente de endpoints añade aquí api/, admin/*.php, verify.php e index.php.
+    # Todo el PHP del proyecto (plataforma, dominio y puntos de entrada).
     paths:
         - config.php
         - config
@@ -8,6 +8,13 @@ parameters:
         - bin
         - database
         - tests/php
+        - index.php
+        - verify.php
+        - api
+        - admin/index.php
+        - admin/callback.php
+        - admin/api.php
+        - admin/api
     bootstrapFiles:
         - tests/php/phpstan-bootstrap.php
     # Constantes que dependen del entorno: PHPStan no debe asumir su valor.
@@ -20,3 +27,8 @@ parameters:
         - FOUNDER_DISCORD_ID
         - FURRGUARD_STORAGE
         - FURRGUARD_SKIP_DOTENV
+    typeAliases:
+        # Usuario del panel devuelto por adminSessionValidate() (includes/admin_session.php).
+        AdminUser: 'array{discord_id: string, username: ?string, avatar: ?string, role: string, session_id: int}'
+        # Reglas de detección cargadas por detectionRules() (includes/detection.php).
+        DetectionRules: 'array{settings: array<string, ?string>, providers: array<string, array{keys: array<string, int>, max_tokens: int}>, countries: array<string, int>, continents: array<string, int>}'

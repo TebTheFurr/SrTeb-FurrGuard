@@ -1,387 +1,168 @@
 <?php
+
+declare(strict_types=1);
+
 /**
- * FurrSecurity - Public Verification Page
+ * FurrSecurity - verificación web del staff (docs/API.md §3).
+ *
+ *   GET  ?token=…         → confirmación con la IP, el país y la hora de la solicitud
+ *   POST action=confirm   → CSRF, token en sesión y 303 a Discord OAuth (state aleatorio)
+ *   GET  ?code=…&state=…  → state de la sesión, token aún pendiente y Discord del staff
+ *   GET  (sin parámetros) → la confirmación del token guardado en sesión (la SPA limpia la URL)
  *
  * @author GrinchHorizon
  * @copyright SrTeb Limited
- * @website https://srteb.eu
- * @version 2.0.0
  */
 
 require_once __DIR__ . '/config.php';
-require_once __DIR__ . '/includes/functions.php';
+require_once FURRGUARD_ROOT . '/includes/furrsecurity.php';
+require_once FURRGUARD_ROOT . '/includes/discord.php';
+require_once FURRGUARD_ROOT . '/includes/spa.php';
 
-// Get Discord credentials from constants
-$discordClientId = DISCORD_CLIENT_ID;
-$discordClientSecret = DISCORD_CLIENT_SECRET;
+const VERIFY_SESSION_KEY = 'furrsecurity_verify';
+const VERIFY_EXPIRED_MESSAGE = 'Este enlace de verificación ya no es válido. Vuelve a entrar al servidor para generar uno nuevo.';
 
-// Determine the base URL for redirect URIs (always use HTTPS in production)
-$baseUrl = 'https://' . $_SERVER['HTTP_HOST'];
+header('Cache-Control: no-store');
+header('Referrer-Policy: no-referrer');
+header('X-Robots-Tag: noindex, nofollow');
 
-// Get token from URL or session
-$token = trim($_GET['token'] ?? $_SESSION['furrsecurity_token'] ?? '');
+/**
+ * @param array<string, mixed> $data VerifyData
+ */
+function verifyRespond(array $data, int $status = 200): never
+{
+    serveSpa(FURRGUARD_ROOT . '/public/dist/index.html', 'window.__VERIFY_DATA__ = ' . spaJson($data) . ';', $status);
+}
 
-if (!$token) {
-    showError('Token no proporcionado');
+function verifyError(int $status, string $code, string $title, string $message): never
+{
+    verifyRespond(['state' => 'error', 'title' => $title, 'message' => $message, 'code' => $code], $status);
+}
+
+/**
+ * Fila de un token que sigue pendiente y sin caducar, o error "enlace caducado".
+ *
+ * @return array<string, mixed>
+ */
+function verifyPendingRow(PDO $db, string $token): array
+{
+    $row = furrSecurityVerificationByToken($db, $token);
+    if ($row === null || $row['status'] !== 'pending' || (int) $row['token_alive'] !== 1 || normalizeIp((string) $row['ip_address']) === null) {
+        verifyError(410, 'token_expired', 'Enlace caducado', VERIFY_EXPIRED_MESSAGE);
+    }
+    return $row;
+}
+
+function verifyShow(PDO $db): never
+{
+    $stored = $_SESSION[VERIFY_SESSION_KEY] ?? null;
+    $token = $_GET['token'] ?? (is_array($stored) ? ($stored['token'] ?? null) : null);
+    if ($token === null) {
+        verifyError(400, 'missing_token', 'Token no proporcionado', 'Abre el enlace de verificación que te ha dado el servidor de Minecraft.');
+    }
+    if (!is_string($token) || preg_match(FURRSECURITY_TOKEN_PATTERN, $token) !== 1) {
+        verifyError(400, 'invalid_token', 'Enlace no válido', 'El enlace de verificación no es válido. Cópialo entero desde el juego.');
+    }
+    $row = furrSecurityVerificationByToken($db, $token);
+    if ($row === null) {
+        verifyError(404, 'token_not_found', 'Enlace no encontrado', VERIFY_EXPIRED_MESSAGE);
+    }
+    if ($row['status'] === 'verified' && (int) $row['session_alive'] === 1) {
+        verifyRespond(['state' => 'success', 'title' => 'Ya verificado', 'message' => 'Esta verificación ya está completada. Puedes volver a Minecraft.']);
+    }
+    $row = verifyPendingRow($db, $token);
+    $_SESSION[VERIFY_SESSION_KEY] = ['token' => $token];
+    $ip = (string) normalizeIp((string) $row['ip_address']);
+    $geo = geoLookup($db, $ip, false)['data'];
+    verifyRespond([
+        'state' => 'confirm',
+        'csrf' => csrfToken(),
+        'token' => $token,
+        'minecraft_nick' => $row['minecraft_nick'],
+        'request_ip' => $ip,
+        'request_country' => is_string($geo['country'] ?? null) ? $geo['country'] : null,
+        'request_country_code' => is_string($geo['countryCode'] ?? null) ? $geo['countryCode'] : null,
+        'requested_at' => $row['created_at'],
+        'token_expires_at' => $row['token_expires_at'],
+    ]);
+}
+
+function verifyConfirm(PDO $db): never
+{
+    inputEnum($_POST, 'action', ['confirm']);
+    $csrf = $_POST['csrf'] ?? null;
+    if (!validateCsrfToken(is_string($csrf) ? $csrf : null)) {
+        verifyError(403, 'session_expired', 'La página ha caducado', 'Vuelve a abrir el enlace de verificación e inténtalo de nuevo.');
+    }
+    $token = (string) inputVerificationToken($_POST);
+    verifyPendingRow($db, $token);
+    $state = bin2hex(random_bytes(32));
+    $_SESSION[VERIFY_SESSION_KEY] = ['token' => $token, 'state' => $state];
+    header('Location: ' . discordAuthorizeUrl(APP_URL . '/verify.php', $state), true, 303);
     exit;
 }
 
-// Store token in session for OAuth callback
-$_SESSION['furrsecurity_token'] = $token;
+function verifyOAuthReturn(PDO $db): never
+{
+    $stored = $_SESSION[VERIFY_SESSION_KEY] ?? null;
+    $expected = is_array($stored) && is_string($stored['state'] ?? null) ? $stored['state'] : null;
+    $token = is_array($stored) && is_string($stored['token'] ?? null) ? $stored['token'] : null;
+    $state = $_GET['state'] ?? null;
+    if ($expected === null || $token === null || !is_string($state) || !hash_equals($expected, $state)) {
+        verifyError(400, 'invalid_state', 'Solicitud no válida', 'La vuelta desde Discord no corresponde a esta verificación. Abre de nuevo el enlace.');
+    }
+    $_SESSION[VERIFY_SESSION_KEY] = ['token' => $token];
+    if (array_key_exists('error', $_GET)) {
+        verifyError(400, 'discord_denied', 'Verificación cancelada', 'Has cancelado la autorización en Discord. Abre de nuevo el enlace si quieres reintentarlo.');
+    }
+    $code = $_GET['code'] ?? null;
+    if (!is_string($code) || preg_match(DISCORD_CODE_PATTERN, $code) !== 1) {
+        verifyError(400, 'invalid_code', 'Solicitud no válida', 'Discord devolvió un código no válido. Abre de nuevo el enlace.');
+    }
+    $pending = verifyPendingRow($db, $token);
 
-// Validate token format (64 hex characters)
-if (!preg_match('/^[a-f0-9]{64}$/', $token)) {
-    showError('Token inválido');
-    exit;
+    $accessToken = discordExchangeCode($code, APP_URL . '/verify.php');
+    $discordUser = $accessToken === null ? null : discordFetchUser($accessToken);
+    if ($discordUser === null) {
+        verifyError(503, 'discord_error', 'Discord no responde', 'No se pudo confirmar tu cuenta de Discord. Inténtalo de nuevo en unos minutos.');
+    }
+
+    $result = furrSecurityCompleteVerification($db, $token, $discordUser['id'], getClientIp());
+    if ($result['result'] !== 'mismatch') {
+        unset($_SESSION[VERIFY_SESSION_KEY]);
+    }
+    match ($result['result']) {
+        'verified' => verifyRespond(['state' => 'success', 'title' => 'Verificación completada', 'message' => 'Tu identidad está confirmada. Ya puedes volver a Minecraft.']),
+        'blacklisted' => verifyError(403, 'auto_blacklisted', 'Cuenta bloqueada', 'Se han superado los intentos con una cuenta de Discord que no es la del staff. Contacta con un administrador.'),
+        'mismatch' => verifyError(403, 'discord_mismatch', 'Cuenta de Discord incorrecta', sprintf(
+            'Esta cuenta de Discord no es la del staff %s. Intento %d de %d: al llegar al máximo la cuenta se bloquea.',
+            (string) $pending['minecraft_nick'],
+            $result['attempts'],
+            $result['max_attempts']
+        )),
+        default => verifyError(410, 'token_expired', 'Enlace caducado', VERIFY_EXPIRED_MESSAGE),
+    };
 }
 
 $db = db();
 if ($db === null) {
-    showError('Error de conexión a la base de datos');
-    exit;
+    verifyError(503, 'service_unavailable', 'Servicio no disponible', 'No se puede verificar ahora mismo. Inténtalo de nuevo en unos minutos.');
+}
+if (APP_URL === '' || DISCORD_CLIENT_ID === '') {
+    verifyError(503, 'not_configured', 'Verificación no configurada', 'La verificación con Discord no está configurada en el servidor.');
 }
 
-// Get verification record
-$stmt = $db->prepare("
-    SELECT v.*, s.minecraft_nick as staff_nick
-    FROM furrsecurity_verifications v
-    LEFT JOIN furrsecurity_staff s ON s.discord_id = v.discord_id
-    WHERE v.verification_token = :token
-    LIMIT 1
-");
-$stmt->execute(['token' => $token]);
-$verification = $stmt->fetch();
-
-if (!$verification) {
-    showError('Token no encontrado');
-    exit;
-}
-
-// Check if already verified
-if ($verification['status'] === 'verified') {
-    showSuccess('Ya verificado', 'Tu sesión ha sido verificada correctamente. Puedes volver al juego.');
-    exit;
-}
-
-// Check if token expired
-if ($verification['status'] === 'expired' || strtotime($verification['expires_at']) < time()) {
-    showError('Token expirado', 'Este token ha expirado. Por favor, reconecta al servidor para generar uno nuevo.');
-    exit;
-}
-
-// Handle Discord OAuth callback
-if (isset($_GET['code'])) {
-    // Validate OAuth state parameter (CSRF protection)
-    if (empty($_GET['state']) || empty($_SESSION['furrsecurity_oauth_state']) || !hash_equals($_SESSION['furrsecurity_oauth_state'], $_GET['state'])) {
-        showError('Error de seguridad', 'Token de verificación inválido. Por favor, inténtalo de nuevo.');
-        exit;
+try {
+    if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
+        verifyConfirm($db);
     }
-    unset($_SESSION['furrsecurity_oauth_state']);
-    handleOAuthCallback($db, $verification);
-    exit;
-}
-
-// Handle OAuth error
-if (isset($_GET['error'])) {
-    showError('Acceso denegado', 'Has cancelado la autenticación con Discord.');
-    exit;
-}
-
-// Show verification page
-showVerificationPage($verification);
-
-// ============================================
-// Functions
-// ============================================
-
-function handleOAuthCallback(PDO $db, array $verification): void {
-    global $token;
-
-    $code = $_GET['code'];
-
-    // Exchange code for access token
-    $tokenData = exchangeDiscordCode($code);
-
-    if (!$tokenData || !isset($tokenData['access_token'])) {
-        showError('Error de Discord', 'No se pudo obtener el token de acceso.');
-        return;
+    if (array_key_exists('code', $_GET) || array_key_exists('state', $_GET) || array_key_exists('error', $_GET)) {
+        verifyOAuthReturn($db);
     }
-
-    // Get Discord user info
-    $discordUser = getDiscordUserInfo($tokenData['access_token']);
-
-    if (!$discordUser || !isset($discordUser['id'])) {
-        showError('Error de Discord', 'No se pudo obtener la información del usuario.');
-        return;
-    }
-
-    $discordId = $discordUser['id'];
-
-    // Check if Discord ID matches the one in verification record
-    if ($discordId !== $verification['discord_id']) {
-        // Log failed attempt
-        logFurrSecurityAction($db, $verification['uuid'], $verification['minecraft_nick'], $discordId, 'verification_failed', 'Discord ID no coincide - Intento con cuenta incorrecta', $_SERVER['REMOTE_ADDR']);
-
-        // Record failed attempt and check for auto-blacklist
-        $blacklistResult = recordWrongDiscordAttempt($db, $verification['uuid'], $verification['minecraft_nick'], $_SERVER['REMOTE_ADDR'], $discordId);
-
-        if ($blacklistResult['blacklisted']) {
-            showError('Auto-Blacklist', 'Has sido añadido a la blacklist por intentar verificar con una cuenta de Discord incorrecta. Contacta a un administrador.');
-        } else {
-            showError('Verificación fallida', 'El Discord ID no coincide con el registrado. Intento ' . $blacklistResult['attempts'] . '/' . $blacklistResult['max_attempts'] . '. Si crees que es un error, contacta a un administrador.');
-        }
-        return;
-    }
-
-    // Mark as verified
-    $sessionDuration = (int)getSetting($db, 'furrsecurity_session_duration', '28800');
-    $newExpiresAt = date('Y-m-d H:i:s', time() + $sessionDuration);
-
-    $stmt = $db->prepare("
-        UPDATE furrsecurity_verifications
-        SET status = 'verified',
-            verified_at = NOW(),
-            expires_at = :expires_at
-        WHERE verification_token = :token
-    ");
-    $stmt->execute(['expires_at' => $newExpiresAt, 'token' => $token]);
-
-    // Log successful verification
-    logFurrSecurityAction($db, $verification['uuid'], $verification['minecraft_nick'], $discordId, 'verification_success', 'Verificación completada via Discord OAuth', $_SERVER['REMOTE_ADDR']);
-
-    // Clear token from session
-    unset($_SESSION['furrsecurity_token']);
-
-    showSuccess('Verificación completada', 'Tu identidad ha sido verificada correctamente. Ya puedes volver al juego.');
-}
-
-function exchangeDiscordCode(string $code): ?array {
-    global $discordClientId, $discordClientSecret, $baseUrl;
-
-    $redirectUri = $baseUrl . strtok($_SERVER['REQUEST_URI'], '?');
-
-    $ch = curl_init('https://discord.com/api/oauth2/token');
-    curl_setopt_array($ch, [
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => http_build_query([
-            'client_id' => $discordClientId,
-            'client_secret' => $discordClientSecret,
-            'grant_type' => 'authorization_code',
-            'code' => $code,
-            'redirect_uri' => $redirectUri,
-        ]),
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 10,
-    ]);
-
-    $response = curl_exec($ch);
-    curl_close($ch);
-
-    return $response ? json_decode($response, true) : null;
-}
-
-function getDiscordUserInfo(string $accessToken): ?array {
-    $ch = curl_init('https://discord.com/api/users/@me');
-    curl_setopt_array($ch, [
-        CURLOPT_HTTPHEADER => ["Authorization: Bearer $accessToken"],
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 10,
-    ]);
-
-    $response = curl_exec($ch);
-    curl_close($ch);
-
-    return $response ? json_decode($response, true) : null;
-}
-
-function logFurrSecurityAction(PDO $db, ?string $uuid, ?string $nick, ?string $discordId, string $action, ?string $details, ?string $ipAddress): void {
-    try {
-        $stmt = $db->prepare("
-            INSERT INTO furrsecurity_logs (uuid, minecraft_nick, discord_id, action, details, ip_address)
-            VALUES (:uuid, :nick, :discord_id, :action, :details, :ip)
-        ");
-        $stmt->execute([
-            'uuid' => $uuid,
-            'nick' => $nick,
-            'discord_id' => $discordId,
-            'action' => $action,
-            'details' => $details,
-            'ip' => $ipAddress,
-        ]);
-    } catch (Exception $e) {
-        error_log("Failed to log FurrSecurity action: " . $e->getMessage());
-    }
-}
-
-/**
- * Serve the Vue app with injected verification data.
- * Replaces the old inline HTML rendering functions.
- */
-function serveVueApp(array $verifyData): void {
-    $nonce = getCspNonce();
-    $distHtml = @file_get_contents(__DIR__ . '/public/dist/index.html');
-    if ($distHtml === false) {
-        http_response_code(503);
-        echo '<!DOCTYPE html><html><body style="background:#0f0f1a;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,sans-serif"><div><h1>Error</h1><p>Servicio no disponible.</p></div></body></html>';
-        exit;
-    }
-
-    $fontLinks = <<<'HTML'
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="icon" type="image/png" href="/icono-furguard.png">
-HTML;
-
-    $dataScript = '<script nonce="' . $nonce . '">' . "\n"
-        . 'window.__VERIFY_DATA__ = ' . json_encode($verifyData) . ";\n"
-        . '</script>';
-
-    $distHtml = str_replace('</head>', $fontLinks . "\n" . $dataScript . "\n</head>", $distHtml);
-    $distHtml = preg_replace('/<script(?![^>]*nonce=)/', '<script nonce="' . $nonce . '"', $distHtml);
-    echo $distHtml;
-}
-
-function showVerificationPage(array $verification): void {
-    global $discordClientId, $baseUrl;
-
-    $redirectUri = $baseUrl . strtok($_SERVER['REQUEST_URI'], '?');
-
-    if (empty($_SESSION['furrsecurity_oauth_state'])) {
-        $_SESSION['furrsecurity_oauth_state'] = bin2hex(random_bytes(32));
-    }
-
-    $oauthUrl = 'https://discord.com/oauth2/authorize?' . http_build_query([
-        'client_id' => $discordClientId,
-        'redirect_uri' => $redirectUri,
-        'response_type' => 'code',
-        'scope' => 'identify',
-        'state' => $_SESSION['furrsecurity_oauth_state'],
-    ]);
-
-    serveVueApp([
-        'state' => 'form',
-        'minecraft_nick' => $verification['minecraft_nick'],
-        'discord_login_url' => $oauthUrl,
-        'expires_at' => date('d/m/Y H:i:s', strtotime($verification['expires_at'])),
-    ]);
-}
-
-function showError(string $title, string $message = ''): void {
-    serveVueApp([
-        'state' => 'error',
-        'title' => $title,
-        'message' => $message,
-    ]);
-}
-
-function showSuccess(string $title, string $message = ''): void {
-    serveVueApp([
-        'state' => 'success',
-        'title' => $title,
-        'message' => $message,
-    ]);
-}
-
-/**
- * Record a wrong Discord attempt and auto-blacklist if threshold reached
- */
-function recordWrongDiscordAttempt(PDO $db, string $uuid, string $nick, string $ip, string $wrongDiscordId): array {
-    // Get max failed attempts from settings
-    $maxFailedAttempts = (int)getSetting($db, 'furrsecurity_max_failed_attempts', '3');
-
-    // Get or create failed attempts record
-    $stmt = $db->prepare("
-        SELECT failed_attempts FROM furrsecurity_failed_attempts
-        WHERE uuid = :uuid
-    ");
-    $stmt->execute(['uuid' => $uuid]);
-    $record = $stmt->fetch();
-
-    $currentAttempts = $record ? (int)$record['failed_attempts'] : 0;
-    $newAttempts = $currentAttempts + 1;
-
-    // Update or insert failed attempts
-    if ($record) {
-        $stmt = $db->prepare("
-            UPDATE furrsecurity_failed_attempts
-            SET failed_attempts = :attempts, last_attempt = NOW(), last_ip = :ip
-            WHERE uuid = :uuid
-        ");
-        $stmt->execute(['attempts' => $newAttempts, 'ip' => $ip, 'uuid' => $uuid]);
-    } else {
-        $stmt = $db->prepare("
-            INSERT INTO furrsecurity_failed_attempts (uuid, minecraft_nick, failed_attempts, last_ip)
-            VALUES (:uuid, :nick, :attempts, :ip)
-        ");
-        $stmt->execute(['uuid' => $uuid, 'nick' => $nick, 'attempts' => $newAttempts, 'ip' => $ip]);
-    }
-
-    // Check if should be blacklisted
-    $blacklisted = false;
-    if ($newAttempts >= $maxFailedAttempts) {
-        // Generate ban_id using FurrGuard's function if available
-        $banId = function_exists('generateBanId') ? generateBanId() : 'FS-' . bin2hex(random_bytes(8));
-
-        // Add to blacklist by UUID
-        $stmt = $db->prepare("
-            INSERT INTO blacklist (ban_id, type, value, reason, added_by, expires_at, active)
-            VALUES (:ban_id, 'uuid', :uuid, :reason, 'FurrSecurity', NULL, 1)
-            ON DUPLICATE KEY UPDATE reason = VALUES(reason), active = 1, updated_at = NOW()
-        ");
-        $stmt->execute([
-            'ban_id' => $banId,
-            'uuid' => $uuid,
-            'reason' => 'seguridad'
-        ]);
-
-        // Get the parent ID for linking
-        $parentId = (int)$db->lastInsertId();
-
-        // Also blacklist by nick
-        $nickBanId = function_exists('generateBanId') ? generateBanId() : 'FS-' . bin2hex(random_bytes(8));
-        $stmt = $db->prepare("
-            INSERT INTO blacklist (ban_id, type, value, reason, added_by, expires_at, active, parent_id)
-            VALUES (:ban_id, 'nick', :nick, :reason, 'FurrSecurity', NULL, 1, :parent_id)
-            ON DUPLICATE KEY UPDATE reason = VALUES(reason), active = 1, updated_at = NOW()
-        ");
-        $stmt->execute([
-            'ban_id' => $nickBanId,
-            'nick' => $nick,
-            'reason' => 'seguridad',
-            'parent_id' => $parentId ?: null
-        ]);
-
-        // Also blacklist the IP
-        $ipBanId = function_exists('generateBanId') ? generateBanId() : 'FS-' . bin2hex(random_bytes(8));
-        $stmt = $db->prepare("
-            INSERT INTO blacklist (ban_id, type, value, reason, added_by, expires_at, active, parent_id)
-            VALUES (:ban_id, 'ip', :ip, :reason, 'FurrSecurity', NULL, 1, :parent_id)
-            ON DUPLICATE KEY UPDATE reason = VALUES(reason), active = 1, updated_at = NOW()
-        ");
-        $stmt->execute([
-            'ban_id' => $ipBanId,
-            'ip' => $ip,
-            'reason' => 'seguridad',
-            'parent_id' => $parentId ?: null
-        ]);
-
-        // Reset failed attempts counter after blacklisting
-        $stmt = $db->prepare("DELETE FROM furrsecurity_failed_attempts WHERE uuid = :uuid");
-        $stmt->execute(['uuid' => $uuid]);
-
-        $blacklisted = true;
-
-        // Log auto-blacklist
-        logFurrSecurityAction($db, $uuid, $nick, $wrongDiscordId, 'auto_blacklisted_wrong_discord', 'Auto-blacklist por verificar con Discord incorrecto ' . $newAttempts . ' veces', $ip);
-    } else {
-        // Log failed attempt
-        logFurrSecurityAction($db, $uuid, $nick, $wrongDiscordId, 'wrong_discord_attempt', "Intento con Discord incorrecto ($newAttempts/$maxFailedAttempts)", $ip);
-    }
-
-    return [
-        'attempts' => $newAttempts,
-        'max_attempts' => $maxFailedAttempts,
-        'blacklisted' => $blacklisted
-    ];
+    verifyShow($db);
+} catch (ValidationError) {
+    verifyError(400, 'invalid_request', 'Solicitud no válida', 'El formulario de verificación no es válido. Abre de nuevo el enlace.');
+} catch (Throwable $e) {
+    error_log('FurrGuard verify: ' . $e);
+    verifyError(503, 'service_unavailable', 'Servicio no disponible', 'No se puede verificar ahora mismo. Inténtalo de nuevo en unos minutos.');
 }

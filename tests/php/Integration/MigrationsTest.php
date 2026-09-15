@@ -45,12 +45,14 @@ final class MigrationsTest extends DatabaseTestCase
         self::assertSame(count(loadProvidersTsv()), (int) $db->query('SELECT COUNT(*) FROM blocked_providers')->fetchColumn());
         self::assertSame('founder', $db->query("SELECT role FROM admin_users WHERE discord_id = '1227233322044887082'")->fetchColumn());
         $messageKeys = $db->query('SELECT `key` FROM messages')->fetchAll(PDO::FETCH_COLUMN);
-        self::assertCount(69, $messageKeys);
+        self::assertCount(76, $messageKeys, '69 de 0001 + 4 del plugin y 3 de FurrPerms 2.0 (0007)');
         self::assertCount(25, array_filter($messageKeys, static fn ($k) => str_starts_with((string) $k, 'furr_security_')));
         self::assertNotContains('furrsecurity_prefix', $messageKeys);
-        foreach (['kick_default', 'kick_mobile', 'notify_continent_blocked', 'fur_perms_logged'] as $key) {
+        foreach (['kick_default', 'kick_mobile', 'notify_continent_blocked', 'fur_perms_logged', 'notify_mobile_blocked', 'notify_player_kicked',
+            'kick_starting', 'kick_unlicensed', 'fur_perms_uuid_mismatch', 'fur_perms_needs_furrsecurity', 'fur_perms_unavailable'] as $key) {
             self::assertContains($key, $messageKeys);
         }
+        self::assertSame(8, substr_count((string) $db->query("SELECT value FROM messages WHERE `key` = 'kick_unlicensed'")->fetchColumn(), "\n"));
         self::assertStringContainsString("\n", (string) $db->query("SELECT value FROM messages WHERE `key` = 'kick_proxy'")->fetchColumn());
 
         $settings = $db->query('SELECT `key`, value FROM settings')->fetchAll(PDO::FETCH_KEY_PAIR);

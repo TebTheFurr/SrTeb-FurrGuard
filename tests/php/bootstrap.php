@@ -19,7 +19,11 @@ ini_set('error_log', FURRGUARD_STORAGE . '/php-errors.log');
 require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
 require_once dirname(__DIR__, 2) . '/includes/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/database/lib.php';
+// Dominio y API del panel (router.php carga plugin_api.php → detection, bans, players, furrperms, furrsecurity).
+require_once dirname(__DIR__, 2) . '/admin/api/router.php';
+require_once dirname(__DIR__, 2) . '/includes/spa.php';
 require_once __DIR__ . '/Integration/DatabaseTestCase.php';
+require_once __DIR__ . '/Integration/DomainTestCase.php';
 
 register_shutdown_function(static function (): void {
     $dir = FURRGUARD_STORAGE;
