@@ -56,7 +56,7 @@ const stars = [
       </div>
     </div>
     <div class="fg-pie-abajo">
-      <span>© {{ new Date().getFullYear() }} SrTeb Limited · Hecho con 🦊 para comunidades de Minecraft</span>
+      <span>© {{ new Date().getFullYear() }} SrTeb Limited · Seguridad para comunidades de Minecraft</span>
       <a href="https://srteb.eu" target="_blank" rel="noopener noreferrer">srteb.eu</a>
     </div>
   </footer>

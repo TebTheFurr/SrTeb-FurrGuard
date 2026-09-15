@@ -42,7 +42,8 @@ code {
   color: var(--ink-2);
 }
 
-.emoji { font-family: var(--emoji); font-style: normal; line-height: 1; }
+/* iconos pixel (pixelarticons): siempre a 24 px o múltiplos para que no se emborronen */
+.icono-pixel { shape-rendering: crispEdges; flex: none; }
 
 ::selection { background: color-mix(in srgb, var(--accent) 38%, transparent); }
 
