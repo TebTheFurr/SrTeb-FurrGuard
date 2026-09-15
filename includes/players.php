@@ -74,7 +74,7 @@ function inputIp(array $in, string $key = 'ip'): string
  * @param array{uuid: ?string, nick: string, ip: string, game_version?: ?string} $player
  * @param array<string, mixed> $geo
  */
-function logPlayerConnection(PDO $db, array $player, array $geo, bool $blocked, ?string $reason): void
+function logPlayerConnection(PDO $db, array $player, array $geo, bool $blocked, ?string $reason, ?string $geoSource = null): void
 {
     $text = static function (string $key, int $max) use ($geo): ?string {
         $value = $geo[$key] ?? null;
@@ -89,8 +89,8 @@ function logPlayerConnection(PDO $db, array $player, array $geo, bool $blocked, 
     $db->prepare(
         'INSERT INTO player_connections
             (uuid, nick, ip, ip_version, country, country_code, region, city, isp, org, asn, asname, is_proxy, is_vpn,
-             is_hosting, is_mobile, latitude, longitude, timezone, game_version, blocked, block_reason, raw_data, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())'
+             is_hosting, is_mobile, latitude, longitude, timezone, game_version, blocked, block_reason, raw_data, geo_source, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())'
     )->execute([
         $player['uuid'],
         $player['nick'],
@@ -115,6 +115,7 @@ function logPlayerConnection(PDO $db, array $player, array $geo, bool $blocked, 
         $blocked ? 1 : 0,
         $reason,
         json_encode((object) $geo, JSON_FLAGS),
+        $geoSource === null ? null : mb_substr($geoSource, 0, 64),
     ]);
 }
 

@@ -129,6 +129,7 @@ export interface ConnectionRow {
   org?: string | null
   asn?: string | null
   asname?: string | null
+  geo_source?: string | null
   is_proxy: Flag
   is_vpn: Flag
   is_hosting: Flag

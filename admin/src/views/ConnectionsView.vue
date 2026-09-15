@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { geoSourceLabel } from '@/lib/geoSource'
 import { computed, ref } from 'vue'
 import IconPlug from '~icons/pixelarticons/plug'
 import IconReload from '~icons/pixelarticons/reload'
@@ -117,6 +118,7 @@ const detectionsOf = (row: ConnectionRow) => DETECTIONS.filter((d) => isOn(row[d
           <div class="detalle"><dt class="label">AS</dt><dd class="valor mono">{{ connection.asn || '—' }} {{ connection.asname || '' }}</dd></div>
           <div class="detalle"><dt class="label">Versión</dt><dd class="valor mono">{{ connection.game_version || '—' }}</dd></div>
           <div class="detalle"><dt class="label">Zona horaria</dt><dd class="valor">{{ connection.timezone || '—' }}</dd></div>
+          <div class="detalle"><dt class="label">Geolocalización</dt><dd class="valor">{{ geoSourceLabel(connection.geo_source) }}</dd></div>
           <div class="detalle"><dt class="label">Detección</dt><dd class="valor chips">
             <StatusChip v-for="d in detectionsOf(connection)" :key="d.key" :label="d.label" :icon="d.icon" tone="warn" />
             <span v-if="!detectionsOf(connection).length" class="faint">Nada sospechoso</span>

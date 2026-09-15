@@ -79,7 +79,7 @@ final class GeoAndMinecraftDbTest extends DatabaseTestCase
             return ['status' => 0, 'headers' => [], 'body' => null];
         }, $maxmind);
         $degraded = geoLookup($this->db, '1.1.1.1');
-        self::assertSame(['data' => $maxmind('1.1.1.1'), 'source' => 'maxmind', 'degraded' => true], $degraded);
+        self::assertSame(['data' => $maxmind('1.1.1.1') + ['source' => 'maxmind'], 'source' => 'maxmind', 'degraded' => true, 'method' => 'maxmind'], $degraded);
         self::assertSame(300, $this->ttl('1.1.1.1'), 'fallo cacheado 5 min');
         self::assertSame('maxmind', geoLookup($this->db, '1.1.1.1')['source']);
         self::assertSame(2, $this->ipApiCalls, 'con un fallo reciente no se reintenta ip-api');
@@ -122,7 +122,7 @@ final class GeoAndMinecraftDbTest extends DatabaseTestCase
     {
         $this->fakeIpApi(200, ['status' => 'success', 'country' => 'X']);
         $this->db->exec('INSERT INTO ip_api_logs (ip, success, created_at) VALUES ' . implode(',', array_fill(0, IP_API_BUDGET_PER_MIN, "('9.9.9.9', 1, NOW())")));
-        self::assertSame(['data' => [], 'source' => 'none', 'degraded' => false], geoLookup($this->db, '8.8.8.8'));
+        self::assertSame(['data' => [], 'source' => 'none', 'degraded' => false, 'method' => 'none'], geoLookup($this->db, '8.8.8.8'));
         self::assertSame(0, $this->ipApiCalls);
         self::assertSame('limited', ipApiStatus($this->db));
         self::assertSame(0, (int) $this->db->query("SELECT COUNT(*) FROM ip_cache")->fetchColumn(), 'sin petición real no se cachea fallo');

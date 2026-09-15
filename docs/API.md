@@ -131,7 +131,10 @@ Respuesta:
 }
 ```
 
-- `ip_data` es **siempre un objeto** (`{}` si no hay datos), nunca un array.
+- `ip_data` es **siempre un objeto** (`{}` si no hay datos), nunca un array. Incluye `source`.
+- `geo_source`: método y proveedores usados para esa conexión (`proxycheck`, `ip-api+maxmind`,
+  `cache:freeipapi+maxmind`, `maxmind` = solo espejo, `none`). Se guarda en
+  `player_connections.geo_source` y el panel lo muestra en el detalle de la conexión.
 - `reason` ∈ `allowed`, `whitelisted`, `blacklisted`, `compromised_account`, `proxy_detected`,
   `vpn_detected`, `hosting_detected`, `mobile_detected`, `blocked_provider`, `blocked_country`,
   `blocked_continent`, `ip_api_unavailable`.

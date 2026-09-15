@@ -54,11 +54,14 @@ function geoUseTestDoubles(?callable $ipApiTransport, ?callable $maxmindLookup, 
  * Datos de una IP: caché → MaxMind → proveedores remotos → mezcla. `degraded` es true cuando solo
  * respondió MaxMind. Una IP privada o reservada nunca tiene datos.
  *
- * @return array{data: array<string, mixed>, source: string, degraded: bool}
+ * `method` describe qué se usó, para guardarlo con la conexión: `proxycheck`, `ip-api+maxmind`,
+ * `cache:freeipapi+maxmind`, `maxmind` (solo espejo) o `none`.
+ *
+ * @return array{data: array<string, mixed>, source: string, degraded: bool, method: string}
  */
 function geoLookup(PDO $db, string $ip, bool $allowRemote = true): array
 {
-    $none = ['data' => [], 'source' => 'none', 'degraded' => false];
+    $none = ['data' => [], 'source' => 'none', 'degraded' => false, 'method' => 'none'];
     $ip = normalizeIp($ip);
     if ($ip === null || filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
         return $none;
@@ -66,7 +69,8 @@ function geoLookup(PDO $db, string $ip, bool $allowRemote = true): array
 
     $cached = geoCacheRead($db, $ip);
     if ($cached !== null && $cached['status'] === 'success') {
-        return ['data' => $cached['data'], 'source' => 'cache', 'degraded' => false];
+        $origin = is_string($cached['data']['source'] ?? null) ? $cached['data']['source'] : 'desconocido';
+        return ['data' => $cached['data'], 'source' => 'cache', 'degraded' => false, 'method' => 'cache:' . $origin];
     }
 
     $maxmind = geoMaxmindLookup($ip);
@@ -75,15 +79,17 @@ function geoLookup(PDO $db, string $ip, bool $allowRemote = true): array
         $remote = geoRemoteLookup($db, $ip);
         if ($remote['data'] !== null) {
             $merged = geoMerge($remote['data'], $maxmind);
+            // `source` guarda proveedor (+maxmind si el espejo rellenó algún campo): se cachea con los datos.
+            $merged['source'] = (string) $remote['source'] . ($merged !== $remote['data'] ? '+maxmind' : '');
             geoCacheWrite($db, $ip, 'success', $merged, $remote['partial'] ? GEO_CACHE_PARTIAL_TTL : GEO_CACHE_SUCCESS_TTL);
-            return ['data' => $merged, 'source' => $maxmind === null ? (string) $remote['source'] : 'merged', 'degraded' => false];
+            return ['data' => $merged, 'source' => $maxmind === null ? (string) $remote['source'] : 'merged', 'degraded' => false, 'method' => $merged['source']];
         }
         if ($remote['attempted']) {
             geoCacheWrite($db, $ip, 'fail', [], GEO_CACHE_FAIL_TTL);
         }
     }
 
-    return $maxmind === null ? $none : ['data' => $maxmind, 'source' => 'maxmind', 'degraded' => true];
+    return $maxmind === null ? $none : ['data' => $maxmind + ['source' => 'maxmind'], 'source' => 'maxmind', 'degraded' => true, 'method' => 'maxmind'];
 }
 
 /**

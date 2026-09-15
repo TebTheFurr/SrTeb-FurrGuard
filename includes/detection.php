@@ -417,11 +417,11 @@ function checkPlayer(PDO $db, array $player): array
     $result = evaluatePlayer($db, detectionRules($db), $player, true, true);
     $decision = $result['decision'];
     $data = $result['geo']['data'];
-    logPlayerConnection($db, $player, $data, $decision['allowed'] !== true, $decision['allowed'] === true ? null : (string) $decision['reason']);
+    logPlayerConnection($db, $player, $data, $decision['allowed'] !== true, $decision['allowed'] === true ? null : (string) $decision['reason'], $result['geo']['method']);
     if ($player['uuid'] !== null) {
         updatePlayerInfo($db, $player['uuid'], $player['nick'], $player['ip'], $data);
     }
-    return $decision + ['degraded' => $result['geo']['degraded'], 'ip_data' => (object) $data];
+    return $decision + ['degraded' => $result['geo']['degraded'], 'geo_source' => $result['geo']['method'], 'ip_data' => (object) $data];
 }
 
 /**
