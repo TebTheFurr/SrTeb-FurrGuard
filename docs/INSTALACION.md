@@ -391,6 +391,9 @@ PHP dice por qué (p. ej. `[1045] Access denied`), nunca con la contraseña.
 | `API_RATE_LIMIT_PER_MIN` | `6000` | peticiones por minuto por API key; todo el tráfico de la red sale de la IP del proxy |
 | `GEOIP_COUNTRY_DB` · `GEOIP_ASN_DB` | `storage/geoip/…` | relativas a la raíz. Fuera de `/var/www/furrguard` chocarían con el `open_basedir` del pool |
 | `MAXMIND_ACCOUNT_ID` · `MAXMIND_LICENSE_KEY` | cuenta y secreto | los usa `bin/geoip-update.php` |
+| `GEO_PROVIDERS` | `ip-api,proxycheck,ipapi-is,freeipapi` | balanceador de proveedores de geolocalización; quita los que no quieras |
+| `PROXYCHECK_API_KEY` | vacío | clave gratuita de <https://proxycheck.io>: 1.000 consultas/día en vez de 100 |
+| `IPAPI_IS_API_KEY` | vacío | clave gratuita de <https://ipapi.is>: sin ella el proveedor se omite |
 
 > **`APP_URL` tiene que estar bien antes del paso 7.** Las migraciones guardan `APP_URL/verify.php`
 > como URL de verificación de FurrSecurity y no vuelven a tocarla. Si más adelante cambias de

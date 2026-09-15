@@ -12,7 +12,7 @@ export interface SettingField {
   max?: number
   maxLength?: number
   /** Unidad mostrada junto al número (los segundos se enseñan también en formato legible). */
-  unit?: 's' | 'días' | '%'
+  unit?: 's' | 'h' | 'días' | '%'
   optional?: boolean
   fallback: string
 }
@@ -36,7 +36,8 @@ export const SETTING_GROUPS: SettingGroup[] = [
       bool('block_vpn', 'Bloquear VPN', '1'),
       bool('block_hosting', 'Bloquear hosting y datacenters', '1'),
       bool('block_mobile', 'Bloquear redes móviles', '0'),
-      bool('ip_api_fail_open', 'Dejar pasar si no hay ningún dato de IP', '0', 'Solo aplica cuando no hay caché, ni ip-api, ni espejo MaxMind.'),
+      bool('ip_api_fail_open', 'Dejar pasar si no hay ningún dato de IP', '0', 'Solo aplica cuando no hay caché, ni proveedores remotos, ni espejo MaxMind.'),
+      bool('auto_ban_evasion_ip', 'Banear la IP de quien evade un baneo', '1', 'Al entrar un baneado por UUID o nick, su IP pasa a ser hija del baneo. Nunca en redes móviles (IP compartida).'),
     ],
   },
   {
@@ -46,8 +47,9 @@ export const SETTING_GROUPS: SettingGroup[] = [
     fields: [
       bool('country_change_detection_enabled', 'Activar la detección', '1'),
       bool('country_change_continent_only', 'Solo si cambia de continente', '0'),
-      { key: 'country_change_min_connections', label: 'Conexiones mínimas de historial', kind: 'int', min: 1, max: 1000, fallback: '3' },
+      { key: 'country_change_min_connections', label: 'Conexiones mínimas de historial', kind: 'int', min: 1, max: 1000, fallback: '10' },
       { key: 'country_change_min_percentage', label: 'Porcentaje mínimo del país habitual', kind: 'float', min: 0, max: 100, unit: '%', fallback: '70' },
+      { key: 'compromised_ban_hours', label: 'Duración del baneo automático', kind: 'int', min: 0, max: 8760, unit: 'h', fallback: '24', help: '0 = permanente. Se aplica al UUID, al nick y a la IP.' },
     ],
   },
   {

@@ -215,8 +215,8 @@ function banWrite(PDO $db, array $ban): array
  */
 function upsertBan(PDO $db, array $ban, string $mode): array
 {
-    if ($mode === 'auto') {
-        $ban['duration_seconds'] = null;
+    if ($mode === 'auto' && !array_key_exists('duration_seconds', $ban)) {
+        $ban['duration_seconds'] = null; // permanente salvo que el llamante fije una duración
     }
     $result = banWrite($db, $ban);
     if ($mode === 'manual' && $result['status'] === 'in_force') {

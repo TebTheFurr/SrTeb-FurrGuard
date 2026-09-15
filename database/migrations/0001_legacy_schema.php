@@ -355,7 +355,7 @@ return static function (PDO $db): void {
         'block_proxy' => '1', 'block_vpn' => '1', 'block_hosting' => '1', 'block_mobile' => '0',
         'notify_connections' => '0', 'notify_hispanic' => '0',
         'server_name' => 'FurrGuard', 'discord_url' => '',
-        'country_change_detection_enabled' => '1', 'country_change_min_connections' => '3',
+        'country_change_detection_enabled' => '1', 'country_change_min_connections' => '10',
         'country_change_min_percentage' => '70', 'country_change_continent_only' => '0',
         'fur_perms_enabled' => '1', 'fur_perms_log_allowed' => '1', 'fur_perms_log_blocked' => '1',
         'furrsecurity_enabled' => '1', 'furrsecurity_session_duration' => '28800',

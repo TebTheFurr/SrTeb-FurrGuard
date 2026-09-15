@@ -48,9 +48,14 @@ final class BansTest extends DomainTestCase
         self::assertSame(1, $this->countRows('activity_logs', "type = 'security' AND action = 'auto_ban' AND details LIKE 'nick: GRIEFER%'"), 'siempre deja traza');
 
         banSetActive($this->db, $manual['id'], false);
-        $reactivated = upsertBan($this->db, ['type' => 'nick', 'value' => 'Griefer', 'reason' => 'automático', 'added_by' => 'FurrGuard', 'duration_seconds' => 999], 'auto');
+        $reactivated = upsertBan($this->db, ['type' => 'nick', 'value' => 'Griefer', 'reason' => 'automático', 'added_by' => 'FurrGuard'], 'auto');
         self::assertSame('reactivated', $reactivated['status']);
-        self::assertSame(['reason' => 'automático', 'added_by' => 'FurrGuard', 'expires_at' => null, 'active' => 1], $this->row('SELECT reason, added_by, expires_at, active FROM blacklist WHERE id = ?', [$manual['id']]), 'automático = permanente');
+        self::assertSame(['reason' => 'automático', 'added_by' => 'FurrGuard', 'expires_at' => null, 'active' => 1], $this->row('SELECT reason, added_by, expires_at, active FROM blacklist WHERE id = ?', [$manual['id']]), 'automático sin duración = permanente');
+
+        banSetActive($this->db, $manual['id'], false);
+        $temporary = upsertBan($this->db, ['type' => 'nick', 'value' => 'Griefer', 'reason' => 'comprometida', 'added_by' => 'FurrGuard', 'duration_seconds' => 3600], 'auto');
+        self::assertSame('reactivated', $temporary['status']);
+        self::assertSame(['temporal' => 1, 'active' => 1], $this->row('SELECT expires_at > NOW() AS temporal, active FROM blacklist WHERE id = ?', [$manual['id']]), 'automático con duración = temporal');
     }
 
     public function testStainedIpsAreChildrenThatFollowTheParent(): void

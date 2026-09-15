@@ -7,7 +7,7 @@ declare(strict_types=1);
 define('FURRGUARD_SKIP_DOTENV', true);
 define('FURRGUARD_STORAGE', sys_get_temp_dir() . '/furrguard-tests-' . getmypid());
 
-foreach (['APP_ENV' => 'production', 'APP_URL' => 'https://furrguard.test', 'FOUNDER_DISCORD_ID' => '111111111111111111'] as $key => $value) {
+foreach (['APP_ENV' => 'production', 'APP_URL' => 'https://furrguard.test', 'FOUNDER_DISCORD_ID' => '111111111111111111', 'GEO_PROVIDERS' => 'ip-api'] as $key => $value) {
     putenv("{$key}={$value}");
     $_ENV[$key] = $value;
 }

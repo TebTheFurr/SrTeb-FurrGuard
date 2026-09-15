@@ -217,3 +217,13 @@ function sameIpScope(?string $a, ?string $b): bool
     $keyA = ipScopeKey($a);
     return $keyA !== null && $keyA === ipScopeKey($b);
 }
+
+/**
+ * UUID versión 4 = cuenta premium autenticada con Mojang. Los UUID offline que genera el servidor
+ * para jugadores no premium son versión 3 (MD5 del nick), así que sirve para distinguirlos.
+ */
+function isPremiumUuid(string $uuid): bool
+{
+    $normalized = normalizeUuid($uuid);
+    return $normalized !== null && $normalized[14] === '4';
+}

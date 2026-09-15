@@ -140,6 +140,7 @@ final class CheckPlayerTest extends DomainTestCase
             logPlayerConnection($this->db, $this->player(ip: '2606:4700:1:2::9'), ['countryCode' => 'RU'] + self::RESIDENTIAL, true, 'blacklisted');
         }
         $this->ipApi['2606:4700:1:2::9'] = ['countryCode' => 'RU', 'country' => 'Russia', 'continentCode' => 'EU'] + self::RESIDENTIAL;
+        setSetting($this->db, 'country_change_min_connections', '3');
         $version = (int) getSetting($this->db, 'cache_version');
 
         $result = checkPlayer($this->db, $this->player(ip: '2606:4700:1:2::9'));

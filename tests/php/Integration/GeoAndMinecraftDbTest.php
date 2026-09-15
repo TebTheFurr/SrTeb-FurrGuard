@@ -85,6 +85,39 @@ final class GeoAndMinecraftDbTest extends DatabaseTestCase
         self::assertSame(2, $this->ipApiCalls, 'con un fallo reciente no se reintenta ip-api');
     }
 
+    public function testBalancerFailsOverBetweenProvidersAndCachesPartialResultsForAnHour(): void
+    {
+        \FurrGuard\Tests\Unit\GeoProvidersTest::setEnv('GEO_PROVIDERS', 'ip-api,proxycheck,freeipapi');
+        try {
+            $calls = [];
+            geoUseTestDoubles(function (string $ip, string $provider) use (&$calls): array {
+                $calls[] = $provider;
+                return match ($provider) {
+                    'ip-api' => ['status' => 500, 'headers' => [], 'body' => null],
+                    'proxycheck' => ['status' => 200, 'headers' => [], 'body' => json_encode(['status' => 'denied', 'message' => 'You have exceeded your query limit'])],
+                    default => ['status' => 200, 'headers' => [], 'body' => json_encode(['countryCode' => 'ES', 'continentCode' => 'EU', 'asn' => '3352', 'asnOrganization' => 'Telefonica', 'isProxy' => false])],
+                };
+            }, null, 0); // empieza por ip-api para que el orden sea determinista
+
+            $result = geoLookup($this->db, '203.0.113.9');
+            self::assertSame('freeipapi', $result['source'], 'los dos primeros fallan y el tercero responde');
+            self::assertSame(['ES', 'AS3352 Telefonica', null], [$result['data']['countryCode'], $result['data']['as'], $result['data']['hosting']]);
+            self::assertSame(3600, $this->ttl('203.0.113.9'), 'resultado parcial: caché de una hora');
+            self::assertContains('freeipapi', $calls);
+            self::assertGreaterThan(time(), geoPausedUntil('proxycheck'), 'la cuota agotada deja a proxycheck en pausa');
+            self::assertSame('limited', geoRemoteStatus($this->db)['proxycheck']);
+
+            // Con proxycheck en pausa no vuelve a llamarse; ip-api y freeipapi siguen en la rotación.
+            $calls = [];
+            geoLookup($this->db, '203.0.113.10');
+            self::assertNotContains('proxycheck', $calls);
+            self::assertSame(2, (int) $this->db->query("SELECT COUNT(*) FROM ip_api_logs WHERE provider = 'freeipapi' AND success = 1")->fetchColumn());
+        } finally {
+            \FurrGuard\Tests\Unit\GeoProvidersTest::setEnv('GEO_PROVIDERS', 'ip-api');
+            @unlink(geoPauseFile('proxycheck'));
+        }
+    }
+
     public function testBudgetAndRateHeadersStopRemoteCalls(): void
     {
         $this->fakeIpApi(200, ['status' => 'success', 'country' => 'X']);

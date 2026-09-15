@@ -160,8 +160,13 @@ function matchDetectionRule(array $rules, array $data): ?array
             return $hit('proxy_detected', 'blocked_providers', $id);
         }
     }
-    if ($on('block_vpn') && ($id = $provider('vpn')) !== null) {
-        return $hit('vpn_detected', 'blocked_providers', $id);
+    if ($on('block_vpn')) {
+        if (($data['vpn'] ?? null) === true) {
+            return $hit('vpn_detected');
+        }
+        if (($id = $provider('vpn')) !== null) {
+            return $hit('vpn_detected', 'blocked_providers', $id);
+        }
     }
     if ($on('block_hosting') && ($data['hosting'] ?? null) === true) {
         return $hit('hosting_detected');
@@ -239,14 +244,17 @@ function detectCountryChange(PDO $db, array $settings, ?string $uuid, string $ni
  * @param array{historical_country: string, current_country: string, percentage: float, connections: int} $change
  * @return array<string, mixed>
  */
-function banCompromisedAccount(PDO $db, ?string $uuid, string $nick, string $ip, array $change): array
+function banCompromisedAccount(PDO $db, ?string $uuid, string $nick, string $ip, array $change, int $hours = 24): array
 {
     $base = [
         'reason' => sprintf('Cuenta comprometida: cambio de país %s → %s', $change['historical_country'], $change['current_country']),
         'added_by' => AUTO_BAN_AUTHOR,
     ];
-    return withTransaction($db, static function (PDO $db) use ($uuid, $nick, $ip, $change, $base): array {
-        $root = upsertBan($db, ($uuid !== null ? ['type' => 'uuid', 'value' => $uuid] : ['type' => 'nick', 'value' => $nick]) + $base, 'auto');
+    // Temporal por defecto (24 h): un viaje o una VPN legítima no dejan un baneo permanente. 0 = permanente.
+    $root = $base + ['duration_seconds' => $hours > 0 ? $hours * 3600 : null];
+    $rootBan = $root;
+    return withTransaction($db, static function (PDO $db) use ($uuid, $nick, $ip, $change, $base, $rootBan): array {
+        $root = upsertBan($db, ($uuid !== null ? ['type' => 'uuid', 'value' => $uuid] : ['type' => 'nick', 'value' => $nick]) + $rootBan, 'auto');
         if ($uuid !== null) {
             upsertBan($db, ['type' => 'nick', 'value' => $nick, 'parent_id' => $root['id']] + $base, 'auto');
         }
@@ -331,11 +339,18 @@ function evaluatePlayer(PDO $db, array $rules, array $player, bool $remote, bool
     $decide = static fn (array $decision): array => ['decision' => $decision + DECISION_DEFAULTS, 'geo' => $geo];
 
     // 3. Blacklist. El UUID premium del nick también cuenta: un baneo nunca se esquiva entrando en offline.
-    $profile = minecraftProfileByName($db, $player['nick'], $remote);
-    $uuids = array_values(array_unique(array_filter([$player['uuid'], $profile['status'] === 'premium' ? $profile['uuid'] : null])));
+    // Un UUID v4 ya es el premium autenticado por Velocity: la consulta a Mojang solo hace falta con UUID offline (v3).
+    $premiumUuid = null;
+    if ($player['uuid'] === null || !isPremiumUuid($player['uuid'])) {
+        $profile = minecraftProfileByName($db, $player['nick'], $remote);
+        $premiumUuid = $profile['status'] === 'premium' ? $profile['uuid'] : null;
+    }
+    $uuids = array_values(array_unique(array_filter([$player['uuid'], $premiumUuid])));
     $ban = findActiveBan($db, $uuids, $player['nick'], $player['ip'], $asn);
     if ($ban !== null) {
-        if ($live && in_array($ban['type'], ['uuid', 'nick'], true)) {
+        // La IP de evasión se banea si el ajuste lo permite y no es una red móvil (CGNAT compartido por miles de usuarios).
+        if ($live && in_array($ban['type'], ['uuid', 'nick'], true)
+            && ($rules['settings']['auto_ban_evasion_ip'] ?? '1') === '1' && ($data['mobile'] ?? null) !== true) {
             banEvasionIp($db, $ban, $player['ip']);
         }
         return $decide(banDecision('blacklisted', $ban) + ['blocked_name' => banDisplayName($db, $ban, $remote)]);
@@ -356,7 +371,7 @@ function evaluatePlayer(PDO $db, array $rules, array $player, bool $remote, bool
     if ($live && is_string($data['countryCode'] ?? null) && $data['countryCode'] !== '') {
         $change = detectCountryChange($db, $rules['settings'], $player['uuid'], $player['nick'], $data['countryCode']);
         if ($change !== null) {
-            $root = banCompromisedAccount($db, $player['uuid'], $player['nick'], $player['ip'], $change);
+            $root = banCompromisedAccount($db, $player['uuid'], $player['nick'], $player['ip'], $change, (int) ($rules['settings']['compromised_ban_hours'] ?? '24'));
             return $decide(banDecision('compromised_account', $root) + [
                 'historical_country' => $change['historical_country'],
                 'current_country' => $change['current_country'],

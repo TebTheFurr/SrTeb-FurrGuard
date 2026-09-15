@@ -105,7 +105,7 @@ final class PlatformDbTest extends DatabaseTestCase
         $db = $this->db;
         $db->exec("INSERT INTO ip_cache (ip, data, status, expires_at) VALUES
             ('198.51.100.1', '{}', 'fail', NOW() - INTERVAL 1 MINUTE), ('198.51.100.2', '{}', 'success', NOW() + INTERVAL 1 HOUR)");
-        $db->exec("INSERT INTO ip_api_logs (ip, success, created_at) VALUES ('198.51.100.1', 1, NOW() - INTERVAL 2 HOUR), ('198.51.100.1', 1, NOW())");
+        $db->exec("INSERT INTO ip_api_logs (ip, success, created_at) VALUES ('198.51.100.1', 1, NOW() - INTERVAL 26 HOUR), ('198.51.100.1', 1, NOW())");
         $db->exec("INSERT INTO admin_sessions (discord_id, session_token_hash, expires_at, revoked_at) VALUES
             ('1', REPEAT('a', 64), NOW() - INTERVAL 2 DAY, NULL), ('2', REPEAT('b', 64), NOW() + INTERVAL 1 HOUR, NOW() - INTERVAL 3 DAY),
             ('3', REPEAT('c', 64), NOW() + INTERVAL 1 HOUR, NULL)");

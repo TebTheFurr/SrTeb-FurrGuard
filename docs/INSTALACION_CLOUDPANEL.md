@@ -111,6 +111,11 @@ GEOIP_COUNTRY_DB=storage/geoip/GeoLite2-Country.mmdb
 GEOIP_ASN_DB=storage/geoip/GeoLite2-ASN.mmdb
 MAXMIND_ACCOUNT_ID=...
 MAXMIND_LICENSE_KEY=...
+
+# Balanceador de proveedores remotos (docs/API.md §6). Claves gratuitas opcionales
+GEO_PROVIDERS=ip-api,proxycheck,ipapi-is,freeipapi
+PROXYCHECK_API_KEY=
+IPAPI_IS_API_KEY=
 ```
 
 - `APP_URL` es obligatoria, sin barra final y **con https**: de ella salen el origen permitido del

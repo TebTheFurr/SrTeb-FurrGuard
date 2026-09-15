@@ -38,7 +38,7 @@ function runCleanup(PDO $db): array
 
     $result = [
         'ip_cache' => cleanupDelete($db, 'ip_cache', 'expires_at < NOW()'),
-        'ip_api_logs' => cleanupDelete($db, 'ip_api_logs', 'created_at < NOW() - INTERVAL 1 HOUR'),
+        'ip_api_logs' => cleanupDelete($db, 'ip_api_logs', 'created_at < NOW() - INTERVAL 25 HOUR'),
         'minecraft_profiles' => cleanupDelete($db, 'minecraft_profiles', 'expires_at < NOW()'),
         'minecraft_names_cache' => cleanupDelete($db, 'minecraft_names_cache', 'expires_at < NOW()'),
         'admin_sessions' => cleanupDelete($db, 'admin_sessions', 'expires_at < NOW() - INTERVAL 1 DAY OR revoked_at < NOW() - INTERVAL 1 DAY'),

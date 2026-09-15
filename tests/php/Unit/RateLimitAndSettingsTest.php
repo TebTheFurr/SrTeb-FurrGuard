@@ -115,7 +115,7 @@ final class RateLimitAndSettingsTest extends TestCase
     public function testDefinitionsCoverContract(): void
     {
         $definitions = settingDefinitions();
-        self::assertCount(36, $definitions);
+        self::assertCount(38, $definitions);
         self::assertSame('https://furrguard.test/verify.php', $definitions['furrsecurity_verify_url']['default']);
         self::assertArrayNotHasKey('api_key', $definitions);
         self::assertArrayNotHasKey('webhook_url', $definitions);

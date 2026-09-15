@@ -101,13 +101,17 @@ Orden de evaluación (no cambiar sin actualizar este documento):
 2. Geolocalización (`includes/geo.php`, ver §6).
 3. **Blacklist** (uuid → nick → as → ip → ip_range). Un baneo gana siempre, también a la whitelist.
    Además del UUID recibido cuenta el **UUID premium del nick** (Mojang, con caché): un baneo por UUID
-   no se esquiva entrando en modo offline.
+   no se esquiva entrando en modo offline. Mojang solo se consulta cuando el UUID recibido es offline
+   (versión 3): un UUID v4 ya es el premium autenticado por Velocity.
+   Si el baneo es por uuid o nick, la IP desde la que entra pasa a ser hija del baneo (evasión) salvo
+   que `auto_ban_evasion_ip = 0` o la IP sea de una red móvil (`mobile: true`, CGNAT compartido).
 4. **Whitelist** (uuid, nick, as, ip, ip_range): exime de los pasos 5 y 6, **no** de la blacklist.
    Solo cuenta el UUID recibido (el premium resuelto por nick nunca exime).
 5. Sin ningún dato de geolocalización: `ip_api_unavailable` si la IP es pública e
    `ip_api_fail_open = 0`; en otro caso se permite. **Una IP privada o reservada nunca tiene datos y
    se permite** (sin pasos 6 y 7).
-6. Detección de cuenta comprometida (cambio drástico de país).
+6. Detección de cuenta comprometida (cambio drástico de país). El baneo automático de UUID, nick e IP
+   dura `compromised_ban_hours` (24 h por defecto; 0 = permanente).
 7. Reglas automáticas: proxy → vpn → hosting → mobile → proveedor bloqueado → país → continente.
 
 Respuesta:
@@ -437,12 +441,28 @@ admin:   overview players whitelist blacklist sanctions
 2. **Espejo local MaxMind** (GeoLite2-Country + GeoLite2-ASN, `maxmind-db/reader`): país, continente,
    ASN y organización. Rutas en `GEOIP_COUNTRY_DB` y `GEOIP_ASN_DB`; si faltan, el espejo se
    desactiva sin errores.
-3. **ip-api** (HTTP, plan gratuito) si hay presupuesto y no hay un fallo reciente en caché para esa
-   IP: aporta ISP, proxy, hosting y mobile. Presupuesto 40/min contando **solo peticiones reales**
-   (`ip_api_logs`) y respetando `X-Rl`/`X-Ttl` (pausa en `storage/ratelimit`).
-4. Se combinan: ip-api manda en ISP/proxy/hosting/mobile; MaxMind rellena país, continente, ASN y
-   organización cuando ip-api no los da. Caché 24 h en éxito y 5 min en fallo; un resultado solo de
-   MaxMind no se cachea (`degraded: true`).
+3. **Proveedores remotos, balanceador de igual prioridad** (`GEO_PROVIDERS`, por defecto los cuatro),
+   si no hay un fallo reciente en caché para esa IP. Cada consulta empieza por un proveedor al azar y,
+   si está caído, en pausa o sin presupuesto, pasa al siguiente hasta agotar la cadena o un plazo
+   total de 6,5 s. Presupuesto por proveedor contando **solo peticiones reales** (`ip_api_logs`,
+   columna `provider`) y pausa por proveedor en `storage/ratelimit/<proveedor>-pause` ante un 429
+   (`Retry-After`), `X-Rl: 0`/`X-Ttl` (ip-api) o un aviso de cuota agotada (proxycheck):
+
+   | Proveedor | Presupuesto | Aporta |
+   |---|---|---|
+   | `ip-api` (http, gratuito) | 40/min | país, continente, ASN, ISP, proxy, hosting, mobile |
+   | `proxycheck` (`PROXYCHECK_API_KEY` opcional) | 90/día sin clave, 950/día con clave | país, continente, ASN, proxy, **vpn**, hosting (`type: Hosting`), mobile (`type: Wireless`) |
+   | `ipapi-is` (requiere `IPAPI_IS_API_KEY`) | 950/día | país, continente, ASN, proxy, **vpn**, hosting (`is_datacenter`), mobile |
+   | `freeipapi` (sin clave) | 50/min | país, continente, ASN, proxy; **sin** vpn/hosting/mobile (resultado parcial) |
+
+   Todo se normaliza al formato de ip-api más `vpn` y `source`; una bandera que el proveedor no
+   aporta vale `null` (desconocida). `block_vpn` bloquea con `vpn: true` además de por proveedor.
+4. Se combinan: el proveedor remoto manda; MaxMind rellena país, continente, ASN y organización
+   cuando falten. Caché 24 h en éxito (1 h si el resultado es parcial), 5 min en fallo; un resultado
+   solo de MaxMind no se cachea (`degraded: true`).
+- `geoHealth()` devuelve `ip_api` como resumen de todos los proveedores (`ok` si alguno responde,
+  `limited` si todos están en pausa o sin presupuesto, `down` si todos fallan) y `providers` con el
+  estado de cada uno; `php bin/geoip-update.php --status` los muestra.
 - `bin/geoip-update.php` descarga las bases con `MAXMIND_ACCOUNT_ID` + `MAXMIND_LICENSE_KEY`, verifica
   el SHA-256 y las sustituye de forma atómica (cron dos veces por semana).
 
@@ -454,7 +474,9 @@ admin:   overview players whitelist blacklist sanctions
 | `block_mobile`, `ip_api_fail_open`, `notify_connections`, `notify_hispanic` | bool | `0` |
 | `country_change_detection_enabled` | bool | `1` |
 | `country_change_continent_only` | bool | `0` |
-| `country_change_min_connections` | int 1–1000 | `3` |
+| `country_change_min_connections` | int 1–1000 | `10` |
+| `compromised_ban_hours` | int 0–8760 (0 = permanente) | `24` |
+| `auto_ban_evasion_ip` | bool | `1` |
 | `country_change_min_percentage` | float 0–100 | `70` |
 | `server_name` | texto ≤ 64 | `FurrGuard` |
 | `discord_url` | URL https o vacío | `` |
@@ -480,7 +502,8 @@ Eliminadas: `api_key` (texto plano), `webhook_url`, `notify_blocks`.
 `APP_ENV` (`production`/`development`), `APP_URL`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`,
 `DB_PASSWORD`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI`,
 `FOUNDER_DISCORD_ID`, `TRUSTED_PROXIES`, `API_RATE_LIMIT_PER_MIN`, `GEOIP_COUNTRY_DB`,
-`GEOIP_ASN_DB`, `MAXMIND_ACCOUNT_ID`, `MAXMIND_LICENSE_KEY`.
+`GEOIP_ASN_DB`, `MAXMIND_ACCOUNT_ID`, `MAXMIND_LICENSE_KEY`, `GEO_PROVIDERS`, `PROXYCHECK_API_KEY`,
+`IPAPI_IS_API_KEY`.
 
 Una variable del entorno real (PHP-FPM, systemd) tiene prioridad sobre `.env`.
 `CORS_ALLOWED_ORIGIN` ya no existe: las APIs de plugin no envían cabeceras CORS.

@@ -205,7 +205,7 @@ function geoStatusAnswer(string $key, array $record): ?string
  * Informe de `--status`. `ok` (salida 0) exige espejo `ok` y respuesta de las dos consultas de prueba.
  * `$readerInstalled` solo se fuerza desde los tests (simular `disabled` sin tocar vendor/).
  *
- * @return array{ip: string, reader: array{installed: bool, version: ?string}, databases: array<string, array{edition: string, env: string, configured: string, path: string, exists: bool, size: ?int, build_epoch: ?int, age_days: ?int, type: ?string, answer: ?string, error: ?string}>, credentials: array<string, bool>, mirror: string, ip_api: ?string, db_error: ?string, ok: bool}
+ * @return array{ip: string, reader: array{installed: bool, version: ?string}, databases: array<string, array{edition: string, env: string, configured: string, path: string, exists: bool, size: ?int, build_epoch: ?int, age_days: ?int, type: ?string, answer: ?string, error: ?string}>, credentials: array<string, bool>, mirror: string, ip_api: ?string, providers: array<string, string>, db_error: ?string, ok: bool}
  */
 function geoStatusReport(string $ip = GEOIP_STATUS_TEST_IP, ?PDO $db = null, ?string $dbError = null, ?bool $readerInstalled = null): array
 {
@@ -231,13 +231,14 @@ function geoStatusReport(string $ip = GEOIP_STATUS_TEST_IP, ?PDO $db = null, ?st
         'credentials' => ['MAXMIND_ACCOUNT_ID' => env('MAXMIND_ACCOUNT_ID') !== '', 'MAXMIND_LICENSE_KEY' => env('MAXMIND_LICENSE_KEY') !== ''],
         'mirror' => $mirror,
         'ip_api' => $ipApi,
+        'providers' => $db !== null && $dbError === null ? geoRemoteStatus($db) : [],
         'db_error' => $dbError,
         'ok' => $mirror === 'ok' && count($answered) === count($databases),
     ];
 }
 
 /**
- * @param array{ip: string, reader: array{installed: bool, version: ?string}, databases: array<string, array{edition: string, env: string, configured: string, path: string, exists: bool, size: ?int, build_epoch: ?int, age_days: ?int, type: ?string, answer: ?string, error: ?string}>, credentials: array<string, bool>, mirror: string, ip_api: ?string, db_error: ?string, ok: bool} $report
+ * @param array{ip: string, reader: array{installed: bool, version: ?string}, databases: array<string, array{edition: string, env: string, configured: string, path: string, exists: bool, size: ?int, build_epoch: ?int, age_days: ?int, type: ?string, answer: ?string, error: ?string}>, credentials: array<string, bool>, mirror: string, ip_api: ?string, providers: array<string, string>, db_error: ?string, ok: bool} $report
  */
 function geoStatusRender(array $report): string
 {
@@ -281,7 +282,13 @@ function geoStatusRender(array $report): string
         'missing' => 'faltan las bases o PHP no puede leerlas: ejecuta php bin/geoip-update.php con el usuario de la web y revisa permisos y rutas GEOIP_*',
         default => 'falta el lector: ejecuta `composer install --no-dev` y vuelve a comprobar',
     };
-    $lines[] = 'ip-api: ' . ($report['ip_api'] ?? 'no comprobado, la base de datos no conecta' . ($report['db_error'] !== null ? " ({$report['db_error']})" : ''));
+    $lines[] = 'Proveedores remotos: ' . ($report['ip_api'] ?? 'no comprobados, la base de datos no conecta' . ($report['db_error'] !== null ? " ({$report['db_error']})" : ''));
+    foreach ($report['providers'] as $provider => $state) {
+        $lines[] = sprintf('  %-12s %s', $provider, $state);
+    }
+    if ($report['ip_api'] !== null && $report['providers'] === []) {
+        $lines[] = '  (ninguno activo: revisa GEO_PROVIDERS)';
+    }
     $lines[] = '';
     $lines[] = $report['ok'] ? 'Resultado: OK (salida 0)' : 'Resultado: FALLO, el espejo no está operativo (salida 1)';
     return implode(PHP_EOL, $lines) . PHP_EOL;
