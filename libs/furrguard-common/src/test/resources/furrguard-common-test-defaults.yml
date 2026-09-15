@@ -1,0 +1,4 @@
+# Defaults de prueba para YamlConfigTest
+alert-times:
+  - 3600
+  - 60

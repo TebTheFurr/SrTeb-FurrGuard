@@ -1,0 +1,48 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'org.grinch.furrguard'
+version = '2.0.0'
+
+repositories {
+    mavenCentral()
+}
+
+def adventureVersion = '4.20.0' // el mas bajo de las plataformas: Paper 1.21.4 (Velocity 3.4.0 trae 4.26.1)
+
+dependencies {
+    // Los consumidores las sombrean y reubican
+    api('com.google.code.gson:gson:2.11.0') {
+        exclude group: 'com.google.errorprone' // solo anotaciones de compilacion
+    }
+    api 'org.yaml:snakeyaml:2.2'
+
+    // Lo aportan Velocity y Paper en tiempo de ejecucion
+    compileOnly "net.kyori:adventure-api:$adventureVersion"
+    compileOnly "net.kyori:adventure-text-serializer-legacy:$adventureVersion"
+    testImplementation "net.kyori:adventure-api:$adventureVersion"
+    testImplementation "net.kyori:adventure-text-serializer-legacy:$adventureVersion"
+
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// Sin toolchain fijo: compila con la JVM que ejecuta Gradle (17+), asi un consumidor con
+// includeBuild no necesita tener un JDK 17 instalado. -PtoolchainVersion=21|26 fuerza uno.
+def toolchainVersion = findProperty('toolchainVersion')
+if (toolchainVersion != null) {
+    java.toolchain.languageVersion.set(JavaLanguageVersion.of(toolchainVersion as int))
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release.set(17)
+    // -classfile: avisos por las anotaciones errorprone de Gson, excluidas a proposito
+    options.compilerArgs.addAll(['-Xlint:all', '-Xlint:-processing', '-Xlint:-classfile'])
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
