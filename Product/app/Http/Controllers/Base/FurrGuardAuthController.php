@@ -135,10 +135,12 @@ class FurrGuardAuthController extends Controller
     }
 
     /**
-     * Redirects to the FurrGuard page, optionally with ?error=... for the page to explain what happened.
+     * Redirects to the FurrGuard page, optionally with ?error=... for the page to explain what
+     * happened. The Location is relative on purpose: the panel forces https on generated URLs
+     * when APP_URL is https, and a browser using the panel over http must stay on http.
      */
     private function toPage(array $query = []): RedirectResponse
     {
-        return redirect()->to('/furrguard' . ($query === [] ? '' : '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986)));
+        return new RedirectResponse('/furrguard' . ($query === [] ? '' : '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986)));
     }
 }

@@ -93,22 +93,17 @@ const HideIpsButton = styled.button<{ $on: boolean }>`
     }
 `;
 
+/** Sections as wrapping pills: every one is always visible, on any width, without scrollbars. */
 const NavBar = styled.nav`
-    ${tw`flex items-stretch gap-1 mb-4 overflow-x-auto`};
-    border-bottom: 1px solid var(--color-neutral);
-    scrollbar-width: thin;
-`;
-
-const GroupDivider = styled.span`
-    ${tw`self-center w-px h-4 mx-1 flex-shrink-0`};
-    background-color: var(--color-neutral);
+    ${tw`flex flex-wrap items-center gap-1 p-1.5 mb-4 rounded-[var(--border-radius)]`};
+    background-color: var(--color-background-secondary);
+    border: 1px solid var(--color-neutral);
 `;
 
 const NavTab = styled(NavLink)`
-    ${tw`flex items-center gap-2 px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors duration-150`};
-    margin-bottom: -1px;
+    ${tw`flex items-center gap-2 px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors duration-150`};
+    border-radius: calc(var(--border-radius, 12px) * 0.67);
     color: var(--color-muted);
-    border-bottom: 2px solid transparent;
 
     svg {
         font-size: 0.8rem;
@@ -116,11 +111,12 @@ const NavTab = styled(NavLink)`
 
     &:hover {
         color: var(--color-base);
+        background-color: var(--color-background);
     }
 
     &.active {
         color: var(--color-base);
-        border-bottom-color: var(--color-primary);
+        background-color: color-mix(in srgb, var(--color-primary) 18%, transparent);
 
         svg {
             color: var(--color-primary);
@@ -227,17 +223,14 @@ const FurrGuardShell = () => {
 
             {groups.length > 0 && (
                 <NavBar aria-label={t('furrguard.nav.label', 'Secciones de FurrGuard')}>
-                    {groups.map((group, index) => (
-                        <React.Fragment key={group.title}>
-                            {index > 0 && <GroupDivider aria-hidden={'true'} />}
-                            {group.items.map((item) => (
-                                <NavTab key={item.section} to={sectionPath(item.section)} exact={item.section === 'overview'} title={group.title}>
-                                    <FontAwesomeIcon icon={item.icon} />
-                                    {item.label}
-                                </NavTab>
-                            ))}
-                        </React.Fragment>
-                    ))}
+                    {groups.map((group) =>
+                        group.items.map((item) => (
+                            <NavTab key={item.section} to={sectionPath(item.section)} exact={item.section === 'overview'} title={group.title}>
+                                <FontAwesomeIcon icon={item.icon} />
+                                {item.label}
+                            </NavTab>
+                        ))
+                    )}
                 </NavBar>
             )}
 
