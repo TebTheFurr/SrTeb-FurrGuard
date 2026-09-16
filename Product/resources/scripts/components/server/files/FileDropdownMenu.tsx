@@ -11,8 +11,11 @@ import {
     faTrash,
     faKey,
     faCompress,
+    faShieldAlt,
     IconDefinition,
 } from '@fortawesome/free-solid-svg-icons';
+import useVaultTranslation from '@/components/server/vault/useVaultTranslation';
+import useCopyToVault from '@/components/server/vault/useCopyToVault';
 import RenameFileModal from '@/components/server/files/RenameFileModal';
 import MoveFileModal from '@/components/server/files/MoveFileModal';
 import CompressImageModal from '@/components/server/files/CompressImageModal';
@@ -136,6 +139,8 @@ const FileDropdownMenu = ({ file, directory: directoryOverride }: { file: FileOb
     const trashAutoDeleteHours = useStoreState((state) => state.settings.data?.components?.trashAutoDeleteHours ?? 168);
 
     const isInTrash = directory.startsWith(getTrashPath());
+    const { t } = useVaultTranslation();
+    const { vaultEnabled, copyToVault } = useCopyToVault();
 
     useEventListener(`pterodactyl:files:ctx:${file.key}`, (e: CustomEvent<{ x: number; y: number }>) => {
         if (onClickRef.current) {
@@ -208,6 +213,11 @@ const FileDropdownMenu = ({ file, directory: directoryOverride }: { file: FileOb
             .then(() => mutate())
             .catch((error) => clearAndAddHttpError({ key: 'files', error }))
             .then(() => setShowSpinner(false));
+    };
+
+    const doCopyToVault = () => {
+        setShowSpinner(true);
+        copyToVault(directory, [file.name]).then(() => setShowSpinner(false));
     };
 
     const doUnarchive = () => {
@@ -328,10 +338,17 @@ const FileDropdownMenu = ({ file, directory: directoryOverride }: { file: FileOb
                         </Can>
                     )}
                     {file.isFile && (
-                        <MenuItemRow 
-                            icon={faDownload} 
-                            label="Download" 
-                            onClick={doDownload} 
+                        <MenuItemRow
+                            icon={faDownload}
+                            label="Download"
+                            onClick={doDownload}
+                        />
+                    )}
+                    {vaultEnabled && !isInTrash && (
+                        <MenuItemRow
+                            icon={faShieldAlt}
+                            label={t('vault.copy.action', 'Copiar a Vault (M-Backup)')}
+                            onClick={doCopyToVault}
                         />
                     )}
                 </MenuSection>

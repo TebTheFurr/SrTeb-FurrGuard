@@ -333,6 +333,16 @@ class ThemeSettings extends Model
                                     'order' => 11,
                                     'egg_filter' => [],
                                 ],
+                                // Tebby Vault. The client only shows it on servers with
+                                // the Vault active, and hides "backups" on those.
+                                [
+                                    'id' => 'vault',
+                                    'label' => 'Vault',
+                                    'icon' => 'archive',
+                                    'enabled' => true,
+                                    'order' => 12,
+                                    'egg_filter' => [],
+                                ],
                             ],
                         ],
                         [

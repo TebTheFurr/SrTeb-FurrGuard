@@ -17,6 +17,11 @@ class AuthenticateServerAccess
     ];
 
     /**
+     * Name pattern of the Tebby Vault client routes (routes/api-client.php).
+     */
+    private const VAULT_ROUTES = 'api:client:server.vault.*';
+
+    /**
      * AuthenticateServerAccess constructor.
      */
     public function __construct()
@@ -51,7 +56,7 @@ class AuthenticateServerAccess
         } catch (ServerStateConflictException $exception) {
             // Still allow users to get information about their server if it is installing or
             // being transferred.
-            if (!$request->routeIs('api:client:server.view')) {
+            if (!$request->routeIs('api:client:server.view') && !$this->isVaultRestoreConflict($request, $server)) {
                 if (($server->isSuspended() || $server->node->isUnderMaintenance()) && !$request->routeIs('api:client:server.resources')) {
                     throw $exception;
                 }
@@ -64,5 +69,21 @@ class AuthenticateServerAccess
         $request->attributes->set('server', $server);
 
         return $next($request);
+    }
+
+    /**
+     * A Tebby Vault restore that stops the server holds it in "restoring_backup"
+     * until the job is over, and the Vault page has to keep polling (and be able
+     * to cancel) that very job meanwhile. So the Vault client routes pass when
+     * the restore is the only conflict; suspended, installing, transferring or
+     * maintenance servers stay blocked. Writes that would clash with the running
+     * job are refused by the vault itself (409 "ocupado").
+     */
+    private function isVaultRestoreConflict(Request $request, Server $server): bool
+    {
+        return $request->routeIs(self::VAULT_ROUTES)
+            && $server->status === Server::STATUS_RESTORING_BACKUP
+            && !$server->node->isUnderMaintenance()
+            && is_null($server->transfer);
     }
 }

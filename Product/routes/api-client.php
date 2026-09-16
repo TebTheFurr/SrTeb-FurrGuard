@@ -1,11 +1,14 @@
 <?php
 
+use Pterodactyl\Enum\VaultLimit;
 use Pterodactyl\Enum\ResourceLimit;
 use Illuminate\Support\Facades\Route;
 use Pterodactyl\Http\Controllers\Api\Client;
 use Pterodactyl\Http\Middleware\Activity\ServerSubject;
 use Pterodactyl\Http\Middleware\Activity\AccountSubject;
+use Pterodactyl\Http\Middleware\RequireFurrGuardAccess;
 use Pterodactyl\Http\Middleware\RequireTwoFactorAuthentication;
+use Pterodactyl\Http\Middleware\Api\Client\Server\RequireVaultEnabled;
 use Pterodactyl\Http\Middleware\Api\Client\Server\ResourceBelongsToServer;
 use Pterodactyl\Http\Middleware\Api\Client\Server\AuthenticateServerAccess;
 
@@ -74,6 +77,22 @@ Route::prefix('/account')->middleware(AccountSubject::class)->group(function () 
 
 /*
 |--------------------------------------------------------------------------
+| FurrGuard (proxy to the FurrGuard panel API, see FurrGuard docs/API.md §9)
+|--------------------------------------------------------------------------
+|
+| Only for panel users with the FurrGuard permission and while the integration
+| is configured; otherwise these routes are 404. FurrGuard's own limit is 300
+| actions per minute and user, so the general client API limit is enough here.
+|
+*/
+Route::prefix('/furrguard')->middleware([RequireFurrGuardAccess::class])->group(function () {
+    Route::get('/', [Client\FurrGuardController::class, 'index'])->name('api:client.furrguard.index');
+    Route::post('/logout', [Client\FurrGuardController::class, 'logout'])->name('api:client.furrguard.logout');
+    Route::post('/action', [Client\FurrGuardController::class, 'action'])->name('api:client.furrguard.action');
+});
+
+/*
+|--------------------------------------------------------------------------
 | Client Control API
 |--------------------------------------------------------------------------
 |
@@ -116,6 +135,7 @@ Route::group([
 
     Route::group(['prefix' => '/files'], function () {
         Route::get('/list', [Client\Servers\FileController::class, 'directory']);
+        Route::get('/directory-size', [Client\Servers\FileController::class, 'directorySize']);
         Route::get('/contents', [Client\Servers\FileController::class, 'contents']);
         Route::get('/download', [Client\Servers\FileController::class, 'download']);
         Route::put('/rename', [Client\Servers\FileController::class, 'rename']);
@@ -172,6 +192,45 @@ Route::group([
         Route::middleware([ResourceLimit::Backup->middleware()])
             ->post('/{backup}/restore', [Client\Servers\BackupController::class, 'restore']);
         Route::delete('/{backup}', [Client\Servers\BackupController::class, 'delete']);
+    });
+
+    // Every route here is named "api:client:server.vault.*": AuthenticateServerAccess
+    // relies on that prefix to let the Vault page work during its own restores.
+    Route::group(['prefix' => '/vault', 'middleware' => [RequireVaultEnabled::class]], function () {
+        $backup = ['carpeta' => 'Backups|M-Backups', 'nombre' => '[^/]{1,255}'];
+        $trabajo = ['trabajo' => '[A-Za-z0-9_-]{8,64}'];
+
+        Route::get('/', [Client\Servers\VaultController::class, 'index'])->name('api:client:server.vault.index');
+        Route::post('/logout', [Client\Servers\VaultController::class, 'logout'])->name('api:client:server.vault.logout');
+        Route::get('/listar', [Client\Servers\VaultController::class, 'listar'])->name('api:client:server.vault.listar');
+        Route::middleware([VaultLimit::Links->middleware()])->group(function () {
+            Route::get('/descargar', [Client\Servers\VaultController::class, 'descargar'])->name('api:client:server.vault.descargar');
+            Route::post('/zip', [Client\Servers\VaultController::class, 'zip'])->name('api:client:server.vault.zip');
+        });
+        Route::middleware([VaultLimit::Backup->middleware()])
+            ->post('/backups', [Client\Servers\VaultController::class, 'crearBackup'])
+            ->name('api:client:server.vault.backups.store');
+        Route::delete('/backups/{carpeta}/{nombre}', [Client\Servers\VaultController::class, 'borrarBackup'])
+            ->where($backup)
+            ->name('api:client:server.vault.backups.delete');
+        Route::post('/backups/{carpeta}/{nombre}/fijar', [Client\Servers\VaultController::class, 'fijarBackup'])
+            ->where($backup)
+            ->name('api:client:server.vault.backups.pin');
+        Route::middleware([VaultLimit::Restore->middleware()])
+            ->post('/restaurar', [Client\Servers\VaultController::class, 'restaurar'])
+            ->name('api:client:server.vault.restaurar');
+        Route::middleware([VaultLimit::Sync->middleware()])
+            ->post('/sincronizar', [Client\Servers\VaultController::class, 'sincronizar'])
+            ->name('api:client:server.vault.sincronizar');
+        Route::put('/exclusiones', [Client\Servers\VaultController::class, 'exclusiones'])->name('api:client:server.vault.exclusiones');
+        Route::get('/trabajos', [Client\Servers\VaultController::class, 'trabajos'])->name('api:client:server.vault.trabajos');
+        Route::get('/trabajos/{trabajo}', [Client\Servers\VaultController::class, 'trabajo'])
+            ->where($trabajo)
+            ->name('api:client:server.vault.trabajo');
+        Route::post('/trabajos/{trabajo}/cancelar', [Client\Servers\VaultController::class, 'cancelar'])
+            ->where($trabajo)
+            ->name('api:client:server.vault.trabajo.cancelar');
+        Route::get('/actividad', [Client\Servers\VaultController::class, 'actividad'])->name('api:client:server.vault.actividad');
     });
 
     Route::group(['prefix' => '/startup'], function () {

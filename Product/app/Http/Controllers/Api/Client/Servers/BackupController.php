@@ -8,6 +8,7 @@ use Pterodactyl\Models\Server;
 use Illuminate\Http\JsonResponse;
 use Pterodactyl\Facades\Activity;
 use Pterodactyl\Models\Permission;
+use Pterodactyl\Exceptions\DisplayException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Pterodactyl\Services\Backups\DeleteBackupService;
 use Pterodactyl\Services\Backups\DownloadLinkService;
@@ -43,6 +44,8 @@ class BackupController extends ClientApiController
      */
     public function index(Request $request, Server $server): array
     {
+        $this->assertNativeBackups($server);
+
         if (!$request->user()->can(Permission::ACTION_BACKUP_READ, $server)) {
             throw new AuthorizationException();
         }
@@ -66,6 +69,8 @@ class BackupController extends ClientApiController
      */
     public function store(StoreBackupRequest $request, Server $server): array
     {
+        $this->assertNativeBackups($server);
+
         $action = $this->initiateBackupService
             ->setIgnoredFiles(explode(PHP_EOL, $request->input('ignored') ?? ''));
 
@@ -103,6 +108,8 @@ class BackupController extends ClientApiController
      */
     public function toggleLock(Request $request, Server $server, Backup $backup): array
     {
+        $this->assertNativeBackups($server);
+
         if (!$request->user()->can(Permission::ACTION_BACKUP_DELETE, $server)) {
             throw new AuthorizationException();
         }
@@ -125,6 +132,8 @@ class BackupController extends ClientApiController
      */
     public function view(Request $request, Server $server, Backup $backup): array
     {
+        $this->assertNativeBackups($server);
+
         if (!$request->user()->can(Permission::ACTION_BACKUP_READ, $server)) {
             throw new AuthorizationException();
         }
@@ -142,6 +151,8 @@ class BackupController extends ClientApiController
      */
     public function delete(Request $request, Server $server, Backup $backup): JsonResponse
     {
+        $this->assertNativeBackups($server);
+
         if (!$request->user()->can(Permission::ACTION_BACKUP_DELETE, $server)) {
             throw new AuthorizationException();
         }
@@ -166,6 +177,8 @@ class BackupController extends ClientApiController
      */
     public function download(Request $request, Server $server, Backup $backup): JsonResponse
     {
+        $this->assertNativeBackups($server);
+
         if (!$request->user()->can(Permission::ACTION_BACKUP_DOWNLOAD, $server)) {
             throw new AuthorizationException();
         }
@@ -197,6 +210,8 @@ class BackupController extends ClientApiController
      */
     public function restore(RestoreBackupRequest $request, Server $server, Backup $backup): JsonResponse
     {
+        $this->assertNativeBackups($server);
+
         // Cannot restore a backup unless a server is fully installed and not currently
         // processing a different backup restoration request.
         if (!is_null($server->status)) {
@@ -226,5 +241,20 @@ class BackupController extends ClientApiController
         });
 
         return new JsonResponse([], JsonResponse::HTTP_NO_CONTENT);
+    }
+
+    /**
+     * Native backups are switched off on servers that use the Tebby Vault. The
+     * listing answers the same 400 on purpose: the page then explains where
+     * backups live now instead of showing an empty list with a create button
+     * that would fail.
+     *
+     * @throws DisplayException
+     */
+    private function assertNativeBackups(Server $server): void
+    {
+        if ($server->hasVaultEnabled()) {
+            throw new DisplayException(InitiateBackupService::VAULT_MESSAGE);
+        }
     }
 }

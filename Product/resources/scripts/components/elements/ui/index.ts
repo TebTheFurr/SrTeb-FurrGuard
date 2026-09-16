@@ -12,6 +12,14 @@ export type { PanelHeaderProps } from './Panel';
 export { default as StatTile } from './StatTile';
 export type { StatTileProps } from './StatTile';
 
+export { default as StatDetails } from './StatDetails';
+export type { StatDetailsProps, StatDetailRow } from './StatDetails';
+
+export { default as AnimatedNumber } from './AnimatedNumber';
+export type { AnimatedNumberProps } from './AnimatedNumber';
+
+export { VALUE_TRANSITION_MS, EASE_OUT_CUBIC, easeOutCubic, tweenValue, prefersReducedMotion } from './motion';
+
 export { default as MetaChip } from './MetaChip';
 export type { MetaChipProps, ChipTone } from './MetaChip';
 

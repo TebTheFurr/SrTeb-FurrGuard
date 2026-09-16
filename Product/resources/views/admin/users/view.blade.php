@@ -111,6 +111,16 @@
                             <p class="text-muted"><small>Choose which theme editor tabs this user can access when they are not an administrator. Administrators can always access every tab.</small></p>
                         </div>
                     </div>
+                    <div class="form-group">
+                        <label for="furrguard_access" class="control-label">FurrGuard</label>
+                        <div>
+                            <select id="furrguard_access" name="furrguard_access" class="form-control" {{ $isDemo ? 'disabled' : '' }}>
+                                <option value="0">@lang('strings.no')</option>
+                                <option value="1" {{ old('furrguard_access', $user->furrguard_access) ? 'selected="selected"' : '' }}>@lang('strings.yes')</option>
+                            </select>
+                            <p class="text-muted"><small>Muestra el botón FurrGuard en el panel. Dentro, el acceso lo decide su cuenta de Discord.</small></p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

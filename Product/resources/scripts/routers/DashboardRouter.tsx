@@ -9,6 +9,8 @@ import Spinner from '@/components/elements/Spinner';
 import routes from '@/routers/routes';
 import Sidebar from '@/components/layout/Sidebar';
 
+const FurrGuardContainer = React.lazy(() => import('@/components/furrguard/FurrGuardContainer'));
+
 export default () => {
     const location = useLocation();
 
@@ -22,6 +24,9 @@ export default () => {
                         </Route>
                         <Route path={'/claim'} exact>
                             <ClaimOffersContainer />
+                        </Route>
+                        <Route path={'/furrguard'}>
+                            <FurrGuardContainer />
                         </Route>
                         {routes.account.map(({ path, component: Component }) => (
                             <Route key={path} path={`/account/${path}`.replace('//', '/')} exact>

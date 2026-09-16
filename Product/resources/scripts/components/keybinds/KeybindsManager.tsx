@@ -7,6 +7,7 @@ import Modal from '@/components/elements/Modal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faKeyboard } from '@fortawesome/free-solid-svg-icons';
 import Tooltip from '@/components/elements/tooltip/Tooltip';
+import { isVaultEnabledFor } from '@/components/server/vault/vaultNavigation';
 
 type Keybind = {
     cat: 'global' | 'server' | 'account' | 'admin';
@@ -193,6 +194,7 @@ const getServerContext = (pathname: string): string | null => {
     if (pathname.includes('/schedules')) return 'Schedules';
     if (pathname.includes('/users')) return 'Users';
     if (pathname.includes('/backups')) return 'Backups';
+    if (pathname.includes('/vault')) return 'Vault';
     if (pathname.includes('/network')) return 'Network';
     if (pathname.includes('/startup')) return 'Startup';
     if (pathname.includes('/settings')) return 'Settings';
@@ -208,9 +210,21 @@ export default () => {
     const [visible, setVisible] = useState(false);
     const isAuthRoute = location.pathname.startsWith('/auth');
 
+    const currentServerUsesVault = isVaultEnabledFor(getServerIdFromPath(location.pathname));
+
     const visibleBinds = useMemo(
-        () => binds.filter((bind) => !bind.admin || rootAdmin),
-        [rootAdmin]
+        () =>
+            binds
+                .filter((bind) => !bind.admin || rootAdmin)
+                .map((bind) => {
+                    // On Vault servers Ctrl+6 and the "create backup" shortcut lead to the Vault.
+                    if (!currentServerUsesVault) return bind;
+                    if (bind.label === 'Backups') return { ...bind, label: 'Vault' };
+                    // The Vault section is always Spanish (see useVaultTranslation).
+                    if (bind.ctx === 'Backups') return { ...bind, label: 'Crear M-Backup', ctx: 'Vault' };
+                    return bind;
+                }),
+        [rootAdmin, currentServerUsesVault, visible]
     );
 
     useEffect(() => {
@@ -315,7 +329,7 @@ export default () => {
             }
             if (combo === 'Ctrl+6') {
                 event.preventDefault();
-                goServer('/backups');
+                goServer(isVaultEnabledFor(serverId) ? '/vault' : '/backups');
                 return;
             }
             if (combo === 'Ctrl+7') {
@@ -387,7 +401,9 @@ export default () => {
                     window.dispatchEvent(new CustomEvent('luna:keybind:create-subuser'));
                     return;
                 }
-                if (serverContext === 'Backups') {
+                // The Vault page opens its M-Backup dialog on the same event; native
+                // backups cannot be created on Vault servers.
+                if ((serverContext === 'Backups' && !isVaultEnabledFor(serverId)) || serverContext === 'Vault') {
                     event.preventDefault();
                     window.dispatchEvent(new CustomEvent('luna:keybind:create-backup'));
                     return;

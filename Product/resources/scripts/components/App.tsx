@@ -29,6 +29,7 @@ interface ExtendedWindow extends Window {
         /* eslint-disable camelcase */
         root_admin: boolean;
         theme_editor_permissions?: string[] | null;
+        furrguard_access?: boolean;
         use_totp: boolean;
         email_verified_at: string | null;
         language: string;
@@ -88,6 +89,7 @@ const App = () => {
             language: PterodactylUser.language,
             rootAdmin: PterodactylUser.root_admin,
             themeEditorPermissions: PterodactylUser.theme_editor_permissions || [],
+            furrguardAccess: PterodactylUser.furrguard_access === true,
             useTotp: PterodactylUser.use_totp,
             privacyMode: PterodactylUser.privacy_mode || false,
             emailVerifiedAt: PterodactylUser.email_verified_at ? new Date(PterodactylUser.email_verified_at) : null,

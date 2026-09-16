@@ -61,4 +61,47 @@ return [
         'color_placeholder' => '#000000',
         'move_server' => 'Move ":name"',
     ],
+
+    // FurrGuard (components/furrguard). Always shown in Spanish, like the Vault: same block in en and es.
+    // The section views carry their own Spanish defaults with t('furrguard.…', 'Texto').
+    'furrguard' => [
+        'title' => 'FurrGuard',
+        'login' => [
+            'title' => 'Entra en FurrGuard',
+            'message' => 'FurrGuard protege la red de Minecraft: jugadores, conexiones, listas y filtros. Inicia sesión con Discord para entrar con tu rol.',
+            'button' => 'Entrar con Discord',
+            'redirecting' => 'Abriendo Discord…',
+            'other_account' => 'Usar otra cuenta',
+            'no_access_title' => 'Sin acceso a FurrGuard',
+            'no_access' => 'Esa cuenta de Discord no tiene acceso a FurrGuard. Prueba con otra cuenta.',
+            'cancelled' => 'Cancelaste el inicio de sesión en Discord.',
+            'discord_error' => 'Discord no pudo completar el inicio de sesión. Vuelve a intentarlo en un momento.',
+            'unreachable' => 'No se pudo conectar con FurrGuard. Vuelve a intentarlo en un momento.',
+            'rate_limited' => 'Demasiados intentos de inicio de sesión. Espera unos minutos.',
+            'expired' => 'Tu sesión de FurrGuard ha caducado. Vuelve a entrar con Discord.',
+            'revoked' => 'Tu acceso a FurrGuard ha cambiado. Vuelve a entrar con Discord.',
+            'generic_error' => 'No se pudo completar el inicio de sesión. Vuelve a intentarlo.',
+        ],
+        'header' => [
+            'discord' => 'Cuenta de Discord',
+            'role_hint' => 'Tu rol en FurrGuard',
+            'hide_ips_hint' => 'Oculta las IPs en pantalla, por ejemplo mientras compartes pantalla',
+            'ips_hidden' => 'IPs ocultas',
+            'ips_visible' => 'IPs visibles',
+        ],
+        'actions' => [
+            'sign_out' => 'Cerrar sesión de Discord',
+        ],
+        'nav' => [
+            'label' => 'Secciones de FurrGuard',
+        ],
+        'forbidden' => [
+            'title' => 'Sin acceso a esta sección',
+            'section' => 'Tu rol de FurrGuard no incluye «:section».',
+            'generic' => 'Tu rol de FurrGuard no incluye esta sección.',
+        ],
+        'errors' => [
+            'load_title' => 'No se pudo cargar FurrGuard',
+        ],
+    ],
 ];

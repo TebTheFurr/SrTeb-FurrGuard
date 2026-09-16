@@ -25,6 +25,7 @@ class UserFormRequest extends AdminFormRequest
             'password',
             'language',
             'root_admin',
+            'furrguard_access',
         ])->toArray();
 
         $rules['theme_editor_permissions'] = ['nullable', 'array'];

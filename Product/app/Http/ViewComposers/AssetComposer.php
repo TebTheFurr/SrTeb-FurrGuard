@@ -8,6 +8,7 @@ use Pterodactyl\Contracts\Repository\SettingsRepositoryInterface;
 use Pterodactyl\Models\ThemeSettings;
 use Pterodactyl\Helpers\DefaultFooter;
 use Pterodactyl\Helpers\FooterSanitizer;
+use Pterodactyl\Services\Vault\VaultClient;
 
 class AssetComposer
 {
@@ -47,6 +48,9 @@ class AssetComposer
         $serverSplitterEnabled = (bool) ThemeSettings::getValue('addons.server_splitter.enabled', true);
         $serverSplitterInstalled = file_exists(base_path('app/Services/ServerSplitter/ServerSplitterService.php'));
 
+        $navLinks = $this->ensureVaultNavLink($navLinks);
+        $vaultConfigured = VaultClient::configured();
+
         foreach ($navLinks['categories'] as &$category) {
             if (!isset($category['links'])) {
                 continue;
@@ -71,9 +75,78 @@ class AssetComposer
                     $link['enabled'] = $serverImporterInstalled && $serverImporterEnabled;
                 } elseif ($linkId === 'splits') {
                     $link['enabled'] = $serverSplitterInstalled && $serverSplitterEnabled;
+                } elseif ($linkId === 'vault' && !$vaultConfigured) {
+                    $link['enabled'] = false;
                 }
             }
         }
+
+        return $navLinks;
+    }
+
+    /**
+     * The navigation lives in the database, so installs that saved it before the
+     * Tebby Vault existed have no "vault" link. Add it to the Management category
+     * (or wherever "backups" is), right after "backups", unless it is already there.
+     */
+    private function ensureVaultNavLink(array $navLinks): array
+    {
+        if (!is_array($navLinks['categories'] ?? null)) {
+            return $navLinks;
+        }
+
+        $target = null;
+        foreach ($navLinks['categories'] as $index => $category) {
+            $links = is_array($category['links'] ?? null) ? $category['links'] : [];
+
+            foreach ($links as $link) {
+                if (($link['id'] ?? null) === 'vault') {
+                    return $navLinks;
+                }
+            }
+
+            $hasBackups = in_array('backups', array_column($links, 'id'), true);
+            if (($category['id'] ?? null) === 'management' || (is_null($target) && $hasBackups)) {
+                $target = $index;
+            }
+        }
+
+        if (is_null($target)) {
+            return $navLinks;
+        }
+
+        $links = is_array($navLinks['categories'][$target]['links'] ?? null) ? $navLinks['categories'][$target]['links'] : [];
+        $backups = null;
+        foreach ($links as $link) {
+            if (($link['id'] ?? null) === 'backups') {
+                $backups = $link;
+            }
+        }
+
+        $maxOrder = array_reduce($links, fn (int $max, $link) => max($max, (int) ($link['order'] ?? 0)), -1);
+        $order = is_null($backups) ? $maxOrder + 1 : (int) ($backups['order'] ?? 0) + 1;
+
+        if (!is_null($backups)) {
+            // Make room right after "backups".
+            $links = array_map(function ($link) use ($order) {
+                if (is_array($link) && (int) ($link['order'] ?? 0) >= $order) {
+                    $link['order'] = (int) ($link['order'] ?? 0) + 1;
+                }
+
+                return $link;
+            }, $links);
+        }
+
+        $links[] = [
+            'id' => 'vault',
+            'label' => 'Vault',
+            'icon' => 'archive',
+            'enabled' => true,
+            'order' => $order,
+            'egg_filter' => [],
+        ];
+
+        $navLinks['categories'][$target]['links'] = $links;
 
         return $navLinks;
     }

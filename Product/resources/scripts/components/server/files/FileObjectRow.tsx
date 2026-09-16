@@ -12,6 +12,7 @@ import SelectFileCheckbox from '@/components/server/files/SelectFileCheckbox';
 import { usePermissions } from '@/plugins/usePermissions';
 import { join } from 'pathe';
 import { bytesToString } from '@/lib/formatters';
+import { DirectorySizeLabel } from '@/components/server/files/DirectorySizeContext';
 import styles from './style.module.css';
 import { useStoreState } from 'easy-peasy';
 import { ApplicationStore } from '@/state';
@@ -193,7 +194,7 @@ const FileObjectRow = ({ file }: { file: FileObject }) => {
                     className="w-24 text-right mr-4 hidden sm:block text-xs"
                     style={{ color: 'var(--color-muted)' }}
                 >
-                    {file.isFile ? bytesToString(file.size) : '—'}
+                    {file.isFile ? bytesToString(file.size) : <DirectorySizeLabel name={file.name} />}
                 </div>
                 <div 
                     className="w-48 text-right mr-4 hidden md:block text-xs"

@@ -26,6 +26,8 @@ import PanelContainer from '@/components/layout/PanelContainer';
 import { getModpackCompatibility } from '@/api/server/modpacks';
 import { getMinecraftVersionCompatibility } from '@/api/server/minecraftVersions';
 import tw from 'twin.macro';
+import VaultRestoreListener from '@/components/server/vault/VaultRestoreListener';
+import { isServerSectionLink, setVaultAvailability } from '@/components/server/vault/vaultNavigation';
 
 const ServerRouterInner = () => {
     const match = useRouteMatch<{ id: string }>();
@@ -86,6 +88,26 @@ const ServerRouterInner = () => {
         };
     }, [match.params.id]);
 
+    const vaultEnabled = serverData?.vaultEnabled ?? false;
+
+    // The keybinds manager is mounted outside this store; tell it which servers use Vault.
+    useEffect(() => {
+        if (id) {
+            setVaultAvailability(id, vaultEnabled);
+        }
+    }, [id, vaultEnabled]);
+
+    // A Vault restore that stops the server marks it `restoring_backup`. The Vault page
+    // stays reachable meanwhile so its progress can be followed; other pages keep the
+    // usual conflict screen.
+    const showVaultDuringRestore =
+        !!id &&
+        vaultEnabled &&
+        serverData?.status === 'restoring_backup' &&
+        !serverData.isTransferring &&
+        !serverData.isNodeUnderMaintenance &&
+        isServerSectionLink(location.pathname, id, 'vault');
+
     const filteredServerRoutes = useMemo(() => {
         return routes.server.filter((route) => {
             if (!showDashboard && route.path === '/console') {
@@ -136,6 +158,7 @@ const ServerRouterInner = () => {
                     >
                         <InstallListener />
                         <TransferListener />
+                        <VaultRestoreListener />
                         <WebsocketHandler />
                         <PowerDock />
                         <ContentContainer css={tw`mt-4 sm:mt-10 mb-0`}>
@@ -146,7 +169,7 @@ const ServerRouterInner = () => {
                                 <TopbarPowerControls />
                             </ContentContainer>
                         )}
-                        {inConflictState && (!rootAdmin || (rootAdmin && !location.pathname.endsWith(`/server/${id}`))) ? (
+                        {inConflictState && !showVaultDuringRestore && (!rootAdmin || (rootAdmin && !location.pathname.endsWith(`/server/${id}`))) ? (
                             <ConflictStateRenderer />
                         ) : (
                             <PanelContainer>

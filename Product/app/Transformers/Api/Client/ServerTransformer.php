@@ -83,6 +83,8 @@ class ServerTransformer extends BaseClientTransformer
             // This field is deprecated, please use "status".
             'is_installing' => !$server->isInstalled(),
             'is_transferring' => !is_null($server->transfer),
+            // The VAULT page replaces native backups on servers where it is active.
+            'vault_enabled' => $server->hasVaultEnabled(),
         ];
     }
 

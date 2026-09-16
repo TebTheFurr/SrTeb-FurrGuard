@@ -97,6 +97,35 @@ class DaemonFileRepository extends DaemonRepository
     }
 
     /**
+     * Return the total size in bytes of a directory and all of its descendants.
+     *
+     * The size reported by getDirectory() for a folder is only the size of the
+     * directory inode (4096 on ext4), so Wings has to walk the tree for us.
+     *
+     * @throws DaemonConnectionException
+     */
+    public function getDirectorySize(string $path): int
+    {
+        Assert::isInstanceOf($this->server, Server::class);
+
+        try {
+            $response = $this->getHttpClient()->get(
+                sprintf('/api/servers/%s/files/directory-size', $this->server->uuid),
+                [
+                    'query' => ['directory' => $path],
+                    // Walking a directory with a very large number of files can take
+                    // a while, so allow more headroom than the default timeout.
+                    'timeout' => 120,
+                ]
+            );
+        } catch (TransferException $exception) {
+            throw new DaemonConnectionException($exception);
+        }
+
+        return (int) Arr::get(json_decode($response->getBody(), true), 'size', 0);
+    }
+
+    /**
      * Creates a new directory for the server in the given $path.
      *
      * @throws DaemonConnectionException

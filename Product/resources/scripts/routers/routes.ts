@@ -9,6 +9,7 @@ const DatabasesContainer = lazy(() => import('@/components/server/databases/Data
 const ScheduleContainer = lazy(() => import('@/components/server/schedules/ScheduleContainer'));
 const UsersContainer = lazy(() => import('@/components/server/users/UsersContainer'));
 const BackupContainer = lazy(() => import('@/components/server/backups/BackupContainer'));
+const VaultContainer = lazy(() => import('@/components/server/vault/VaultContainer'));
 const NetworkContainer = lazy(() => import('@/components/server/network/NetworkContainer'));
 const StartupContainer = lazy(() => import('@/components/server/startup/StartupContainer'));
 const FileManagerContainer = lazy(() => import('@/components/server/files/FileManagerContainer'));
@@ -184,6 +185,15 @@ export default {
             permission: 'backup.*',
             name: 'Backups',
             component: BackupContainer,
+        },
+        {
+            // Access is decided by the vault itself (Discord identity + level),
+            // so any user of the server may open the page. It redirects to the
+            // server home when Vault is not enabled.
+            path: '/vault',
+            permission: null,
+            name: 'Vault',
+            component: VaultContainer,
         },
         {
             path: '/network',

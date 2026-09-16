@@ -137,6 +137,7 @@ class User extends Model implements
         'privacy_mode',
         'root_admin',
         'theme_editor_permissions',
+        'furrguard_access',
     ];
 
     /**
@@ -145,6 +146,7 @@ class User extends Model implements
     protected $casts = [
         'root_admin' => 'boolean',
         'theme_editor_permissions' => 'array',
+        'furrguard_access' => 'boolean',
         'use_totp' => 'boolean',
         'gravatar' => 'boolean',
         'privacy_mode' => 'boolean',
@@ -164,6 +166,7 @@ class User extends Model implements
         'external_id' => null,
         'root_admin' => false,
         'theme_editor_permissions' => null,
+        'furrguard_access' => false,
         'language' => 'en',
         'use_totp' => false,
         'totp_secret' => null,
@@ -183,6 +186,7 @@ class User extends Model implements
         'password' => 'sometimes|nullable|string',
         'root_admin' => 'boolean',
         'theme_editor_permissions' => 'nullable|array',
+        'furrguard_access' => 'boolean',
         'language' => 'string',
         'use_totp' => 'boolean',
         'totp_secret' => 'nullable|string',

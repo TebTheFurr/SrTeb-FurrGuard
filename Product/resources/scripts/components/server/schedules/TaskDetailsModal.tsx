@@ -17,6 +17,17 @@ import Select from '@/components/elements/Select';
 import ModalContext from '@/context/ModalContext';
 import asModal from '@/hoc/asModal';
 import FormikSwitch from '@/components/elements/FormikSwitch';
+import useVaultTranslation from '@/components/server/vault/useVaultTranslation';
+import styled from 'styled-components/macro';
+import { stateColors } from '@/components/elements/ui/tokens';
+
+const VaultNotice = styled.p`
+    ${tw`text-sm mt-3 p-3 rounded-lg`};
+    color: var(--color-base);
+    background-color: var(--color-background);
+    border: 1px solid ${stateColors.warning};
+    border-radius: var(--border-radius, 8px);
+`;
 
 interface Props {
     schedule: Schedule;
@@ -71,6 +82,12 @@ const TaskDetailsModal = ({ schedule, task }: Props) => {
     const uuid = ServerContext.useStoreState((state) => state.server.data!.uuid);
     const appendSchedule = ServerContext.useStoreActions((actions) => actions.schedules.appendSchedule);
     const backupLimit = ServerContext.useStoreState((state) => state.server.data!.featureLimits.backups);
+    const vaultEnabled = ServerContext.useStoreState((state) => state.server.data!.vaultEnabled);
+    const { t } = useVaultTranslation();
+    const vaultBackupMessage = t(
+        'vault.schedules.backup_task_disabled',
+        'Este servidor usa Vault: las tareas de copia se omiten. Las copias diarias se hacen solas y las M-Backups se crean desde la página del Vault.'
+    );
 
     useEffect(() => {
         return () => {
@@ -80,7 +97,10 @@ const TaskDetailsModal = ({ schedule, task }: Props) => {
 
     const submit = (values: Values, { setSubmitting }: FormikHelpers<Values>) => {
         clearFlashes('schedule:task');
-        if (backupLimit === 0 && values.action === 'backup') {
+        if (vaultEnabled && values.action === 'backup') {
+            setSubmitting(false);
+            addError({ message: vaultBackupMessage, key: 'schedule:task' });
+        } else if (backupLimit === 0 && values.action === 'backup') {
             setSubmitting(false);
             addError({
                 message: "A backup task cannot be created when the server's backup limit is set to 0.",
@@ -128,7 +148,10 @@ const TaskDetailsModal = ({ schedule, task }: Props) => {
                                 <FormikField as={Select} name={'action'}>
                                     <option value={'command'}>Send command</option>
                                     <option value={'power'}>Send power action</option>
-                                    <option value={'backup'}>Create backup</option>
+                                    {/* Kept only to display an existing backup task on a Vault server. */}
+                                    {(!vaultEnabled || task?.action === 'backup') && (
+                                        <option value={'backup'}>Create backup</option>
+                                    )}
                                 </FormikField>
                             </FormikFieldWrapper>
                         </div>
@@ -173,6 +196,7 @@ const TaskDetailsModal = ({ schedule, task }: Props) => {
                                 >
                                     <FormikField as={Textarea} name={'payload'} rows={6} />
                                 </FormikFieldWrapper>
+                                {vaultEnabled && <VaultNotice>{vaultBackupMessage}</VaultNotice>}
                             </div>
                         )}
                     </div>

@@ -163,6 +163,15 @@ Route::group(['prefix' => 'servers', 'middleware' => [DemoSectionDisabled::class
         Route::get('/view/{server:id}/startup', [Admin\Servers\ServerViewController::class, 'startup'])->name('admin.servers.view.startup');
         Route::get('/view/{server:id}/database', [Admin\Servers\ServerViewController::class, 'database'])->name('admin.servers.view.database');
         Route::get('/view/{server:id}/mounts', [Admin\Servers\ServerViewController::class, 'mounts'])->name('admin.servers.view.mounts');
+
+        // Tebby Vault
+        Route::get('/view/{server:id}/vault', [Admin\Servers\VaultController::class, 'index'])->name('admin.servers.view.vault');
+        Route::post('/view/{server:id}/vault/activation', [Admin\Servers\VaultController::class, 'activation'])->name('admin.servers.view.vault.activation');
+        Route::post('/view/{server:id}/vault/import', [Admin\Servers\VaultController::class, 'import'])->name('admin.servers.view.vault.import');
+        Route::post('/view/{server:id}/vault/access', [Admin\Servers\VaultController::class, 'access'])->name('admin.servers.view.vault.access');
+        Route::post('/view/{server:id}/vault/settings', [Admin\Servers\VaultController::class, 'settings'])->name('admin.servers.view.vault.settings');
+        Route::post('/view/{server:id}/vault/backups/pin', [Admin\Servers\VaultController::class, 'pin'])->name('admin.servers.view.vault.backups.pin');
+        Route::post('/view/{server:id}/vault/backups/delete', [Admin\Servers\VaultController::class, 'deleteBackup'])->name('admin.servers.view.vault.backups.delete');
     });
 
     Route::get('/view/{server:id}/manage', [Admin\Servers\ServerViewController::class, 'manage'])->name('admin.servers.view.manage');

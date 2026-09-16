@@ -17,6 +17,8 @@ import { faTrash, faTrashAlt } from '@fortawesome/free-solid-svg-icons';
 import { Dialog, DialogContext } from '@/components/elements/dialog';
 import { useDeepCompareEffect } from '@/plugins/useDeepCompareEffect';
 import { useStoreState } from 'easy-peasy';
+import useVaultTranslation from '@/components/server/vault/useVaultTranslation';
+import useCopyToVault from '@/components/server/vault/useCopyToVault';
 
 const CustomFooter = ({ children }: { children: React.ReactNode }) => {
     const { setFooter } = useContext(DialogContext);
@@ -79,10 +81,22 @@ const MassActionsBar = () => {
     const setSelectedFiles = ServerContext.useStoreActions((actions) => actions.files.setSelectedFiles);
 
     const isInTrash = directory.startsWith(getTrashPath());
+    const { t } = useVaultTranslation();
+    const { vaultEnabled, copyToVault } = useCopyToVault();
 
     useEffect(() => {
         if (!loading) setLoadingMessage('');
     }, [loading]);
+
+    const onClickCopyToVault = () => {
+        setLoading(true);
+        setLoadingMessage(t('vault.copy.starting', 'Iniciando la M-Backup...'));
+
+        copyToVault(directory, selectedFiles).then((accepted) => {
+            if (accepted) setSelectedFiles([]);
+            setLoading(false);
+        });
+    };
 
     const onClickCompress = () => {
         setLoading(true);
@@ -200,6 +214,11 @@ const MassActionsBar = () => {
                                 </span>
                                 {!isInTrash && <Button onClick={() => setShowMove(true)}>Move</Button>}
                                 {!isInTrash && <Button onClick={onClickCompress}>Archive</Button>}
+                                {vaultEnabled && !isInTrash && (
+                                    <Button onClick={onClickCopyToVault}>
+                                        {t('vault.copy.action', 'Copiar a Vault (M-Backup)')}
+                                    </Button>
+                                )}
                                 <Button.Danger onClick={() => setShowDeleteOptions(true)}>
                                     {isInTrash ? 'Delete Forever' : 'Delete'}
                                 </Button.Danger>

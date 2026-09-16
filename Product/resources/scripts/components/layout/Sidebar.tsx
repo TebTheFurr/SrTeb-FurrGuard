@@ -37,7 +37,10 @@ import {
     faCube,
     faKey,
     faGift,
+    faPaw,
+    faShieldAlt,
 } from '@fortawesome/free-solid-svg-icons';
+import { filterBackupNavigation } from '@/components/server/vault/vaultNavigation';
 import getServers from '@/api/getServers';
 import { Server } from '@/api/server/getServer';
 import { ip } from '@/lib/formatters';
@@ -1291,6 +1294,7 @@ const serverIcons: Record<string, any> = {
     Schedules: faCalendarAlt,
     Users: faUserFriends,
     Backups: faCloudUploadAlt,
+    Vault: faShieldAlt,
     Network: faGlobe,
     Startup: faRocket,
     Settings: faSlidersH,
@@ -1299,7 +1303,7 @@ const serverIcons: Record<string, any> = {
 
 const serverCategories: Record<string, string[]> = {
     'Overview': ['Dashboard', 'Console'],
-    'Management': ['Files', 'Environment Variables', 'Databases', 'Backups'],
+    'Management': ['Files', 'Environment Variables', 'Databases', 'Backups', 'Vault'],
     'Configuration': ['Schedules', 'Network', 'Startup'],
     'Access & Logs': ['Users', 'Activity'],
     'Server': ['Settings'],
@@ -1323,6 +1327,7 @@ const routeTranslationKeys: Record<string, string> = {
     Schedules: 'schedules',
     Users: 'users',
     Backups: 'backups',
+    Vault: 'vault',
     Network: 'network',
     Startup: 'startup',
     Settings: 'settings',
@@ -1505,6 +1510,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     const layoutType = useStoreState((state: ApplicationStore) => state.settings.data?.layout?.layoutType ?? 'default');
     const navLinks = useStoreState((state: ApplicationStore) => state.settings.data?.layout?.navLinks ?? null);
     const showClaim = useStoreState((state: ApplicationStore) => state.settings.data?.addons?.freeServers?.enabled ?? false);
+    const showFurrGuard = !!user?.furrguardAccess;
     const powerDockLocation = useStoreState((state: ApplicationStore) => state.settings.data?.components?.powerDock ?? 'dock');
     const isDockFloating = powerDockLocation === 'dock' || powerDockLocation === 'dock_labels';
     const sidebarItemStyle = useStoreState((state: ApplicationStore) => state.settings.data?.components?.sidebarItemStyle ?? 'default');
@@ -1596,6 +1602,8 @@ const Sidebar: React.FC<SidebarProps> = ({
         console: 'terminal',
         files: 'folder-open',
         backups: 'cloud-upload-alt',
+        // "vault" is not a Font Awesome 5 free icon; the injected nav link may use it.
+        vault: 'shield-alt',
         databases: 'table',
         schedules: 'calendar-alt',
         schedule: 'calendar-alt',
@@ -1650,7 +1658,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     const isPanelAbsolutePath = (path: string) => {
         const pathOnly = path.split('#')[0] || path;
         if (pathOnly === '/') return true;
-        const prefixes = ['/account', '/admin', '/auth', '/claim'];
+        const prefixes = ['/account', '/admin', '/auth', '/claim', '/furrguard'];
         return prefixes.some((prefix) => pathOnly === prefix || pathOnly.startsWith(`${prefix}/`));
     };
 
@@ -2189,7 +2197,9 @@ const Sidebar: React.FC<SidebarProps> = ({
     const configured = buildConfiguredNav();
     const baseAllRoutes = getAllServerRoutes();
     const fallbackCategories = buildFallbackCategories(baseAllRoutes);
-    const categories = configured || fallbackCategories;
+    // Single per-server filter feeding every layout (sidebar, collapsed, navbar, bottombar):
+    // Vault replaces Backups, and Vault is hidden on servers without it.
+    const categories = filterBackupNavigation(configured || fallbackCategories, serverId, !!server?.vaultEnabled);
     const serverIpRow = connectionAddress ? (
         <CopyOnClick text={connectionAddress}>
             <ServerIpRow title={t('copy_ip_address', 'Copy IP address')}>
@@ -2341,6 +2351,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                                         {t('claim', 'Claim')}
                                     </NavItem>
                                 )}
+                                {showFurrGuard && (
+                                    <NavItem to="/furrguard" onClick={closeSidebar} $sidebarItemStyle={sidebarItemStyle}>
+                                        <FontAwesomeIcon icon={faPaw} />
+                                        FurrGuard
+                                    </NavItem>
+                                )}
                                 {dashboardCustomLinks.map((link: any, index: number) =>
                                     renderCustomNavLink(link, `dashboard-mobile-${index}`)
                                 )}
@@ -2432,6 +2448,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                                         <NavbarTab to="/claim">
                                             <FontAwesomeIcon icon={faGift} />
                                             Claim
+                                        </NavbarTab>
+                                    )}
+                                    {showFurrGuard && (
+                                        <NavbarTab to="/furrguard">
+                                            <FontAwesomeIcon icon={faPaw} />
+                                            FurrGuard
                                         </NavbarTab>
                                     )}
                                 </NavbarTabs>
@@ -2612,6 +2634,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                                         Claim
                                     </NavItem>
                                 )}
+                                {showFurrGuard && (
+                                    <NavItem to="/furrguard" onClick={closeSidebar} $sidebarItemStyle={sidebarItemStyle}>
+                                        <FontAwesomeIcon icon={faPaw} />
+                                        FurrGuard
+                                    </NavItem>
+                                )}
                             </nav>
                         )}
 
@@ -2704,6 +2732,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                                         <BottomBarTab to="/claim">
                                             <FontAwesomeIcon icon={faGift} />
                                             Claim
+                                        </BottomBarTab>
+                                    )}
+                                    {showFurrGuard && (
+                                        <BottomBarTab to="/furrguard">
+                                            <FontAwesomeIcon icon={faPaw} />
+                                            FurrGuard
                                         </BottomBarTab>
                                     )}
                                 </BottomBarTabs>
@@ -2847,6 +2881,16 @@ const Sidebar: React.FC<SidebarProps> = ({
                                                     $sidebarItemStyle={sidebarItemStyle}
                                                 >
                                                     <FontAwesomeIcon icon={faGift} />
+                                                </CollapsedNavItem>
+                                            )}
+                                            {showFurrGuard && (
+                                                <CollapsedNavItem
+                                                    to="/furrguard"
+                                                    onClick={closeSidebar}
+                                                    data-tooltip="FurrGuard"
+                                                    $sidebarItemStyle={sidebarItemStyle}
+                                                >
+                                                    <FontAwesomeIcon icon={faPaw} />
                                                 </CollapsedNavItem>
                                             )}
                                             {dashboardCustomLinks.map((link: any, index: number) =>
@@ -3058,6 +3102,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                                                 <NavItem to="/claim" onClick={closeSidebar} $sidebarItemStyle={sidebarItemStyle}>
                                                     <FontAwesomeIcon icon={faGift} />
                                                     {t('claim', 'Claim')}
+                                                </NavItem>
+                                            )}
+                                            {showFurrGuard && (
+                                                <NavItem to="/furrguard" onClick={closeSidebar} $sidebarItemStyle={sidebarItemStyle}>
+                                                    <FontAwesomeIcon icon={faPaw} />
+                                                    FurrGuard
                                                 </NavItem>
                                             )}
                                             {dashboardCustomLinks.map((link, index) =>

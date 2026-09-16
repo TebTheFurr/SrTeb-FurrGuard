@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Pterodactyl\Services\Vault\VaultClient;
 use Pterodactyl\Exceptions\Http\Server\ServerStateConflictException;
 
 /**
@@ -69,6 +70,7 @@ use Pterodactyl\Exceptions\Http\Server\ServerStateConflictException;
  * @property int|null $subusers_count
  * @property ServerTransfer|null $transfer
  * @property User $user
+ * @property VaultServer|null $vaultServer
  * @property \Illuminate\Database\Eloquent\Collection|\Pterodactyl\Models\EggVariable[] $variables
  * @property int|null $variables_count
  *
@@ -364,6 +366,25 @@ class Server extends Model
     public function backups(): HasMany
     {
         return $this->hasMany(Backup::class);
+    }
+
+    /**
+     * Activation of the Tebby Vault for this server.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<\Pterodactyl\Models\VaultServer, $this>
+     */
+    public function vaultServer(): HasOne
+    {
+        return $this->hasOne(VaultServer::class, 'server_id');
+    }
+
+    /**
+     * Whether the Tebby Vault is active for this server. Always false while the
+     * integration is not configured, so native backups keep working.
+     */
+    public function hasVaultEnabled(): bool
+    {
+        return VaultClient::configured() && (bool) $this->vaultServer?->enabled;
     }
 
     /**

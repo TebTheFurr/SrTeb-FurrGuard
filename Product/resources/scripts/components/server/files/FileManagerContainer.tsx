@@ -14,6 +14,8 @@ import tw from 'twin.macro';
 import { Button } from '@/components/elements/button/index';
 import { ServerContext } from '@/state/server';
 import useFileManagerSwr from '@/plugins/useFileManagerSwr';
+import useDirectorySizes from '@/plugins/useDirectorySizes';
+import { DirectorySizeProvider, DirectorySizeLabel } from '@/components/server/files/DirectorySizeContext';
 import FileManagerStatus from '@/components/server/files/FileManagerStatus';
 import PageHeader from '@/components/elements/ui/PageHeader';
 import MassActionsBar from '@/components/server/files/MassActionsBar';
@@ -25,7 +27,6 @@ import ErrorBoundary from '@/components/elements/ErrorBoundary';
 import { FileActionCheckbox } from '@/components/server/files/SelectFileCheckbox';
 import { hashToPath, encodePathSegments } from '@/helpers';
 import { bytesToString } from '@/lib/formatters';
-import { differenceInHours, format, formatDistanceToNow } from 'date-fns';
 import { NavLink as RouterNavLink, useRouteMatch } from 'react-router-dom';
 import { usePermissions } from '@/plugins/usePermissions';
 import { join } from 'pathe';
@@ -44,6 +45,7 @@ import MediaViewerModal from './MediaViewerModal';
 import useGlobalFileSearch, { SearchResult } from '@/plugins/useGlobalFileSearch';
 import ServerIconButton from '@/components/server/files/ServerIconButton';
 import FileManagerOverflowMenu from '@/components/server/files/FileManagerOverflowMenu';
+import VaultCopyNotice from '@/components/server/vault/VaultCopyNotice';
 
 type SortColumn = 'name' | 'size' | 'modified';
 type SortDirection = 'asc' | 'desc';
@@ -498,8 +500,17 @@ const useFileManagerState = () => {
     const mediaFiles = getMediaFiles();
     const currentMediaIndex = mediaFiles.findIndex((f) => f.name === mediaViewer.name);
 
+    // Folder sizes are not part of the directory listing, so each visible folder
+    // is resolved separately. Restricted folders are skipped: the panel rejects
+    // those lookups anyway.
+    const directorySizes = useDirectorySizes(
+        uuid,
+        directory,
+        sortedFiles.filter((file) => !file.isFile && !file.isRestricted).map((file) => file.name)
+    );
+
     return {
-        t, id, files, error, mutate, filteredFiles, sortedFiles,
+        t, id, files, error, mutate, filteredFiles, sortedFiles, directorySizes,
         selectedFilesLength, onSelectAllClick,
         searchQuery, setSearchQuery, searching, searchResults: filteredSearchResults, isSearching, progress, searchMode,
         sortColumn, sortDirection, handleSort,
@@ -692,6 +703,7 @@ const ListViewContent: React.FC<{ trashEnabled?: boolean; onOpenTrash?: () => vo
 
     return (
         <FileViewLayout state={state} trashEnabled={trashEnabled} onOpenTrash={onOpenTrash}>
+            <DirectorySizeProvider value={state.directorySizes}>
             <div className={style.file_table}>
                 <div className={style.file_header}>
                     <div
@@ -722,6 +734,7 @@ const ListViewContent: React.FC<{ trashEnabled?: boolean; onOpenTrash?: () => vo
                     <FileObjectRow key={file.key} file={file} />
                 ))}
             </div>
+            </DirectorySizeProvider>
         </FileViewLayout>
     );
 };
@@ -774,11 +787,7 @@ const GridFileCard: React.FC<{ file: FileObject }> = ({ file }) => {
             </GridCardIcon>
             <GridCardName title={file.name} style={{ color: file.isRestricted ? 'var(--color-muted)' : undefined }}>{file.name}</GridCardName>
             <GridCardMeta>
-                {file.isFile ? bytesToString(file.size) :
-                    Math.abs(differenceInHours(file.modifiedAt, new Date())) > 48
-                        ? format(file.modifiedAt, 'MMM do')
-                        : formatDistanceToNow(file.modifiedAt, { addSuffix: true })
-                }
+                {file.isFile ? bytesToString(file.size) : <DirectorySizeLabel name={file.name} />}
             </GridCardMeta>
         </GridCardContent>
     );
@@ -817,11 +826,13 @@ const GridViewContent: React.FC<{ trashEnabled?: boolean; onOpenTrash?: () => vo
 
     return (
         <FileViewLayout state={state} trashEnabled={trashEnabled} onOpenTrash={onOpenTrash}>
-            <GridContainer>
-                {state.sortedFiles.map((file) => (
-                    <GridFileCard key={file.key} file={file} />
-                ))}
-            </GridContainer>
+            <DirectorySizeProvider value={state.directorySizes}>
+                <GridContainer>
+                    {state.sortedFiles.map((file) => (
+                        <GridFileCard key={file.key} file={file} />
+                    ))}
+                </GridContainer>
+            </DirectorySizeProvider>
         </FileViewLayout>
     );
 };
@@ -904,6 +915,7 @@ export default () => {
                     </>
                 }
             />
+            <VaultCopyNotice />
             {viewMode === 'list' && (
                 <ListViewContent trashEnabled={trashEnabled} onOpenTrash={() => setShowTrash(true)} />
             )}

@@ -105,6 +105,7 @@ import { Link } from 'react-router-dom';
 import styled from 'styled-components/macro';
 import tw from 'twin.macro';
 import { useTranslation } from 'react-i18next';
+import { hiddenBackupSection, isServerSectionLink } from '@/components/server/vault/vaultNavigation';
 
 declare global {
     interface Window {
@@ -195,6 +196,7 @@ const ServerDashboardContainer = () => {
     const isNodeUnderMaintenance = ServerContext.useStoreState((state) => state.server.data!.isNodeUnderMaintenance);
     const eggId = ServerContext.useStoreState((state) => state.server.data!.eggId);
     const status = ServerContext.useStoreState((state) => state.status.value);
+    const vaultEnabled = ServerContext.useStoreState((state) => state.server.data!.vaultEnabled);
     const showDashboard = useStoreState((state: ApplicationStore) => state.settings.data?.layout?.showDashboard ?? true);
     const hideDashboardHeader = useStoreState((state: ApplicationStore) => state.settings.data?.components?.hideDashboardHeader ?? false);
     const dashboardQuickActions = useStoreState(
@@ -218,6 +220,7 @@ const ServerDashboardContainer = () => {
         backups: faCloudUploadAlt,
         backup: faCloudUploadAlt,
         'cloud-upload': faCloudUploadAlt,
+        vault: faShieldAlt,
         databases: faTable,
         database: faTable,
         table: faTable,
@@ -359,12 +362,24 @@ const ServerDashboardContainer = () => {
         return { external: false as const, to: `/server/${id}${path === '/' ? '' : path}` };
     };
 
+    const vaultQuickAction = {
+        title: t('navigation.vault', 'Vault'),
+        icon: faShieldAlt,
+        external: false as const,
+        to: `/server/${id}/vault`,
+    };
+
     const configuredQuickActions = (Array.isArray(dashboardQuickActions) ? dashboardQuickActions : [])
         .filter((a: any) => a && a.title && a.link)
         .slice(0, 4)
         .map((a: any, idx: number) => {
             const resolved = resolveQuickActionLink(a.link);
             if (!resolved) return null;
+            // Backups and Vault never coexist: a Backups action points at the Vault on
+            // Vault servers, and a Vault action is dropped everywhere else.
+            if (!resolved.external && isServerSectionLink(resolved.to, id, hiddenBackupSection(vaultEnabled))) {
+                return vaultEnabled ? { key: `qa:${idx}:vault`, ...vaultQuickAction } : null;
+            }
             const title = (a.title || '').toString();
             return {
                 key: `qa:${idx}:${title}`,
@@ -385,7 +400,9 @@ const ServerDashboardContainer = () => {
     const defaultQuickActions = [
         { key: 'qa:console', title: t('navigation.console', 'Console'), icon: faTerminal, external: false as const, to: `/server/${id}/console` },
         { key: 'qa:files', title: t('navigation.files', 'Files'), icon: faFolderOpen, external: false as const, to: `/server/${id}/files` },
-        { key: 'qa:backups', title: t('navigation.backups', 'Backups'), icon: faCloudUploadAlt, external: false as const, to: `/server/${id}/backups` },
+        vaultEnabled
+            ? { key: 'qa:vault', ...vaultQuickAction }
+            : { key: 'qa:backups', title: t('navigation.backups', 'Backups'), icon: faCloudUploadAlt, external: false as const, to: `/server/${id}/backups` },
         { key: 'qa:settings', title: t('navigation.settings', 'Settings'), icon: faSlidersH, external: false as const, to: `/server/${id}/settings` },
     ];
 

@@ -15,6 +15,7 @@ import EmptyState from '@/components/elements/EmptyState';
 import PageHeader from '@/components/elements/ui/PageHeader';
 import MetaChip from '@/components/elements/ui/MetaChip';
 import { faArchive } from '@fortawesome/free-solid-svg-icons';
+import { Redirect } from 'react-router-dom';
 
 const BackupContainer = () => {
     const { t } = useTranslation('server');
@@ -88,6 +89,14 @@ const BackupContainer = () => {
 
 export default () => {
     const [page, setPage] = useState<number>(1);
+    const id = ServerContext.useStoreState((state) => state.server.data!.id);
+    const vaultEnabled = ServerContext.useStoreState((state) => state.server.data!.vaultEnabled);
+
+    // Native backups are replaced by the Vault on servers that use it.
+    if (vaultEnabled) {
+        return <Redirect to={`/server/${id}/vault`} />;
+    }
+
     return (
         <ServerBackupContext.Provider value={{ page, setPage }}>
             <BackupContainer />

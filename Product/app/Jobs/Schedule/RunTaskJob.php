@@ -5,6 +5,7 @@ namespace Pterodactyl\Jobs\Schedule;
 use Carbon\CarbonImmutable;
 use Pterodactyl\Models\Task;
 use Illuminate\Bus\Queueable;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\DispatchesJobs;
@@ -52,6 +53,21 @@ class RunTaskJob implements ShouldQueue
         // condition.
         if (!is_null($server->status)) {
             $this->failed();
+
+            return;
+        }
+
+        // Servers on the Tebby Vault take their backups there: skip the task but
+        // keep running the rest of the schedule.
+        if ($this->task->action === Task::ACTION_BACKUP && $server->hasVaultEnabled()) {
+            Log::warning('Skipping a scheduled backup task: the server uses the Tebby Vault.', [
+                'server' => $server->uuid,
+                'schedule' => $this->task->schedule_id,
+                'task' => $this->task->id,
+            ]);
+
+            $this->markTaskNotQueued();
+            $this->queueNextTask();
 
             return;
         }

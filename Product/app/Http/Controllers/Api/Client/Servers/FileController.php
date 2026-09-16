@@ -8,6 +8,7 @@ use Pterodactyl\Models\Server;
 use Illuminate\Http\JsonResponse;
 use Pterodactyl\Facades\Activity;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use Pterodactyl\Services\Nodes\NodeJWTService;
 use Pterodactyl\Enum\JwtScope;
 use Pterodactyl\Repositories\Wings\DaemonFileRepository;
@@ -18,6 +19,7 @@ use Pterodactyl\Http\Requests\Api\Client\Servers\Files\CopyFileRequest;
 use Pterodactyl\Http\Requests\Api\Client\Servers\Files\PullFileRequest;
 use Pterodactyl\Http\Requests\Api\Client\Servers\Files\ListFilesRequest;
 use Pterodactyl\Http\Requests\Api\Client\Servers\Files\ChmodFilesRequest;
+use Pterodactyl\Http\Requests\Api\Client\Servers\Files\DirectorySizeRequest;
 use Pterodactyl\Http\Requests\Api\Client\Servers\Files\DeleteFileRequest;
 use Pterodactyl\Http\Requests\Api\Client\Servers\Files\RenameFileRequest;
 use Pterodactyl\Http\Requests\Api\Client\Servers\Files\CreateFolderRequest;
@@ -28,6 +30,13 @@ use Pterodactyl\Http\Requests\Api\Client\Servers\Files\WriteFileContentRequest;
 
 class FileController extends ClientApiController
 {
+    /**
+     * How long a computed directory size stays cached. Wings walks the whole
+     * tree on every call and takes no lock while doing it, so without this a
+     * user refreshing the file manager can pile up disk walks on the node.
+     */
+    private const DIRECTORY_SIZE_CACHE_SECONDS = 60;
+
     /**
      * FileController constructor.
      */
@@ -63,6 +72,38 @@ class FileController extends ClientApiController
         return $this->fractal->collection($contents)
             ->transformWith($this->getTransformer(FileObjectTransformer::class))
             ->toArray();
+    }
+
+    /**
+     * Returns the total size in bytes of a directory and all of its descendants.
+     *
+     * @throws \Pterodactyl\Exceptions\Http\Connection\DaemonConnectionException
+     */
+    public function directorySize(DirectorySizeRequest $request, Server $server): array
+    {
+        $directory = $request->get('directory');
+
+        // A subuser who is not allowed to see a folder should not be able to
+        // learn how much it weighs either.
+        $this->fileAccessValidationService->validateSubuserFileAccess(
+            $request->user(),
+            $server,
+            basename($directory)
+        );
+
+        $size = Cache::remember(
+            sprintf('server:%s:directory-size:%s', $server->uuid, sha1($directory)),
+            self::DIRECTORY_SIZE_CACHE_SECONDS,
+            fn () => $this->fileRepository->setServer($server)->getDirectorySize($directory)
+        );
+
+        return [
+            'object' => 'directory_size',
+            'attributes' => [
+                'directory' => $directory,
+                'size' => $size,
+            ],
+        ];
     }
 
     /**

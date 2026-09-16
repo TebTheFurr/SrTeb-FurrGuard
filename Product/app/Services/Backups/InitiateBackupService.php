@@ -8,6 +8,7 @@ use Webmozart\Assert\Assert;
 use Pterodactyl\Models\Backup;
 use Pterodactyl\Models\Server;
 use Pterodactyl\Models\ThemeSettings;
+use Pterodactyl\Exceptions\DisplayException;
 use Illuminate\Database\ConnectionInterface;
 use Pterodactyl\Extensions\Backups\BackupManager; 
 use Pterodactyl\Repositories\Eloquent\BackupRepository;
@@ -18,6 +19,8 @@ use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 
 class InitiateBackupService
 {
+    public const VAULT_MESSAGE = 'Este servidor usa Vault: crea las copias desde la sección Vault.';
+
     private array $ignoredFiles = [];
 
     private bool $isLocked = false;
@@ -92,6 +95,12 @@ class InitiateBackupService
     {
         if (filter_var(env('IS_DEMO', false), FILTER_VALIDATE_BOOLEAN)) {
             throw new DemoBackupDisabledException();
+        }
+
+        // Servers on the Tebby Vault get their backups there; a native backup would
+        // only compete with it for disk space on the node.
+        if ($server->hasVaultEnabled()) {
+            throw new DisplayException(self::VAULT_MESSAGE);
         }
 
         $limit = config('backups.throttles.limit');

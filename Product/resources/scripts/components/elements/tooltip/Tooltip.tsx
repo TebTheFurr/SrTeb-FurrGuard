@@ -92,6 +92,8 @@ export default ({ children, ...props }: Props) => {
                             className: 'text-sm px-3 py-2 pointer-events-none max-w-[24rem]',
                             style: {
                                 position: strategy,
+                                // Rendered in place, so without a stacking order it slides under later positioned siblings.
+                                zIndex: 50,
                                 top: `${y || 0}px`,
                                 left: `${x || 0}px`,
                                 backgroundColor: 'var(--color-background)',

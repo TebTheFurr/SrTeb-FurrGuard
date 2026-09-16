@@ -95,6 +95,12 @@
     overflow: visible;
 }
 
+/* Theme text colour: the old hover-to-white made the title vanish in light mode while reading the chart. */
+.chart_title {
+    @apply font-header font-medium;
+    color: var(--color-base);
+}
+
 .chart_content {
     @apply relative px-2 pb-2;
     height: 180px;

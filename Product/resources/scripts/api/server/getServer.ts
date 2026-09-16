@@ -48,6 +48,8 @@ export interface Server {
     allocations: Allocation[];
     eggId: number;
     primarySubdomain: string | null;
+    /** Tebby Vault is enabled for this server: the Vault page replaces native backups. */
+    vaultEnabled: boolean;
 }
 
 export const rawDataToServerObject = ({ attributes: data }: FractalResponseData): Server => ({
@@ -74,6 +76,7 @@ export const rawDataToServerObject = ({ attributes: data }: FractalResponseData)
     isTransferring: data.is_transferring,
     eggId: data.egg_id,
     primarySubdomain: data.primary_subdomain || null,
+    vaultEnabled: Boolean(data.vault_enabled),
     variables: ((data.relationships?.variables as FractalResponseList | undefined)?.data || []).map(
         rawDataToServerEggVariable
     ),

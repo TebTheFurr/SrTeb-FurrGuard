@@ -9,6 +9,8 @@ export interface UserData {
     language: string;
     rootAdmin: boolean;
     themeEditorPermissions: string[];
+    /** Admin → Users → FurrGuard: shows the FurrGuard page (FurrGuard itself decides what the Discord account may do). */
+    furrguardAccess: boolean;
     useTotp: boolean;
     privacyMode: boolean;
     emailVerifiedAt: Date | null;
