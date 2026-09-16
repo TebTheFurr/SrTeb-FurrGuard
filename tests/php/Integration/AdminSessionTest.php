@@ -115,9 +115,10 @@ final class AdminSessionTest extends DatabaseTestCase
         self::assertSame('session_expired', adminSessionValidate($this->db)['error']);
 
         $this->login();
+        $sessionId = $_SESSION[ADMIN_SESSION_KEY]['session_id'];
         adminSessionLogout($this->db);
         self::assertSame([], $_SESSION);
-        self::assertSame(0, (int) $this->db->query('SELECT COUNT(*) FROM admin_sessions WHERE revoked_at IS NULL')->fetchColumn());
+        self::assertNotNull($this->db->query("SELECT revoked_at FROM admin_sessions WHERE id = {$sessionId}")->fetchColumn(), 'salir revoca su propia fila');
     }
 
     public function testRolesAndLoginUrl(): void
@@ -176,6 +177,7 @@ final class AdminSessionTest extends DatabaseTestCase
 
         $this->db->exec('UPDATE admin_sessions SET last_activity_at = NOW() - INTERVAL 43201 SECOND');
         self::assertSame('session_expired', adminSessionValidateToken($this->db, $second['token'])['error'], 'inactividad');
+        self::assertSame('session_expired', adminSessionValidateToken($this->db, $first['token'])['error']);
         self::assertSame(0, (int) $this->db->query('SELECT COUNT(*) FROM admin_sessions WHERE revoked_at IS NULL')->fetchColumn());
     }
 
