@@ -429,9 +429,10 @@ admin:   overview players whitelist blacklist sanctions
 - Cookie `__Host-furrguard` (con `APP_URL` https; con http se llama `furrguard` y no es `Secure`,
   solo para desarrollo), `HttpOnly`, `SameSite=Lax`, `path=/`, `session.use_strict_mode=1`. Las
   sesiones PHP se guardan en `storage/sessions`.
-- Tras el login: `session_regenerate_id(true)`, token CSRF nuevo, se **revocan las sesiones
-  anteriores del mismo usuario** y se crea una fila en `admin_sessions` con `session_token_hash`
-  (SHA-256). Cada petición valida esa fila (no revocada, no expirada) y el rol vigente en BD.
+- Tras el login: `session_regenerate_id(true)`, token CSRF nuevo y una fila en `admin_sessions` con
+  `session_token_hash` (SHA-256). **Una cuenta puede tener varias sesiones vivas** (panel propio y
+  Pterodactyl a la vez): un login nuevo no cierra las anteriores. Cada petición valida esa fila
+  (no revocada, no expirada) y el rol vigente en BD.
 - Caducidad absoluta 12 h desde el login (la inactividad no la acorta), regeneración de ID cada 30 min.
 - IP: se aprende una por familia (IPv4 exacta, IPv6 /64). Si llega otra IP de una familia ya
   aprendida → sesión inválida. Un cambio IPv4↔IPv6 no cierra la sesión.
@@ -548,7 +549,7 @@ Navegador ──(sesión de Pterodactyl)──► Panel (Laravel) ──(HMAC + 
    10 min) y llama a `oauth_exchange` con `{state, code}`.
 3. FurrGuard comprueba la firma del `state`, canjea el código con **su** aplicación de Discord y
    `PTERODACTYL_URL/furrguard/callback`, y busca el rol (`FOUNDER_DISCORD_ID` o `admin_users`):
-   - con rol: crea una fila en `admin_sessions` (revocando las anteriores del usuario, como §5) y
+   - con rol: crea una fila en `admin_sessions` (sin cerrar las que ya tenga, §5) y
      responde `{token, expires_in, idle_timeout, user:{discord_id, username, avatar, role},
      permissions[], can_see_ips, version}`;
    - sin rol: 403 `no_access` (y traza `login_denied`).

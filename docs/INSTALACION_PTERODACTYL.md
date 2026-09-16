@@ -411,7 +411,6 @@ Con un usuario que tenga el permiso y una cuenta de Discord con rol en FurrGuard
 | Todo funciona y a las 12 h pide entrar otra vez | Caducidad normal de la sesión de FurrGuard | Nada |
 | Pide entrar de nuevo antes de las 12 h aunque se estuviera usando | Caducó la sesión de Pterodactyl (`SESSION_LIFETIME` del panel, en minutos), que es donde vive el token | Subir `SESSION_LIFETIME` a 720 o más en el `.env` del panel + `php artisan config:clear` |
 | Un cambio de rol en FurrGuard no se refleja | La página relee el rol al cargar; las pestañas no cambian en caliente | Recargar la página |
-| `admin/api.php` del panel propio de FurrGuard pide login tras entrar desde Pterodactyl | Igual que con dos navegadores: entrar de nuevo revoca la sesión anterior de esa cuenta | Esperado |
 
 Dónde mirar:
 

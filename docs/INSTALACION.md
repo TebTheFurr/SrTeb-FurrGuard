@@ -1232,7 +1232,7 @@ userdel furrguard
 | «La petición de inicio de sesión no es válida o ha caducado» (`invalid_state`) | el navegador no conserva la sesión: entraste por un host distinto de `APP_URL` (`www.`, la IP) o por http (la cookie `__Host-furrguard` solo se guarda por https y en ese host exacto), o bloquea las cookies | entra siempre por la dirección exacta de `APP_URL`, con https |
 | «Tu cuenta de Discord no tiene acceso al panel» | no es `FOUNDER_DISCORD_ID` ni está en **Usuarios** | añádela en **Usuarios** o revisa `FOUNDER_DISCORD_ID` |
 | «Token CSRF inválido o petición no permitida. Recarga la página.» | una vez: la pestaña estaba abierta desde antes del último login. En todas las acciones: `APP_URL` no coincide con la dirección del navegador (`http://`, `www.`, otro dominio) | recarga; `APP_URL` exacta, con https |
-| La sesión del panel se cierra sola | cambió tu IP (IPv4, o de red /64 en IPv6), 12 h desde el login o entraste desde otro dispositivo | es lo previsto |
+| La sesión del panel se cierra sola | cambió tu IP (IPv4, o de red /64 en IPv6), 12 h desde el login | es lo previsto |
 | Resumen: «Falta el espejo MaxMind» | faltan las `.mmdb` o PHP no puede leerlas | paso 8 como `furrguard`; `ls -l storage/geoip`; rutas `GEOIP_*` dentro de `/var/www/furrguard` |
 | No sé si el espejo MaxMind está bien instalado | — | `runuser -u furrguard -- php bin/geoip-update.php --status`: dice qué falta y devuelve 0 solo si todo responde |
 | El espejo MaxMind no funciona, pero el Resumen no dice «Falta el espejo MaxMind» | espejo `disabled`: falta `vendor/`, y el Resumen solo avisa del caso `missing` | paso 4: `composer install` y la comprobación `MaxMind: OK` |

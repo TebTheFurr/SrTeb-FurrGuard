@@ -89,8 +89,8 @@ function getDiscordLoginUrl(): string
 // ─── Sesión ─────────────────────────────────────────────────────────────────
 
 /**
- * Inicia la sesión tras un login correcto: regenera el ID, crea un token CSRF nuevo, revoca las
- * sesiones anteriores del usuario y crea la fila en `admin_sessions`.
+ * Inicia la sesión tras un login correcto: regenera el ID, crea un token CSRF nuevo y crea la
+ * fila en `admin_sessions`.
  *
  * @param array{discord_id: string, username: string, avatar: ?string} $user
  */
@@ -113,9 +113,10 @@ function adminSessionStart(PDO $db, array $user, string $role): void
 }
 
 /**
- * Crea la fila de `admin_sessions` (revocando antes las sesiones activas del mismo usuario) y
- * devuelve su id y el token en claro; la BD solo guarda el SHA-256. La usan la sesión PHP del
- * panel y el puente de Pterodactyl (docs/API.md §9), que guarda el token en su propia sesión.
+ * Crea la fila de `admin_sessions` y devuelve su id y el token en claro; la BD solo guarda el
+ * SHA-256. La usan la sesión PHP del panel y el puente de Pterodactyl (docs/API.md §9), que
+ * guarda el token en su propia sesión. Una cuenta puede tener varias sesiones vivas (panel
+ * propio y Pterodactyl a la vez): solo se revocan al quitar el usuario, cambiar su rol o salir.
  *
  * @param array{discord_id: string, username: string, avatar: ?string} $user
  * @param string|null $ip IP del navegador (por defecto la de la petición)
@@ -127,8 +128,6 @@ function adminSessionCreate(PDO $db, array $user, ?string $ip = null): array
     $ip ??= getClientIp();
     $family = ipFamily($ip);
 
-    $db->prepare('UPDATE admin_sessions SET revoked_at = NOW() WHERE discord_id = ? AND revoked_at IS NULL')
-        ->execute([$user['discord_id']]);
     $db->prepare(
         'INSERT INTO admin_sessions
             (discord_id, discord_username, discord_avatar, session_token_hash, ipv4_address, ipv6_address, created_at, last_activity_at, expires_at)

@@ -104,7 +104,8 @@ final class AdminSessionTest extends DatabaseTestCase
         $first = $_SESSION[ADMIN_SESSION_KEY];
         $this->login('111111111111111111', 'founder');
         $_SESSION[ADMIN_SESSION_KEY] = $first;
-        self::assertSame('session_expired', adminSessionValidate($this->db)['error'], 'un login nuevo revoca las sesiones anteriores');
+        self::assertNull(adminSessionValidate($this->db)['error'], 'un login nuevo no cierra las sesiones anteriores (panel propio y Pterodactyl conviven)');
+        self::assertSame(2, (int) $this->db->query('SELECT COUNT(*) FROM admin_sessions WHERE revoked_at IS NULL')->fetchColumn());
     }
 
     public function testTamperedTokenAndLogout(): void
@@ -165,13 +166,13 @@ final class AdminSessionTest extends DatabaseTestCase
         self::assertSame('access_revoked', adminSessionValidateToken($this->db, $created['token'])['error'], 'revocada y sin rol');
     }
 
-    public function testTokenSessionRevokesPreviousAndExpires(): void
+    public function testTokenSessionsCoexistAndExpire(): void
     {
         $first = $this->createTokenSession();
         $second = $this->createTokenSession('2001:db8::7');
-        self::assertSame('session_expired', adminSessionValidateToken($this->db, $first['token'])['error'], 'entrar de nuevo revoca la sesión anterior');
+        self::assertNull(adminSessionValidateToken($this->db, $first['token'])['error'], 'entrar desde Pterodactyl no cierra la sesión del panel propio');
         self::assertNull(adminSessionValidateToken($this->db, $second['token'])['error']);
-        self::assertSame('2001:db8::7', $this->db->query('SELECT ipv6_address FROM admin_sessions WHERE revoked_at IS NULL')->fetchColumn());
+        self::assertSame('2001:db8::7', $this->db->query('SELECT ipv6_address FROM admin_sessions WHERE revoked_at IS NULL ORDER BY id DESC LIMIT 1')->fetchColumn());
 
         $this->db->exec('UPDATE admin_sessions SET last_activity_at = NOW() - INTERVAL 43201 SECOND');
         self::assertSame('session_expired', adminSessionValidateToken($this->db, $second['token'])['error'], 'inactividad');
