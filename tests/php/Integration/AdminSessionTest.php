@@ -76,7 +76,7 @@ final class AdminSessionTest extends DatabaseTestCase
     public function testIdleAndAbsoluteExpiry(): void
     {
         $this->login();
-        $this->db->exec('UPDATE admin_sessions SET last_activity_at = NOW() - INTERVAL 7201 SECOND');
+        $this->db->exec('UPDATE admin_sessions SET last_activity_at = NOW() - INTERVAL 43201 SECOND');
         self::assertSame('session_expired', adminSessionValidate($this->db)['error']);
 
         $this->login();
@@ -173,7 +173,7 @@ final class AdminSessionTest extends DatabaseTestCase
         self::assertNull(adminSessionValidateToken($this->db, $second['token'])['error']);
         self::assertSame('2001:db8::7', $this->db->query('SELECT ipv6_address FROM admin_sessions WHERE revoked_at IS NULL')->fetchColumn());
 
-        $this->db->exec('UPDATE admin_sessions SET last_activity_at = NOW() - INTERVAL 7201 SECOND');
+        $this->db->exec('UPDATE admin_sessions SET last_activity_at = NOW() - INTERVAL 43201 SECOND');
         self::assertSame('session_expired', adminSessionValidateToken($this->db, $second['token'])['error'], 'inactividad');
         self::assertSame(0, (int) $this->db->query('SELECT COUNT(*) FROM admin_sessions WHERE revoked_at IS NULL')->fetchColumn());
     }

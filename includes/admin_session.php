@@ -6,7 +6,7 @@ declare(strict_types=1);
  * FurrGuard - roles del panel y sesión de administrador (docs/API.md §4.3 y §5).
  *
  * La sesión PHP guarda un token aleatorio; la BD solo su SHA-256 (`admin_sessions.session_token_hash`).
- * Cada petición valida la fila: no revocada, caducidad absoluta 8 h, inactividad 2 h, IP por familia
+ * Cada petición valida la fila: no revocada, caducidad absoluta 12 h, inactividad 12 h, IP por familia
  * (IPv4 exacta, IPv6 /64; un cambio IPv4↔IPv6 no invalida) y rol vigente en BD.
  */
 
@@ -20,8 +20,8 @@ const ROLE_PERMISSIONS = [
 
 const ADMIN_SESSION_KEY = 'furrguard_admin';
 const ADMIN_SESSION_OBSOLETE_KEY = 'furrguard_obsolete_at';
-const ADMIN_SESSION_ABSOLUTE_TTL = 28800;
-const ADMIN_SESSION_IDLE_TTL = 7200;
+const ADMIN_SESSION_ABSOLUTE_TTL = 43200;
+const ADMIN_SESSION_IDLE_TTL = 43200;
 const ADMIN_SESSION_REGENERATE_EVERY = 1800;
 const ADMIN_SESSION_OBSOLETE_GRACE = 60;
 const ADMIN_SESSION_TOUCH_EVERY = 60;

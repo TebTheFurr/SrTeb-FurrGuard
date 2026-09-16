@@ -375,7 +375,7 @@ también para ellos.
 - **Listas:** búsqueda, filtros y paginación en la URL (al volver atrás se conserva lo que
   estaba filtrado), tablas con desplazamiento horizontal en móvil, diálogos para añadir, editar,
   banear y confirmar.
-- **Sesión:** la de FurrGuard dura 8 horas y caduca a las 2 de inactividad. Cuando caduca, la
+- **Sesión:** la de FurrGuard dura 12 horas desde el login. Cuando caduca, la
   página vuelve a mostrar «Entrar con Discord» con un aviso; los datos no se pierden porque
   no hay nada que guardar en el navegador.
 
@@ -408,7 +408,8 @@ Con un usuario que tenga el permiso y una cuenta de Discord con rol en FurrGuard
 | Tras Discord: «Discord no pudo completar el inicio de sesión» | El `state` no coincide (dos pestañas a la vez, más de 10 min en Discord) o FurrGuard no pudo canjear el código (`DISCORD_CLIENT_SECRET`) | Repetir; `furrguard-error.log` («FurrGuard Discord: … respondió HTTP …») |
 | «Sin acceso a FurrGuard» tras entrar | La cuenta de Discord elegida no tiene rol en FurrGuard | «Usar otra cuenta» |
 | «Demasiados intentos de inicio de sesión» | Más de 10 canjes en 5 minutos desde el mismo navegador | Esperar |
-| Todo funciona y a las 8 h pide entrar otra vez | Caducidad normal de la sesión de FurrGuard | Nada |
+| Todo funciona y a las 12 h pide entrar otra vez | Caducidad normal de la sesión de FurrGuard | Nada |
+| Pide entrar de nuevo antes de las 12 h aunque se estuviera usando | Caducó la sesión de Pterodactyl (`SESSION_LIFETIME` del panel, en minutos), que es donde vive el token | Subir `SESSION_LIFETIME` a 720 o más en el `.env` del panel + `php artisan config:clear` |
 | Un cambio de rol en FurrGuard no se refleja | La página relee el rol al cargar; las pestañas no cambian en caliente | Recargar la página |
 | `admin/api.php` del panel propio de FurrGuard pide login tras entrar desde Pterodactyl | Igual que con dos navegadores: entrar de nuevo revoca la sesión anterior de esa cuenta | Esperado |
 

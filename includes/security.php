@@ -8,7 +8,7 @@ declare(strict_types=1);
  * @author GrinchHorizon
  */
 
-const SESSION_GC_MAXLIFETIME = 28800;
+const SESSION_GC_MAXLIFETIME = 43200;
 const VITE_DEV_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173'];
 
 /**

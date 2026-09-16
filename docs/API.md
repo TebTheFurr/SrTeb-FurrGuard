@@ -432,7 +432,7 @@ admin:   overview players whitelist blacklist sanctions
 - Tras el login: `session_regenerate_id(true)`, token CSRF nuevo, se **revocan las sesiones
   anteriores del mismo usuario** y se crea una fila en `admin_sessions` con `session_token_hash`
   (SHA-256). Cada petición valida esa fila (no revocada, no expirada) y el rol vigente en BD.
-- Caducidad absoluta 8 h desde el login, inactividad 2 h, regeneración de ID cada 30 min.
+- Caducidad absoluta 12 h desde el login (la inactividad no la acorta), regeneración de ID cada 30 min.
 - IP: se aprende una por familia (IPv4 exacta, IPv6 /64). Si llega otra IP de una familia ya
   aprendida → sesión inválida. Un cambio IPv4↔IPv6 no cierra la sesión.
 - Quitar un usuario o cambiar su rol revoca sus filas de `admin_sessions`.
@@ -553,7 +553,7 @@ Navegador ──(sesión de Pterodactyl)──► Panel (Laravel) ──(HMAC + 
      permissions[], can_see_ips, version}`;
    - sin rol: 403 `no_access` (y traza `login_denied`).
 4. El panel guarda el token en **su sesión de servidor** (el navegador nunca lo ve) y lo manda en
-   `X-FurrGuard-Session` en cada acción. Caducidad: la de §5 (8 h absoluta, 2 h de inactividad);
+   `X-FurrGuard-Session` en cada acción. Caducidad: la de §5 (12 h desde el login);
    quitar al usuario o cambiar su rol revoca la fila igual que en el panel propio.
 
 | Acción | Sesión | Parámetros | `data` |
