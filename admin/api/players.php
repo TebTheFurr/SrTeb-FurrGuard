@@ -13,7 +13,7 @@ if (!defined('FURRGUARD_ROOT')) {
 }
 
 const ADMIN_CONNECTION_COLUMNS = 'id, uuid, nick, ip, country, country_code, region, city, isp, org, asn, asname,
-    is_proxy, is_vpn, is_hosting, is_mobile, game_version, timezone, blocked, block_reason, created_at';
+    is_proxy, is_vpn, is_hosting, is_mobile, game_version, timezone, geo_source, blocked, block_reason, created_at';
 const ADMIN_CONNECTION_FILTERS = [
     'allowed' => 'blocked = 0', 'blocked' => 'blocked = 1', 'proxy' => 'is_proxy = 1',
     'vpn' => 'is_vpn = 1', 'hosting' => 'is_hosting = 1', 'mobile' => 'is_mobile = 1',
