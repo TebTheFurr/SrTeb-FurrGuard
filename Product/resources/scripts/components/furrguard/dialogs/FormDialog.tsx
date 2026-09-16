@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
 import { Dialog } from '@/components/elements/dialog';
@@ -25,7 +25,12 @@ export interface FormDialogProps {
     children: React.ReactNode;
 }
 
+let formSequence = 0;
+
 export const FormDialog = ({ open, title, description, submitLabel = 'Guardar', danger, invalid, onClose, onSubmit, children }: FormDialogProps) => {
+    // Dialog.Footer renders outside the <form> (the Dialog places it in its own container), so
+    // the submit button is tied to the form through the `form` attribute.
+    const formId = useMemo(() => `furrguard-form-${++formSequence}`, []);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -49,7 +54,7 @@ export const FormDialog = ({ open, title, description, submitLabel = 'Guardar', 
 
     return (
         <Dialog open={open} onClose={close} title={title} description={description} preventExternalClose={saving}>
-            <form onSubmit={submit} noValidate>
+            <form id={formId} onSubmit={submit} noValidate>
                 <Stack className={'mt-2'}>
                     {children}
                     {error && (
@@ -63,7 +68,7 @@ export const FormDialog = ({ open, title, description, submitLabel = 'Guardar', 
                     <Button.Text type={'button'} onClick={close} disabled={saving}>
                         Cancelar
                     </Button.Text>
-                    <SubmitButton type={'submit'} disabled={saving || invalid}>
+                    <SubmitButton type={'submit'} form={formId} disabled={saving || invalid}>
                         {saving ? 'Guardando…' : submitLabel}
                     </SubmitButton>
                 </Dialog.Footer>
