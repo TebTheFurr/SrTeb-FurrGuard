@@ -35,9 +35,7 @@ class FurrGuardAuthController extends Controller
         try {
             $data = $this->client->call('oauth_start', [], null, $request);
         } catch (FurrGuardException $exception) {
-            $unreachable = $exception->is(FurrGuardException::UNREACHABLE) || $exception->is(FurrGuardException::NOT_CONFIGURED);
-
-            return $this->toPage(['error' => $unreachable ? 'unreachable' : 'discord']);
+            return $this->toPage(['error' => $this->errorCode($exception)]);
         }
 
         $url = is_array($data) && is_string($data['url'] ?? null) ? $data['url'] : '';
@@ -88,7 +86,7 @@ class FurrGuardAuthController extends Controller
                 return $this->toPage(['error' => 'no_access']);
             }
 
-            return $this->toPage(['error' => $exception->getStatusCode() === 429 ? 'rate_limited' : 'discord']);
+            return $this->toPage(['error' => $this->errorCode($exception)]);
         }
 
         if (!is_array($data) || !$this->sessions->put($request, $data)) {
@@ -98,6 +96,32 @@ class FurrGuardAuthController extends Controller
         }
 
         return $this->toPage();
+    }
+
+    /**
+     * Error code the page shows for a failed call to FurrGuard. Each one points at a
+     * different place to look: the network, the shared key/clock/IP, the bridge itself
+     * (nginx, .env, a proxy answering HTML) or Discord.
+     */
+    private function errorCode(FurrGuardException $exception): string
+    {
+        if ($exception->is(FurrGuardException::UNREACHABLE) || $exception->is(FurrGuardException::NOT_CONFIGURED)) {
+            return 'unreachable';
+        }
+
+        if ($exception->is('database_unavailable')) {
+            return 'unavailable';
+        }
+
+        if (in_array($exception->getSlug(), ['panel_signature', 'panel_ip'], true)) {
+            return 'rejected';
+        }
+
+        if (in_array($exception->getSlug(), ['not_found', 'invalid_response', 'discord_unconfigured'], true)) {
+            return 'bridge';
+        }
+
+        return $exception->getStatusCode() === 429 ? 'rate_limited' : 'discord';
     }
 
     private function isDiscordUrl(string $url): bool

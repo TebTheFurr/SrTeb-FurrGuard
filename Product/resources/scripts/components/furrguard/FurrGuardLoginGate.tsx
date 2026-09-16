@@ -35,9 +35,9 @@ const Message = styled.p`
     color: var(--color-muted);
 `;
 
-type LoginError = 'no_access' | 'cancelled' | 'discord' | 'unreachable' | 'rate_limited' | 'expired';
+type LoginError = 'no_access' | 'cancelled' | 'discord' | 'unreachable' | 'unavailable' | 'rejected' | 'bridge' | 'rate_limited' | 'expired';
 
-const KNOWN: LoginError[] = ['no_access', 'cancelled', 'discord', 'unreachable', 'rate_limited', 'expired'];
+const KNOWN: LoginError[] = ['no_access', 'cancelled', 'discord', 'unreachable', 'unavailable', 'rejected', 'bridge', 'rate_limited', 'expired'];
 
 const knownError = (value: string | null): LoginError | 'other' | null => {
     if (!value) return null;
@@ -97,6 +97,15 @@ const FurrGuardLoginGate = ({ lostReason }: Props) => {
         cancelled: t('furrguard.login.cancelled', 'Cancelaste el inicio de sesión en Discord.'),
         discord: t('furrguard.login.discord_error', 'Discord no pudo completar el inicio de sesión. Vuelve a intentarlo en un momento.'),
         unreachable: t('furrguard.login.unreachable', 'No se pudo conectar con FurrGuard. Vuelve a intentarlo en un momento.'),
+        unavailable: t('furrguard.login.unavailable', 'FurrGuard no está disponible ahora mismo: su base de datos no responde. Inténtalo en unos minutos.'),
+        rejected: t(
+            'furrguard.login.rejected',
+            'FurrGuard ha rechazado la conexión del panel: la clave compartida no coincide, el reloj de alguna de las dos máquinas va desviado o la IP del panel no está autorizada. Avisa a un administrador.'
+        ),
+        bridge: t(
+            'furrguard.login.bridge',
+            'FurrGuard no responde como puente: en su servidor revisa PTERODACTYL_URL y PTERODACTYL_PANEL_KEY del .env, la línea de nginx que ejecuta api/panel.php, la aplicación de Discord y que nada (Cloudflare, firewall) bloquee al panel.'
+        ),
         rate_limited: t('furrguard.login.rate_limited', 'Demasiados intentos de inicio de sesión. Espera unos minutos.'),
         expired: lostReason === 'access_revoked'
             ? t('furrguard.login.revoked', 'Tu acceso a FurrGuard ha cambiado. Vuelve a entrar con Discord.')
