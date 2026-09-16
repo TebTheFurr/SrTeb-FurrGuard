@@ -19,6 +19,13 @@ por HTTPS.
 > ya funciona (panel propio incluido) y que el panel de Pterodactyl ya tiene el tema Luna con
 > la personalización de Tebby.
 
+> **Dónde está cada código.** Todo vive en el repositorio `TebTheFurr/SrTeb-FurrGuard`, en dos
+> ramas con historias independientes: la de FurrGuard (`master` / `fix/auditoria`, la raíz del
+> repo) y **`panel-pterodactyl`**, que es el repositorio del tema Luna con la personalización de
+> Tebby: su carpeta `Product/` mapea 1:1 con `/var/www/pterodactyl` y su `CLAUDE.md` explica la
+> arquitectura del tema, el Vault y esta integración (§13). El baseline de esa rama (Luna 2.2.1
+> sin tocar) es el commit `0c5e279`.
+
 ---
 
 ## 1. Cómo funciona
@@ -111,9 +118,9 @@ que uses; en CloudPanel, la raíz del sitio).
 
 ### A.1 Actualizar el código
 
-El puente viene con FurrGuard 2.0 a partir de este cambio. Si tu copia es anterior, actualiza
-como en [`INSTALACION.md` §19](INSTALACION.md#19-mantenimiento) («Actualizar dentro de 2.x»).
-Tienen que existir:
+El puente viene con FurrGuard 2.0 a partir del commit `67d58a3` (rama `fix/auditoria`). Si tu
+copia es anterior, actualiza como en [`INSTALACION.md` §19](INSTALACION.md#19-mantenimiento)
+(«Actualizar dentro de 2.x»). Tienen que existir:
 
 ```bash
 ls api/panel.php includes/panel_bridge.php database/migrations/0010_panel_nonces.php
@@ -249,14 +256,21 @@ resources/scripts/components/furrguard/                (toda la carpeta: página
 Los archivos «modificados» son versiones completas: sustituyen a los que hay. Ojo con el
 propietario si subes por FTP: el `chown` del final no es opcional.
 
-Para generar el paquete desde el repositorio del tema:
+Para generar el paquete desde la rama `panel-pterodactyl` (en tu máquina, con acceso al repo):
 
 ```bash
-cd Tema2-2-1
+git clone --branch panel-pterodactyl https://github.com/TebTheFurr/SrTeb-FurrGuard.git panel-luna
+cd panel-luna
 git diff --name-only 0c5e279 HEAD -- Product | sed 's|^Product/||' > /tmp/files.txt
 cd Product && tar --format=ustar -czf ../luna-panel-changes.tar.gz -T /tmp/files.txt
 scp ../luna-panel-changes.tar.gz usuario@panel:~/
 ```
+
+El diff contra `0c5e279` incluye **toda** la personalización del tema (capa de diseño, Vault,
+estadísticas en vivo, tamaño de carpetas y FurrGuard), que es lo que tiene que estar en el
+panel: no se puede instalar solo FurrGuard sobre un Luna virgen, porque la página usa las
+primitivas de `elements/ui/` y los estilos compartidos con el Vault. Si el panel ya tiene el
+resto, el tar solo sobrescribe archivos idénticos.
 
 ### B.2 Variables de entorno del panel
 
